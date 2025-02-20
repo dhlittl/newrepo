@@ -1,5 +1,6 @@
+"use client";
+
 import React, { useEffect, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 const AboutPage = () => {
   const [aboutData, setAboutData] = useState({
@@ -16,7 +17,7 @@ const AboutPage = () => {
     const fetchAboutData = async () => {
       console.log('Fetching about data...');
       try {
-        const response = await fetch(process.env.NEXT_PUBLIC_API_ENDPOINT || 'https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/about', {
+        const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/about', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -29,13 +30,16 @@ const AboutPage = () => {
         
         const data = await response.json();
         console.log('Received data:', data);
+        
         // Check if we have a body property that needs parsing
         const parsedData = data.body ? JSON.parse(data.body) : data;
+        
         // Validate that we have all required fields
         if (!parsedData.TeamNumber || !parsedData.SprintNumber || !parsedData.ReleaseDate || 
             !parsedData.ProductName || !parsedData.ProductDescription) {
           throw new Error('Missing required fields in response');
         }
+        
         setAboutData(parsedData);
         setLoading(false);
       } catch (err) {
@@ -66,39 +70,39 @@ const AboutPage = () => {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100 p-4">
-      <Card className="w-full max-w-2xl">
-        <CardHeader className="border-b">
-          <CardTitle className="text-2xl font-bold text-center">About Our Project</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6 pt-6">
+      <div className="w-full max-w-2xl bg-white rounded-lg shadow-lg">
+        <div className="border-b p-6">
+          <h1 className="text-2xl font-bold text-center text-black">About Our Project</h1>
+        </div>
+        <div className="p-6 space-y-6">
           <div className="grid grid-cols-1 gap-6">
-            <div className="bg-white rounded-lg p-4 shadow-sm">
+            <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="font-semibold text-gray-700">Team Number</h3>
               <p className="mt-1 text-gray-600">{aboutData.TeamNumber}</p>
             </div>
             
-            <div className="bg-white rounded-lg p-4 shadow-sm">
+            <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="font-semibold text-gray-700">Version/Sprint Number</h3>
               <p className="mt-1 text-gray-600">{aboutData.SprintNumber}</p>
             </div>
             
-            <div className="bg-white rounded-lg p-4 shadow-sm">
+            <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="font-semibold text-gray-700">Release Date</h3>
               <p className="mt-1 text-gray-600">{aboutData.ReleaseDate}</p>
             </div>
             
-            <div className="bg-white rounded-lg p-4 shadow-sm">
+            <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="font-semibold text-gray-700">Product Name</h3>
               <p className="mt-1 text-gray-600">{aboutData.ProductName}</p>
             </div>
             
-            <div className="bg-white rounded-lg p-4 shadow-sm">
+            <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="font-semibold text-gray-700">Product Description</h3>
               <p className="mt-1 text-gray-600">{aboutData.ProductDescription}</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
