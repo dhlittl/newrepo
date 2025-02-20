@@ -1,60 +1,46 @@
-"use client";
-
 import React, { useEffect, useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 const AboutPage = () => {
-  // Fallback test data in case API call fails
-  const testData = {
-    TeamNumber: "24",
-    SprintNumber: "3",
-    ReleaseDate: "2024-02-20",
-    ProductName: "Good Driver Incentive Program",
-    ProductDescription: "A web application for incentivizing and rewarding good driving behavior in the trucking industry."
-  };
-
-  const [aboutData, setAboutData] = useState(testData);
+  const [aboutData, setAboutData] = useState({
+    TeamNumber: '',
+    SprintNumber: '',
+    ReleaseDate: '',
+    ProductName: '',
+    ProductDescription: ''
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchAboutData = async () => {
+      console.log('Fetching about data...');
       try {
-        const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/about', {
+        const response = await fetch(process.env.NEXT_PUBLIC_API_ENDPOINT || 'https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/about', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            // Remove any credentials or origin headers - let API Gateway handle CORS
-          },
-          // Don't send credentials
-          credentials: 'omit'
+          }
         });
         
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error('Failed to fetch about data');
         }
         
         const data = await response.json();
-        if (data && data.body) {
-          try {
-            const parsedData = JSON.parse(data.body);
-            setAboutData(parsedData);
-          } catch (parseError) {
-            console.error('Error parsing response data:', parseError);
-            // Fallback to test data if parsing fails
-            setAboutData(testData);
-          }
-        } else {
-          // Fallback to test data if response format is unexpected
-          console.error('Unexpected response format:', data);
-          setAboutData(testData);
+        console.log('Received data:', data);
+        // Check if we have a body property that needs parsing
+        const parsedData = data.body ? JSON.parse(data.body) : data;
+        // Validate that we have all required fields
+        if (!parsedData.TeamNumber || !parsedData.SprintNumber || !parsedData.ReleaseDate || 
+            !parsedData.ProductName || !parsedData.ProductDescription) {
+          throw new Error('Missing required fields in response');
         }
+        setAboutData(parsedData);
+        setLoading(false);
       } catch (err) {
         console.error('Error fetching data:', err);
-        // Fallback to test data on error
-        setAboutData(testData);
-        setError(`Failed to fetch data: ${err.message}`);
-      } finally {
+        setError(err.message);
         setLoading(false);
       }
     };
@@ -64,89 +50,57 @@ const AboutPage = () => {
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh',
-        backgroundColor: '#ffffff'
-      }}>
-        <p style={{ fontSize: '1.125rem', color: '#000000' }}>Loading...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-lg">Loading...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-lg text-red-600">Error: {error}</p>
       </div>
     );
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh',
-      backgroundColor: '#ffffff',
-      color: '#000000'
-    }}>
-      <div style={{ 
-        padding: '2rem',
-        maxWidth: '800px',
-        margin: '0 auto',
-        fontFamily: 'system-ui, -apple-system, sans-serif'
-      }}>
-        {error && (
-          <div style={{
-            padding: '1rem',
-            marginBottom: '1rem',
-            backgroundColor: '#fee2e2',
-            border: '1px solid #dc2626',
-            borderRadius: '4px',
-            color: '#dc2626'
-          }}>
-            {error}
+    <div className="flex justify-center items-center min-h-screen bg-gray-100 p-4">
+      <Card className="w-full max-w-2xl">
+        <CardHeader className="border-b">
+          <CardTitle className="text-2xl font-bold text-center">About Our Project</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6 pt-6">
+          <div className="grid grid-cols-1 gap-6">
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <h3 className="font-semibold text-gray-700">Team Number</h3>
+              <p className="mt-1 text-gray-600">{aboutData.TeamNumber}</p>
+            </div>
+            
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <h3 className="font-semibold text-gray-700">Version/Sprint Number</h3>
+              <p className="mt-1 text-gray-600">{aboutData.SprintNumber}</p>
+            </div>
+            
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <h3 className="font-semibold text-gray-700">Release Date</h3>
+              <p className="mt-1 text-gray-600">{aboutData.ReleaseDate}</p>
+            </div>
+            
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <h3 className="font-semibold text-gray-700">Product Name</h3>
+              <p className="mt-1 text-gray-600">{aboutData.ProductName}</p>
+            </div>
+            
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <h3 className="font-semibold text-gray-700">Product Description</h3>
+              <p className="mt-1 text-gray-600">{aboutData.ProductDescription}</p>
+            </div>
           </div>
-        )}
-        <h1 style={{ 
-          textAlign: 'center',
-          fontSize: '2rem',
-          fontWeight: 'bold',
-          marginBottom: '2rem',
-          color: '#000000'
-        }}>
-          About Our Project
-        </h1>
-        
-        <div style={{ 
-          display: 'grid',
-          gap: '1.5rem',
-          backgroundColor: '#ffffff',
-          padding: '2rem',
-          borderRadius: '8px',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-          border: '1px solid #e5e7eb'
-        }}>
-          <InfoSection title="Team Number" content={aboutData.TeamNumber} />
-          <InfoSection title="Version/Sprint Number" content={aboutData.SprintNumber} />
-          <InfoSection title="Release Date" content={aboutData.ReleaseDate} />
-          <InfoSection title="Product Name" content={aboutData.ProductName} />
-          <InfoSection title="Product Description" content={aboutData.ProductDescription} />
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
-
-const InfoSection = ({ title, content }) => (
-  <div style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: '1rem' }}>
-    <h3 style={{ 
-      fontSize: '1.125rem',
-      fontWeight: '600',
-      color: '#000000',
-      marginBottom: '0.5rem'
-    }}>
-      {title}
-    </h3>
-    <p style={{ 
-      color: '#333333',
-      lineHeight: '1.5'
-    }}>
-      {content}
-    </p>
-  </div>
-);
 
 export default AboutPage;
