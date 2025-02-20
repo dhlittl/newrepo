@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 
 const AboutPage = () => {
+  // Fallback test data in case API call fails
   const testData = {
     TeamNumber: "24",
     SprintNumber: "3",
@@ -12,37 +13,54 @@ const AboutPage = () => {
   };
 
   const [aboutData, setAboutData] = useState(testData);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  /* Commented out API call for now
   useEffect(() => {
     const fetchAboutData = async () => {
       try {
-        const response = await fetch(process.env.NEXT_PUBLIC_API_ENDPOINT || 'https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/about', {
+        const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/about', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-          }
+            'Accept': 'application/json',
+            // Remove any credentials or origin headers - let API Gateway handle CORS
+          },
+          // Don't send credentials
+          credentials: 'omit'
         });
         
         if (!response.ok) {
-          throw new Error('Failed to fetch about data');
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
-        setAboutData(JSON.parse(data.body));
-        setLoading(false);
+        if (data && data.body) {
+          try {
+            const parsedData = JSON.parse(data.body);
+            setAboutData(parsedData);
+          } catch (parseError) {
+            console.error('Error parsing response data:', parseError);
+            // Fallback to test data if parsing fails
+            setAboutData(testData);
+          }
+        } else {
+          // Fallback to test data if response format is unexpected
+          console.error('Unexpected response format:', data);
+          setAboutData(testData);
+        }
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError(err.message);
+        // Fallback to test data on error
+        setAboutData(testData);
+        setError(`Failed to fetch data: ${err.message}`);
+      } finally {
         setLoading(false);
       }
     };
 
     fetchAboutData();
   }, []);
-  */
 
   if (loading) {
     return (
@@ -54,20 +72,6 @@ const AboutPage = () => {
         backgroundColor: '#ffffff'
       }}>
         <p style={{ fontSize: '1.125rem', color: '#000000' }}>Loading...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh',
-        backgroundColor: '#ffffff'
-      }}>
-        <p style={{ fontSize: '1.125rem', color: '#dc2626' }}>Error: {error}</p>
       </div>
     );
   }
@@ -84,6 +88,18 @@ const AboutPage = () => {
         margin: '0 auto',
         fontFamily: 'system-ui, -apple-system, sans-serif'
       }}>
+        {error && (
+          <div style={{
+            padding: '1rem',
+            marginBottom: '1rem',
+            backgroundColor: '#fee2e2',
+            border: '1px solid #dc2626',
+            borderRadius: '4px',
+            color: '#dc2626'
+          }}>
+            {error}
+          </div>
+        )}
         <h1 style={{ 
           textAlign: 'center',
           fontSize: '2rem',
