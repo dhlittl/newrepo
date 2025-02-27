@@ -1,0 +1,18 @@
+{
+  "whyContinueWithGen1": "Prefer not to answer",
+  "projectName": "Team24Gen1",
+  "version": "3.1",
+  "frontend": "javascript",
+  "javascript": {
+    "framework": "react",
+    "config": {
+      "SourceDir": ".",
+      "DistributionDir": ".next",
+      "BuildCommand": "npm.cmd run-script build",
+      "StartCommand": "npm.cmd run-script start"
+    }
+  },
+  "providers": [
+    "awscloudformation"
+  ]
+}

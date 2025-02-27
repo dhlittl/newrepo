@@ -1,0 +1,34 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-team24gen1-dev-13106-authRole",
+      "UnauthRoleArn": "arn:aws:iam::274815321855:role/amplify-team24gen1-dev-13106-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::274815321855:role/amplify-team24gen1-dev-13106-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-team24gen1-dev-13106-deployment",
+      "UnauthRoleName": "amplify-team24gen1-dev-13106-unauthRole",
+      "StackName": "amplify-team24gen1-dev-13106",
+      "StackId": "arn:aws:cloudformation:us-east-1:274815321855:stack/amplify-team24gen1-dev-13106/03426b20-f4e4-11ef-ba22-0afff54f33d1",
+      "AmplifyAppId": "d3ty33cs4lcdx0"
+    },
+    "categories": {
+      "hosting": {
+        "amplifyhosting": {
+          "appId": "d3ty33cs4lcdx0",
+          "type": "cicd"
+        }
+      },
+      "function": {
+        "iTunesAPIFunction": {
+          "dbHost": "proxy-1739302102581-team24-database.proxy-cobd8enwsupz.us-east-1.rds.amazonaws.com",
+          "secretsPathAmplifyAppId": "d3ty33cs4lcdx0",
+          "deploymentBucketName": "amplify-team24gen1-dev-13106-deployment",
+          "s3Key": "amplify-builds/iTunesAPIFunction-456c6f414557636f7755-build.zip"
+        }
+      },
+      "api": {
+        "iTunesAPI": {}
+      }
+    }
+  }
+}

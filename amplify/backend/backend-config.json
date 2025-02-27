@@ -1,0 +1,83 @@
+{
+  "api": {
+    "iTunesAPI": {
+      "dependsOn": [
+        {
+          "attributes": [
+            "Name",
+            "Arn"
+          ],
+          "category": "function",
+          "resourceName": "iTunesAPIFunction"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "API Gateway"
+    }
+  },
+  "function": {
+    "iTunesAPIFunction": {
+      "build": true,
+      "dependsOn": [],
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    }
+  },
+  "hosting": {
+    "amplifyhosting": {
+      "lastPushTimeStamp": "2025-02-27T08:54:44.960Z",
+      "service": "amplifyhosting",
+      "type": "cicd"
+    }
+  },
+  "parameters": {
+    "AMPLIFY_function_iTunesAPIFunction_dbHost": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "iTunesAPIFunction"
+        }
+      ]
+    },
+    "AMPLIFY_function_iTunesAPIFunction_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "iTunesAPIFunction"
+        }
+      ]
+    },
+    "AMPLIFY_function_iTunesAPIFunction_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "iTunesAPIFunction"
+        }
+      ]
+    },
+    "AMPLIFY_function_iTunesAPIFunction_secretsPathAmplifyAppId": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "iTunesAPIFunction"
+        }
+      ]
+    },
+    "AMPLIFY_hosting_amplifyhosting_appId": {
+      "usedBy": [
+        {
+          "category": "hosting",
+          "resourceName": "amplifyhosting"
+        }
+      ]
+    },
+    "AMPLIFY_hosting_amplifyhosting_type": {
+      "usedBy": [
+        {
+          "category": "hosting",
+          "resourceName": "amplifyhosting"
+        }
+      ]
+    }
+  }
+}
