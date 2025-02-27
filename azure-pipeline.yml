@@ -12,26 +12,59 @@ steps:
   clean: true
 
 - task: Bash@3
-  displayName: 'Configure Git'
+  displayName: 'Examine Repository'
   inputs:
     targetType: 'inline'
     script: |
-      git config --global user.email "dhlittl@clemson.edu"
-      git config --global user.name "dhlittl"
+      # Examine the current state of the repo
+      echo "Current directory: $(pwd)"
+      echo "Branch information:"
+      git branch -a
+      echo "Current commit:"
+      git log -1 --oneline
+      echo "Repository size information:"
+      du -sh .
+      echo "Largest files in repository:"
+      find . -type f -not -path "*/\.git/*" -exec du -h {} \; | sort -rh | head -n 10
 
 - task: Bash@3
-  displayName: 'Push to GitHub'
+  displayName: 'Push to GitHub via Clone Method'
   inputs:
     targetType: 'inline'
     script: |
-      # Add GitHub as a remote repository
+      # Create temp directory
+      mkdir -p /tmp/github-sync
+      cd /tmp/github-sync
+      
+      # Clone current branch from Azure repo
+      git clone --branch $(Build.SourceBranchName) --single-branch $(Build.Repository.Uri) .
+      
+      # Set git config
+      git config --global user.email "dhlittl@clemson.edu"
+      git config --global user.name "dhlittl"
+      
+      # Set up GitHub remote with PAT
       git remote add github https://$GITHUB_PAT@github.com/dhlittl/newrepo.git
       
-      # Fetch from GitHub to prevent potential conflicts
+      # Fetch from GitHub to see what we're working with
       git fetch github
+      echo "GitHub branches:"
+      git branch -r | grep github
       
-      # Force push the current branch to GitHub main branch
-      # Use force-push to ensure GitHub main exactly matches our branch
-      git push -f github HEAD:main
+      # Try pushing with verbose output
+      echo "Attempting push to GitHub..."
+      git push -v -f github HEAD:main
+      
+      # If that fails, try a more careful approach
+      if [ $? -ne 0 ]; then
+        echo "Standard push failed, trying alternative approach..."
+        echo "Creating fresh local branch..."
+        git checkout -b temp-branch
+        echo "Adding GitHub remote again with explicit URL..."
+        git remote rm github
+        git remote add github https://$GITHUB_PAT@github.com/dhlittl/newrepo.git
+        echo "Pushing with --force-with-lease for safety..."
+        git push -v --force-with-lease github temp-branch:main
+      fi
   env:
     GITHUB_PAT: $(githubPAT)
