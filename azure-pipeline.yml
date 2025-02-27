@@ -1,0 +1,37 @@
+trigger:
+  branches:
+    include:
+    - amplify-branch  # Only trigger for this specific branch
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- checkout: self
+  persistCredentials: true
+  clean: true
+
+- task: Bash@3
+  displayName: 'Configure Git'
+  inputs:
+    targetType: 'inline'
+    script: |
+      git config --global user.email "dhlittl@clemson.edu"
+      git config --global user.name "dhlittl"
+
+- task: Bash@3
+  displayName: 'Push to GitHub'
+  inputs:
+    targetType: 'inline'
+    script: |
+      # Add GitHub as a remote repository
+      git remote add github https://$(GITHUB_PAT)@github.com/dhlittl/newrepo.git
+      
+      # Fetch from GitHub to prevent potential conflicts
+      git fetch github
+      
+      # Force push the current branch to GitHub main branch
+      # Use force-push to ensure GitHub main exactly matches our branch
+      git push -f github HEAD:main
+  env:
+    GITHUB_PAT: $(githubPAT)
