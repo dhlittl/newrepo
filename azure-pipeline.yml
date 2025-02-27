@@ -25,7 +25,7 @@ steps:
     targetType: 'inline'
     script: |
       # Add GitHub as a remote repository
-      git remote add github https://$(GITHUB_PAT)@github.com/dhlittl/newrepo.git
+      git remote add github https://$GITHUB_PAT@github.com/dhlittl/newrepo.git
       
       # Fetch from GitHub to prevent potential conflicts
       git fetch github
