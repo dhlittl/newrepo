@@ -59,4 +59,4 @@ const HelpPage = () => {
     );
 };
 
-export default HelpPage;
+//export default HelpPage;
