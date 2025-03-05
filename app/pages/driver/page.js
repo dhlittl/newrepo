@@ -68,7 +68,7 @@ export default function DriverDashboard() {
       <div className="max-w-2xl mx-auto p-4">
         {/* Profile Icon in Top Right Corner */}
         <div className="absolute top-4 right-4">
-          <Link href="/profile/driver" className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition">
+          <Link href="/pages/driver/profile" className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition">
               <UserIcon className="w-10 h-10 mr-5 text-blue-600" />
           </Link>
       </div>
@@ -140,7 +140,7 @@ export default function DriverDashboard() {
       case "notifications":
         return <Widget title="Notifications" content="You have 3 new alerts" />;
       case "help":
-        return <LinkWidget title="Help" link="/dashboard/driver/driverHelp" />;
+        return <LinkWidget title="Help" link="/pages/driver/driverHelp" />;
       default:
         return null;
     }
