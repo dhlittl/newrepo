@@ -1,5 +1,10 @@
 // Driver Help Page
 
+"use client";
+
+// commented out import because link isn't connected yet
+//import Link from "next/link";
+
 const HelpPage = () => {
     return (
         <div className="p-6 max-w-4xl mx-auto">
@@ -17,7 +22,7 @@ const HelpPage = () => {
             {/* Help Ticket Section (more development later) */}
             <section className="mb-8">
                 <h2 className="text-2xl font-semibold mb-4">Submit a Help Ticket</h2>
-                <p className="mb=4">
+                <p className="mb-4">
                     Need assistance? Click the button below to submit a help ticket to your sponsor.
                 </p>
                 {/*<Link href="/dashboard/driver/driverHelp/ticket-submission">
