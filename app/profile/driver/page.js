@@ -65,43 +65,48 @@ export default function DriverProfilePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(
-        "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/profile",
-        {
-          method: "PUT", // PUT request to update profile
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            User_ID: driver.id, // Do not allow editing User_ID
-            FName: updatedDriver.fname,
-            LName: updatedDriver.lname,
-            Email: updatedDriver.email,
-            Phone_Number: updatedDriver.phone,
-            Start_Date: driver.startDate, // Do not allow editing Start Date
-          }),
+        const requestBody = {
+            User_ID: driver.id, // Ensure this is an integer
+            FName: updatedDriver.fname || driver.fname,
+            LName: updatedDriver.lname || driver.lname,
+            Email: updatedDriver.email || driver.email,
+            Phone_Number: updatedDriver.phone || driver.phone
+        };
+
+        console.log("Sending request body:", requestBody); // Debugging
+
+        const response = await fetch(
+            "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/profile",
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(requestBody)
+            }
+        );
+
+        const responseData = await response.json();
+        console.log("Response Data:", responseData);
+
+        if (!response.ok) {
+            throw new Error(responseData.error || "Failed to update profile");
         }
-      );
 
-      if (!response.ok) {
-        throw new Error("Failed to update profile");
-      }
+        setDriver({
+            ...driver,
+            fname: updatedDriver.fname,
+            lname: updatedDriver.lname,
+            email: updatedDriver.email,
+            phone: updatedDriver.phone
+        });
 
-      // Update the state with the new information
-      setDriver({
-        ...driver,
-        fname: updatedDriver.fname,
-        lname: updatedDriver.lname,
-        email: updatedDriver.email,
-        phone: updatedDriver.phone,
-      });
-
-      setIsEditing(false); // Close the edit form after submission
+        setIsEditing(false); // Close edit form
     } catch (err) {
-      console.error("Error updating profile:", err);
-      setError(err.message);
+        console.error("Error updating profile:", err);
+        setError(err.message);
     }
-  };
+};
 
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white shadow-md rounded-lg">
