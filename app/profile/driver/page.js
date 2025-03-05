@@ -23,12 +23,12 @@ export default function DriverProfilePage() {
 
         // If the data is a single object, no need to map
         const transformedData = {
-          id: data.User_ID,
-          fname: data.FName,
-          lname: data.LName,
-          email: data.Email,
-          phone: data.Phone_Number,
-          startDate: data.Start_Date,
+          id: data[0].User_ID,
+          fname: data[0].FName,
+          lname: data[0].LName,
+          email: data[0].Email,
+          phone: data[0].Phone_Number,
+          startDate: data[0].Start_Date,
         };
 
         setDriver(transformedData);
