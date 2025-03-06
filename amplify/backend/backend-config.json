@@ -1,6 +1,98 @@
 {
   "api": {},
-  "function": {},
+  "auth": {
+    "team24gen15339fb54": {
+      "customAuth": true,
+      "dependsOn": [
+        {
+          "attributes": [
+            "Arn",
+            "Name"
+          ],
+          "category": "function",
+          "resourceName": "team24gen15339fb54DefineAuthChallenge",
+          "triggerProvider": "Cognito"
+        },
+        {
+          "attributes": [
+            "Arn",
+            "Name"
+          ],
+          "category": "function",
+          "resourceName": "team24gen15339fb54CreateAuthChallenge",
+          "triggerProvider": "Cognito"
+        },
+        {
+          "attributes": [
+            "Arn",
+            "Name"
+          ],
+          "category": "function",
+          "resourceName": "team24gen15339fb54VerifyAuthChallengeResponse",
+          "triggerProvider": "Cognito"
+        },
+        {
+          "attributes": [
+            "Arn",
+            "Name"
+          ],
+          "category": "function",
+          "resourceName": "team24gen15339fb54PostConfirmation",
+          "triggerProvider": "Cognito"
+        }
+      ],
+      "frontendAuthConfig": {
+        "mfaConfiguration": "OFF",
+        "mfaTypes": [
+          "SMS"
+        ],
+        "passwordProtectionSettings": {
+          "passwordPolicyCharacters": [],
+          "passwordPolicyMinLength": 8
+        },
+        "signupAttributes": [
+          "EMAIL",
+          "FAMILY_NAME",
+          "GIVEN_NAME",
+          "PHONE_NUMBER"
+        ],
+        "socialProviders": [],
+        "usernameAttributes": [],
+        "verificationMechanisms": [
+          "EMAIL"
+        ]
+      },
+      "providerPlugin": "awscloudformation",
+      "service": "Cognito"
+    }
+  },
+  "function": {
+    "team24gen15339fb54CreateAuthChallenge": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    },
+    "team24gen15339fb54DefineAuthChallenge": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    },
+    "team24gen15339fb54PostConfirmation": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    },
+    "team24gen15339fb54VerifyAuthChallengeResponse": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    },
+    "team24gen184e372e4CustomMessage": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    }
+  },
   "hosting": {
     "amplifyhosting": {
       "lastPushTimeStamp": "2025-02-27T08:54:44.960Z",
@@ -9,6 +101,102 @@
     }
   },
   "parameters": {
+    "AMPLIFY_function_team24gen15339fb54CreateAuthChallenge_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen15339fb54CreateAuthChallenge"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen15339fb54CreateAuthChallenge_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen15339fb54CreateAuthChallenge"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen15339fb54DefineAuthChallenge_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen15339fb54DefineAuthChallenge"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen15339fb54DefineAuthChallenge_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen15339fb54DefineAuthChallenge"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen15339fb54PostConfirmation_GROUP": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen15339fb54PostConfirmation"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen15339fb54PostConfirmation_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen15339fb54PostConfirmation"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen15339fb54PostConfirmation_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen15339fb54PostConfirmation"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen15339fb54VerifyAuthChallengeResponse_RECAPTCHASECRET": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen15339fb54VerifyAuthChallengeResponse"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen15339fb54VerifyAuthChallengeResponse_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen15339fb54VerifyAuthChallengeResponse"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen15339fb54VerifyAuthChallengeResponse_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen15339fb54VerifyAuthChallengeResponse"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen184e372e4CustomMessage_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen184e372e4CustomMessage"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen184e372e4CustomMessage_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen184e372e4CustomMessage"
+        }
+      ]
+    },
     "AMPLIFY_hosting_amplifyhosting_appId": {
       "usedBy": [
         {
