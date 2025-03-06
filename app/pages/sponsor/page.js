@@ -22,12 +22,9 @@ import Link from "next/link";
 
 // setting up initial widgets that the sponsor user has access to
 const initialWidgets = [
-  { id: "reports", name: "Reports", visible: true},
-  { id: "companyInfo", name: "Company Info", visible: true},
-  { id: "applications", name: "Applications", visible: true},
-  { id: "driverHistory", name: "Driver History", visible: true},
   { id: "driverMetrics", name: "Driver Metrics", visible: true},
-  { id: "helpDesk", name: "Help Desk", visible: true},
+  { id: "companyInfo", name: "Company Info", visible: true},
+  { id: "driverHistory", name: "Driver History", visible: true},
 ];
 
 export default function SponsorDashboard() {
@@ -122,18 +119,12 @@ export default function SponsorDashboard() {
   // some hardcoded bc not connected to db yet
   function getWidgetContent(id) {
     switch (id) {
-      case "reports":
-        return <LinkWidget title="Reports" link="/reports" />;
       case "companyInfo":
         return <LinkWidget title="Company Info" link="/companyInfo" />;
-      case "applications":
-        return <LinkWidget title="Applications" link="/applications" />;
       case "driverHistory":
         return <LinkWidget title="Driver History" link="/driverHistory" />;
       case "driverMetrics":
         return <DriverMetrics />;
-      case "helpDesk":
-        return <LinkWidget title="Help Desk" link="/helpDesk" />;
       default:
         return null;
     }
