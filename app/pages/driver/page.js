@@ -39,28 +39,33 @@ export default function DriverDashboard() {
     const [widgets, setWidgets] = useState (initialWidgets);
     const [userId, setUserId] = useState("1"); // update to be dynamic later
     const [loading, setLoading] = useState(true);
+    const User_ID="1";
 
     useEffect(() => {
-      // Fetch initial widget order from the API when the component mounts
+      console.log("Using User_ID:", userId); 
+      // fetch initial widget order
       async function fetchWidgetOrder() {
         try {
-          const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences?User_ID=${user_id}`);
-          const data = await response.json();
-      
-          if (response.ok && data.widget_order) {
-              // Update widgets based on the fetched widget order
+          if (typeof window !== 'undefined') {
+            //const User_ID = userId;
+  
+            const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences?User_ID=${User_ID}`);
+            const data = await response.json();
+  
+            if (response.ok && data.widget_order) {
               const orderedWidgets = initialWidgets.map((widget) => {
-              return {
-                ...widget,
-                visible: data.widget_order.includes(widget.id)
-              };
-            });
-            setWidgets(orderedWidgets);
-          } else {
-            console.error("Error fetching widget order:", data); // log the entire data to debug
+                return {
+                  ...widget,
+                  visible: data.widget_order.includes(widget.id)
+                };
+              });
+              setWidgets(orderedWidgets);
+            } else {
+              console.error("Error fetching widget order:", data);
+            }
           }
         } catch (error) {
-          console.error("Failed to fetch widget order:", error); // more detailed error logging
+          console.error("Failed to fetch widget order:", error);
         }
       }
   
@@ -113,7 +118,7 @@ export default function DriverDashboard() {
     // function to update the widget order in the database
     async function updateWidgetOrder() {
       try {
-        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences?User_ID=${userId}`, {
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences?User_ID=${User_ID}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
