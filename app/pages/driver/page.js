@@ -37,6 +37,29 @@ const initialWidgets = [
 
 export default function DriverDashboard() {
     const [widgets, setWidgets] = useState (initialWidgets);
+    const [userId, setUserId] = useState("1"); // update to be dynamic later
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      // Fetch initial widget order from the API when the component mounts
+      async function fetchWidgetOrder() {
+        try {
+          const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences');
+          const data = await response.json();
+          if (response.ok) {
+            setWidgets(data.widget_order);
+          } else {
+            console.error("Error fetching widget order:", data.message);
+          }
+        } catch (error) {
+          console.error("Failed to fetch widget order:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+  
+      fetchWidgetOrder();
+    }, [userId]);
 
     useEffect(() => {
       console.log("Widgets Updated:", widgets.map((w) => w.id));
@@ -79,6 +102,31 @@ export default function DriverDashboard() {
 
       console.log('Widgets Updated:', newWidgets);
     };
+
+    // function to update the widget order in the database
+  async function updateWidgetOrder(updatedWidgets) {
+    try {
+      const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          widget_order: updatedWidgets,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        console.log("Widget order updated successfully");
+      } else {
+        console.error("Error updating widget order:", data.message);
+      }
+    } catch (error) {
+      console.error("Failed to update widget order:", error);
+    }
+  }
     
 
     // function to toggle widget visibility
