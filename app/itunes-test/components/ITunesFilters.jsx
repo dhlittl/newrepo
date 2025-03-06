@@ -2,11 +2,19 @@
 
 import { useState, useEffect } from 'react';
 
-const ITunesFilters = ({ onFilterChange, onSortChange }) => {
-  const [mediaType, setMediaType] = useState('all');
-  const [entity, setEntity] = useState('');
+const ITunesFilters = ({ onFilterChange, onSortChange, currentFilters }) => {
+  const [mediaType, setMediaType] = useState(currentFilters?.mediaType || 'all');
+  const [entity, setEntity] = useState(currentFilters?.entity || '');
   const [sortBy, setSortBy] = useState('none');
   const [entityOptions, setEntityOptions] = useState([]);
+
+  // Update local state when props change
+  useEffect(() => {
+    if (currentFilters) {
+      setMediaType(currentFilters.mediaType || 'all');
+      setEntity(currentFilters.entity || '');
+    }
+  }, [currentFilters]);
 
   // Define entity options based on selected media type
   useEffect(() => {
@@ -63,18 +71,20 @@ const ITunesFilters = ({ onFilterChange, onSortChange }) => {
     }
     
     setEntityOptions(options);
-    setEntity(''); // Reset entity when media type changes
   }, [mediaType]);
 
   const handleMediaTypeChange = (e) => {
     const value = e.target.value;
     setMediaType(value);
+    // We'll let the parent component handle the entity reset
+    // Trigger the filter change immediately
     onFilterChange('mediaType', value);
   };
 
   const handleEntityChange = (e) => {
     const value = e.target.value;
     setEntity(value);
+    // Trigger the filter change immediately
     onFilterChange('entity', value);
   };
 

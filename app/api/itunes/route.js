@@ -3,18 +3,35 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const term = searchParams.get('term') || 'jack+johnson';
+  const term = searchParams.get('term') || '';
   const requestedLimit = parseInt(searchParams.get('limit') || '50');
   const page = parseInt(searchParams.get('page') || '1');
   const resultsPerPage = parseInt(searchParams.get('resultsPerPage') || '10');
+  
+  // Get the filter parameters
+  const media = searchParams.get('media');
+  const entity = searchParams.get('entity');
   
   try {
     // Request more than we need to account for API inconsistency
     const apiLimit = Math.max(requestedLimit, 200); 
     
-    const response = await fetch(
-      `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&limit=${apiLimit}`
-    );
+    // Build the base URL
+    let itunesApiUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&limit=${apiLimit}`;
+    
+    // Add media type filter if provided
+    if (media) {
+      itunesApiUrl += `&media=${encodeURIComponent(media)}`;
+    }
+    
+    // Add entity filter if provided
+    if (entity) {
+      itunesApiUrl += `&entity=${encodeURIComponent(entity)}`;
+    }
+    
+    console.log(`Calling iTunes API: ${itunesApiUrl}`);
+    
+    const response = await fetch(itunesApiUrl);
     
     if (!response.ok) {
       throw new Error(`iTunes API returned ${response.status}`);

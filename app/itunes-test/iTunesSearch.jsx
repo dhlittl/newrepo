@@ -5,15 +5,17 @@ import ITunesFilters from './components/ITunesFilters';
 import ItemDetail from './components/ItemDetail';
 
 export default function ITunesSearch() {
-  const [searchTerm, setSearchTerm] = useState('jack johnson');
+  const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState([]);
   const [filteredResults, setFilteredResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [hasSearched, setHasSearched] = useState(false);
   const [filters, setFilters] = useState({
-    mediaType: 'all'
+    mediaType: 'all',
+    entity: ''
   });
   const [sortOrder, setSortOrder] = useState('none');
   const [selectedItem, setSelectedItem] = useState(null);
@@ -21,6 +23,7 @@ export default function ITunesSearch() {
 
   const fetchResults = async (page = 1) => {
     setLoading(true);
+    setHasSearched(true); // Mark that a search has been performed
     try {
       let apiUrl = `/api/itunes?term=${encodeURIComponent(searchTerm)}&page=${page}&resultsPerPage=${resultsPerPage}`;
       
@@ -33,6 +36,8 @@ export default function ITunesSearch() {
       if (filters.entity) {
         apiUrl += `&entity=${filters.entity}`;
       }
+      
+      console.log("Calling API with URL:", apiUrl);
       
       const response = await fetch(apiUrl);
       
@@ -93,25 +98,96 @@ export default function ITunesSearch() {
   // Handle search submission
   const handleSearch = (e) => {
     e.preventDefault();
+    // Don't search if search term is empty
+    if (!searchTerm.trim()) {
+      return;
+    }
     // Reset to first page on new search
     fetchResults(1);
   };
 
-  // Initialize with default search
+  // On component mount
   useEffect(() => {
-    fetchResults(1);
+    // Don't perform initial search if search term is empty
+    if (searchTerm) {
+      fetchResults(1);
+    }
+    
+    // Add event listener for debugging filter changes
+    const logFilters = () => {
+      console.log("Current filters:", filters);
+    };
+    
+    // For debugging only
+    window.addEventListener('filter-debug', logFilters);
+    
+    return () => {
+      window.removeEventListener('filter-debug', logFilters);
+    };
   }, []);
 
   // Handle filter changes
   const handleFilterChange = (filterType, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterType]: value
-    }));
+    // Create updated filter state
+    let updatedFilters;
     
-    // If it's a filter that affects the API call, refetch data
-    if (filterType === 'mediaType' || filterType === 'entity') {
-      fetchResults(1);
+    if (filterType === 'mediaType') {
+      // If the media type changes, reset entity to empty
+      updatedFilters = {
+        ...filters,
+        [filterType]: value,
+        entity: '' // Reset entity when media type changes
+      };
+    } else {
+      updatedFilters = {
+        ...filters,
+        [filterType]: value
+      };
+    }
+    
+    // Update the filter state
+    setFilters(updatedFilters);
+    
+    // If it's a filter that affects the API call, refetch data immediately
+    if ((filterType === 'mediaType' || filterType === 'entity') && hasSearched && searchTerm.trim()) {
+      // Create a new function that uses the updated filters directly
+      const doFetch = async () => {
+        setLoading(true);
+        try {
+          let apiUrl = `/api/itunes?term=${encodeURIComponent(searchTerm)}&page=1&resultsPerPage=${resultsPerPage}`;
+          
+          // Use the updated filters for the API call
+          if (updatedFilters.mediaType !== 'all') {
+            apiUrl += `&media=${updatedFilters.mediaType}`;
+          }
+          
+          if (updatedFilters.entity) {
+            apiUrl += `&entity=${updatedFilters.entity}`;
+          }
+          
+          console.log("Calling API with URL:", apiUrl);
+          
+          const response = await fetch(apiUrl);
+          
+          if (!response.ok) {
+            throw new Error(`Error: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          setResults(data.results || []);
+          setFilteredResults(data.results || []);
+          setTotalResults(data.totalResults || 0);
+          setTotalPages(data.totalPages || 1);
+          setCurrentPage(data.currentPage || 1);
+        } catch (error) {
+          console.error('Error fetching iTunes data:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      // Execute the fetch immediately
+      doFetch();
     }
   };
 
@@ -131,6 +207,25 @@ export default function ITunesSearch() {
     if (currentPage > 1) {
       fetchResults(currentPage - 1);
     }
+  };
+
+  // Format the current filter description
+  const getFilterDescription = () => {
+    if (filters.mediaType === 'all' && !filters.entity) {
+      return '';
+    }
+    
+    let description = ' for ';
+    
+    if (filters.mediaType !== 'all') {
+      description += filters.mediaType;
+    }
+    
+    if (filters.entity) {
+      description += ` (${filters.entity})`;
+    }
+    
+    return description;
   };
 
   return (
@@ -158,21 +253,31 @@ export default function ITunesSearch() {
 
       <ITunesFilters 
         onFilterChange={handleFilterChange} 
-        onSortChange={handleSortChange} 
+        onSortChange={handleSortChange}
+        currentFilters={filters}
       />
 
       {loading ? (
         <p className="text-center">Loading...</p>
       ) : (
         <>
-          <div className="mb-4">
-            <p className="text-sm text-gray-600">
-              Showing {filteredResults.length} {filteredResults.length === 1 ? 'result' : 'results'}
-              {filters.mediaType !== 'all' && ` for ${filters.mediaType}`}
-              {filters.entity && ` (${filters.entity})`}
-              {sortOrder !== 'none' && ` sorted by: ${sortOrder}`}
+          {filteredResults.length > 0 ? (
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">
+                Showing {filteredResults.length} {filteredResults.length === 1 ? 'result' : 'results'}
+                {getFilterDescription()}
+                {sortOrder !== 'none' && ` sorted by: ${sortOrder}`}
+              </p>
+            </div>
+          ) : hasSearched ? (
+            <p className="text-center p-4 bg-gray-50 rounded-lg mb-4">
+              No results found for "{searchTerm}". Try different search terms or filters.
             </p>
-          </div>
+          ) : (
+            <p className="text-center p-4 bg-gray-50 rounded-lg mb-4">
+              Enter a search term above to find iTunes products.
+            </p>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredResults.map((item, index) => {
@@ -192,9 +297,9 @@ export default function ITunesSearch() {
               // Determine the price to display
               let priceDisplay = 'Not available';
               if (item.trackPrice !== undefined) {
-                priceDisplay = `${item.trackPrice}`;
+                priceDisplay = `$${item.trackPrice}`;
               } else if (item.collectionPrice !== undefined) {
-                priceDisplay = `${item.collectionPrice}`;
+                priceDisplay = `$${item.collectionPrice}`;
               }
 
               // Determine the media type display
@@ -244,7 +349,7 @@ export default function ITunesSearch() {
             })}
           </div>
 
-          {filteredResults.length === 0 && !loading && (
+          {filteredResults.length === 0 && !loading && hasSearched && (
             <p className="text-center p-8 bg-gray-50 rounded-lg">
               No results match your current filters. Try changing your filters or search term.
             </p>
