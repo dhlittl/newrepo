@@ -38,6 +38,10 @@ const initialWidgets = [
 export default function DriverDashboard() {
     const [widgets, setWidgets] = useState (initialWidgets);
 
+    useEffect(() => {
+      console.log("Widgets Updated:", widgets.map((w) => w.id));
+    }, [widgets]);
+
     // sensors for dragging widgets
     const sensors = useSensors(
       useSensor(PointerSensor),
@@ -46,15 +50,36 @@ export default function DriverDashboard() {
 
     // function to handle drag and drop
     const handleDrag = (event) => {
-      // defining events
-        // active == currently being dragged
-        // over == hovering over possible placement
       const { active, over } = event;
       if (!over || active.id === over.id) return;
-      const oldIndex = widgets.findIndex((widget) => widget.id === active.id);
-      const newIndex = widgets.findIndex((widget) => widget.id === over.id);
-      setWidgets(arrayMove(widgets, oldIndex, newIndex));
+    
+      console.log('Before Drag:', widgets);
+
+      // get current order
+      const visibleWidgets = widgets.filter((w) => w.visible);
+      const oldIndex = visibleWidgets.findIndex((w) => w.id === active.id);
+      const newIndex = visibleWidgets.findIndex((w) => w.id === over.id);
+    
+      // checking if valid indices were found
+      if (oldIndex === -1 || newIndex === -1) return;
+    
+      // reorder visible widgets
+      const newVisibleWidgets = arrayMove(visibleWidgets, oldIndex, newIndex);
+
+      console.log('New visible widgets:', newVisibleWidgets);
+    
+      // update widget list
+      /*const newWidgets = widgets.map((widget) =>
+        newVisibleWidgets.find((newW) => newW.id === widget.id) || widget
+      );*/
+    
+    
+      // update state
+      setWidgets(newVisibleWidgets);
+
+      console.log('Widgets Updated:', newWidgets);
     };
+    
 
     // function to toggle widget visibility
     const toggleWidget = (id) => {
@@ -86,7 +111,7 @@ export default function DriverDashboard() {
   
         {/* Draggable Widgets */}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDrag}>
-          <SortableContext items={widgets.map((w) => w.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={widgets.filter((w) => w.visible).map((w) => w.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-4">
               {widgets.filter((w) => w.visible).map((widget) => (
                 <SortableWidget key={widget.id} widget={widget} />
@@ -100,7 +125,9 @@ export default function DriverDashboard() {
 
   // making widgets sortable
   function SortableWidget({widget}) {
-    const { attributes, listeners, setNodeRef, transform, transition} = useSortable({ id: widget.id });
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+      id: widget.id,
+    });
 
     const style = {
       transform: CSS.Transform.toString(transform),
