@@ -19,15 +19,7 @@
         }
       },
       "function": {
-        "iTunesAPIFunction": {
-          "dbHost": "proxy-1739302102581-team24-database.proxy-cobd8enwsupz.us-east-1.rds.amazonaws.com",
-          "secretsPathAmplifyAppId": "d3ty33cs4lcdx0",
-          "deploymentBucketName": "amplify-team24gen1-dev-13106-deployment",
-          "s3Key": "amplify-builds/iTunesAPIFunction-456c6f414557636f7755-build.zip"
-        }
-      },
-      "api": {
-        "iTunesAPI": {}
+        "iTunesAPIFunction": {}
       }
     }
   }
