@@ -1,7 +1,7 @@
 // Driver Dashboard
 
 "use client";
-import  React , { useState } from 'react';
+import  React , { useState, useEffect } from 'react';
 
 // importing from dnd-kit for widget implementation and styling
 import {
@@ -120,13 +120,45 @@ export default function DriverDashboard() {
     );
   }
 
+  function PointsWidget() {
+    const [points, setPoints] = useState(null);
+    const [loading, setLoading] = useState(true);
+  
+    useEffect(() => {
+      async function fetchPoints() {
+        try {
+          const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points");
+          const data = await response.json();
+          if (response.ok) {
+            setPoints(data.points);
+          } else {
+            console.error("Error fetching points:", data.message);
+          }
+        } catch (error) {
+          console.error("Failed to fetch points:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+  
+      fetchPoints();
+    }, []);
+  
+    return (
+      <div>
+        <h3 className="font-semibold">Current Points</h3>
+        {loading ? <p>Loading...</p> : <p>{points !== null ? `${points} pts` : "No points available"}</p>}
+      </div>
+    );
+  }
+
 
   // widget components
   // some hardcoded bc not connected to db yet
   function getWidgetContent(id) {
     switch (id) {
       case "points":
-        return <Widget title="Current Points" content="1,500 pts" />;
+        return <PointsWidget />;
       case "conversion":
         return <Widget title="Point-to-Dollar" content="1,500 pts = $1500" />;
       case "progress":
