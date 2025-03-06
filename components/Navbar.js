@@ -17,7 +17,6 @@ const Navbar = () => {
     return <SponsorNavbar />;
   }
 
-  return <div>Default Navbar</div>; // Optional default navbar
 };
 
 export default Navbar;
