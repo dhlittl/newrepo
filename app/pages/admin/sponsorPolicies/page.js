@@ -109,6 +109,7 @@ export default function SponsorsPage() {
           <p className="text-gray-700">{selectedSponsor.description}</p>
           <p className="text-gray-700"><strong>Contact:</strong> {selectedSponsor.email}</p>
           <p className="text-gray-700"><strong>Phone:</strong> {selectedSponsor.phone}</p>
+          <p className="text-gray-700"><strong>ID:</strong> {selectedSponsor.id}</p>
         </div>
       )}
 
