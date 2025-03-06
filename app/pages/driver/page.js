@@ -44,17 +44,23 @@ export default function DriverDashboard() {
       // Fetch initial widget order from the API when the component mounts
       async function fetchWidgetOrder() {
         try {
-          const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences');
+          const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences?User_ID=${user_id}`);
           const data = await response.json();
-          if (response.ok) {
-            setWidgets(data.widget_order);
+      
+          if (response.ok && data.widget_order) {
+              // Update widgets based on the fetched widget order
+              const orderedWidgets = initialWidgets.map((widget) => {
+              return {
+                ...widget,
+                visible: data.widget_order.includes(widget.id)
+              };
+            });
+            setWidgets(orderedWidgets);
           } else {
-            console.error("Error fetching widget order:", data.message);
+            console.error("Error fetching widget order:", data); // log the entire data to debug
           }
         } catch (error) {
-          console.error("Failed to fetch widget order:", error);
-        } finally {
-          setLoading(false);
+          console.error("Failed to fetch widget order:", error); // more detailed error logging
         }
       }
   
@@ -96,37 +102,41 @@ export default function DriverDashboard() {
         newVisibleWidgets.find((newW) => newW.id === widget.id) || widget
       );
     
-    
+      console.log('Widgets Updated:', newWidgets);
+
       // update state
       setWidgets(newVisibleWidgets);
 
-      console.log('Widgets Updated:', newWidgets);
+      updateWidgetOrder(newVisibleWidgets.map((widget) => widget.id));
     };
 
     // function to update the widget order in the database
-  async function updateWidgetOrder(updatedWidgets) {
-    try {
-      const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          widget_order: updatedWidgets,
-        }),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        console.log("Widget order updated successfully");
-      } else {
-        console.error("Error updating widget order:", data.message);
+    async function updateWidgetOrder() {
+      try {
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences?User_ID=${userId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: "1", 
+            widget_order: widgets.map((w) => w.id),
+          }),
+        });
+    
+        const data = await response.json();
+        
+        console.log("API Response:", data);
+    
+        if (response.ok && data.success) { 
+          console.log("Widget order updated successfully");
+        } else {
+          console.error("Error updating widget order:", data); 
+        }
+      } catch (error) {
+        console.error("Failed to update widget order:", error);
       }
-    } catch (error) {
-      console.error("Failed to update widget order:", error);
     }
-  }
     
 
     // function to toggle widget visibility
