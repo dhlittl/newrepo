@@ -1,6 +1,6 @@
 // Driver Dashboard
 
-"use client";
+'use client';
 import  React , { useState, useEffect } from 'react';
 
 // importing from dnd-kit for widget implementation and styling
@@ -38,6 +38,44 @@ const initialWidgets = [
 
 export default function DriverDashboard() {
     const [widgets, setWidgets] = useState (initialWidgets);
+    const [userId, setUserId] = useState("1"); // update to be dynamic later
+    const [loading, setLoading] = useState(true);
+    //const User_ID="1";
+
+    useEffect(() => {
+      console.log("Using User_ID:", userId); 
+      // fetch initial widget order
+      async function fetchWidgetOrder() {
+        try {
+          if (typeof window !== 'undefined') {
+            const User_ID = userId;
+  
+            const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences?User_ID=${User_ID}`);
+            const data = await response.json();
+
+            console.log("API Response", data)
+  
+            if (response.ok && Array.isArray(data.widget_order)) {
+              const orderedWidgets = initialWidgets.map((widget) => ({
+                  ...widget,
+                  visible: data.widget_order.includes(widget.id)
+              }));
+              setWidgets(orderedWidgets);
+            } else {
+              console.error("Error fetching widget order:", data);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch widget order:", error);
+        }
+      }
+  
+      fetchWidgetOrder();
+    }, [userId]);
+
+    useEffect(() => {
+      console.log("Widgets Updated:", widgets.map((w) => w.id));
+    }, [widgets]);
 
     // sensors for dragging widgets
     const sensors = useSensors(
@@ -47,15 +85,69 @@ export default function DriverDashboard() {
 
     // function to handle drag and drop
     const handleDrag = (event) => {
-      // defining events
-        // active == currently being dragged
-        // over == hovering over possible placement
       const { active, over } = event;
       if (!over || active.id === over.id) return;
-      const oldIndex = widgets.findIndex((widget) => widget.id === active.id);
-      const newIndex = widgets.findIndex((widget) => widget.id === over.id);
-      setWidgets(arrayMove(widgets, oldIndex, newIndex));
+    
+      console.log('Before Drag:', widgets);
+
+      // get current order
+      const visibleWidgets = widgets.filter((w) => w.visible);
+      const oldIndex = visibleWidgets.findIndex((w) => w.id === active.id);
+      const newIndex = visibleWidgets.findIndex((w) => w.id === over.id);
+    
+      // checking if valid indices were found
+      if (oldIndex === -1 || newIndex === -1) return;
+    
+      // reorder visible widgets
+      const newVisibleWidgets = arrayMove(visibleWidgets, oldIndex, newIndex);
+
+      console.log('New visible widgets:', newVisibleWidgets);
+    
+      // update widget list
+      const newWidgets = widgets.map((widget) =>
+        newVisibleWidgets.find((newW) => newW.id === widget.id) || widget
+      );
+    
+      console.log('Widgets Updated:', newWidgets);
+
+      // update state
+      setWidgets(newVisibleWidgets);
+
+      //updateWidgetOrder(newVisibleWidgets.map((widget) => widget.id));
+      updateWidgetOrder(newVisibleWidgets);
     };
+
+    // function to update the widget order in the database
+    async function updateWidgetOrder(newVisibleWidgets) {
+      try {
+        const requestBody = {
+          User_ID: userId,
+          Widget_Order: newVisibleWidgets.map((widget) => widget.id),
+        };
+        console.log("Request Body:", requestBody);
+        
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        });
+    
+        const data = await response.json();
+        
+        console.log("API Response:", data);
+    
+        if (data.message === "Widget Order Updated or Created") { 
+          console.log("Widget order updated successfully");
+        } else {
+          console.error("Error updating widget order:", data); 
+        }
+      } catch (error) {
+        console.error("Failed to update widget order:", error);
+      }
+    };
+    
 
     // function to toggle widget visibility
     const toggleWidget = (id) => {
@@ -87,7 +179,7 @@ export default function DriverDashboard() {
   
         {/* Draggable Widgets */}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDrag}>
-          <SortableContext items={widgets.map((w) => w.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={widgets.filter((w) => w.visible).map((w) => w.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-4">
               {widgets.filter((w) => w.visible).map((widget) => (
                 <SortableWidget key={widget.id} widget={widget} />
@@ -101,7 +193,9 @@ export default function DriverDashboard() {
 
   // making widgets sortable
   function SortableWidget({widget}) {
-    const { attributes, listeners, setNodeRef, transform, transition} = useSortable({ id: widget.id });
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+      id: widget.id,
+    });
 
     const style = {
       transform: CSS.Transform.toString(transform),
