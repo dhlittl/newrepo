@@ -69,9 +69,9 @@ export default function DriverDashboard() {
       console.log('New visible widgets:', newVisibleWidgets);
     
       // update widget list
-      /*const newWidgets = widgets.map((widget) =>
+      const newWidgets = widgets.map((widget) =>
         newVisibleWidgets.find((newW) => newW.id === widget.id) || widget
-      );*/
+      );
     
     
       // update state
