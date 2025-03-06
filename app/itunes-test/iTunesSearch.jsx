@@ -37,6 +37,11 @@ export default function ITunesSearch() {
         apiUrl += `&entity=${filters.entity}`;
       }
       
+      // Add sort parameter if specified
+      if (sortOrder !== 'none') {
+        apiUrl += `&sort=${sortOrder}`;
+      }
+      
       console.log("Calling API with URL:", apiUrl);
       
       const response = await fetch(apiUrl);
@@ -58,42 +63,11 @@ export default function ITunesSearch() {
     }
   };
 
-  // Apply filters and sorting to results
+  // Update filtered results when results change
+  // Note: We're now handling sorting on the server side
   useEffect(() => {
-    let filtered = [...results];
-    
-    // Apply sorting
-    if (sortOrder !== 'none') {
-      filtered.sort((a, b) => {
-        switch (sortOrder) {
-          case 'price-low-high':
-            return (a.trackPrice || a.collectionPrice || 0) - (b.trackPrice || b.collectionPrice || 0);
-          case 'price-high-low':
-            return (b.trackPrice || b.collectionPrice || 0) - (a.trackPrice || a.collectionPrice || 0);
-          case 'name-a-z':
-            const nameA = a.trackName || a.collectionName || '';
-            const nameB = b.trackName || b.collectionName || '';
-            return nameA.localeCompare(nameB);
-          case 'name-z-a':
-            const nameADesc = a.trackName || a.collectionName || '';
-            const nameBDesc = b.trackName || b.collectionName || '';
-            return nameBDesc.localeCompare(nameADesc);
-          case 'date-newest':
-            const dateA = new Date(a.releaseDate || 0);
-            const dateB = new Date(b.releaseDate || 0);
-            return dateB - dateA;
-          case 'date-oldest':
-            const dateAOld = new Date(a.releaseDate || 0);
-            const dateBOld = new Date(b.releaseDate || 0);
-            return dateAOld - dateBOld;
-          default:
-            return 0;
-        }
-      });
-    }
-    
-    setFilteredResults(filtered);
-  }, [results, sortOrder]);
+    setFilteredResults([...results]);
+  }, [results]);
 
   // Handle search submission
   const handleSearch = (e) => {
@@ -165,6 +139,11 @@ export default function ITunesSearch() {
             apiUrl += `&entity=${updatedFilters.entity}`;
           }
           
+          // Include current sort order
+          if (sortOrder !== 'none') {
+            apiUrl += `&sort=${sortOrder}`;
+          }
+          
           console.log("Calling API with URL:", apiUrl);
           
           const response = await fetch(apiUrl);
@@ -178,7 +157,7 @@ export default function ITunesSearch() {
           setFilteredResults(data.results || []);
           setTotalResults(data.totalResults || 0);
           setTotalPages(data.totalPages || 1);
-          setCurrentPage(data.currentPage || 1);
+          setCurrentPage(1); // Reset to page 1 when filters change
         } catch (error) {
           console.error('Error fetching iTunes data:', error);
         } finally {
@@ -194,6 +173,52 @@ export default function ITunesSearch() {
   // Handle sort changes
   const handleSortChange = (sortValue) => {
     setSortOrder(sortValue);
+    
+    // If we have results and a search has been performed, refetch with the new sort order
+    if (hasSearched && searchTerm.trim()) {
+      // Reset to page 1 when sorting changes
+      const doSortedFetch = async () => {
+        setLoading(true);
+        try {
+          let apiUrl = `/api/itunes?term=${encodeURIComponent(searchTerm)}&page=1&resultsPerPage=${resultsPerPage}`;
+          
+          // Add media type filter if not 'all'
+          if (filters.mediaType !== 'all') {
+            apiUrl += `&media=${filters.mediaType}`;
+          }
+          
+          // Add entity filter if specified
+          if (filters.entity) {
+            apiUrl += `&entity=${filters.entity}`;
+          }
+          
+          // Add sort parameter
+          apiUrl += `&sort=${sortValue}`;
+          
+          console.log("Calling API with sorted URL:", apiUrl);
+          
+          const response = await fetch(apiUrl);
+          
+          if (!response.ok) {
+            throw new Error(`Error: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          // Update state with new sorted results
+          setResults(data.results || []);
+          setFilteredResults(data.results || []);
+          setTotalResults(data.totalResults || 0);
+          setTotalPages(data.totalPages || 1);
+          setCurrentPage(1); // Reset to page 1
+        } catch (error) {
+          console.error('Error fetching sorted iTunes data:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      doSortedFetch();
+    }
   };
 
   // Pagination handlers

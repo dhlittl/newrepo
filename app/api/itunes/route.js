@@ -11,6 +11,7 @@ export async function GET(request) {
   // Get the filter parameters
   const media = searchParams.get('media');
   const entity = searchParams.get('entity');
+  const sort = searchParams.get('sort');
   
   try {
     // Request more than we need to account for API inconsistency
@@ -40,16 +41,49 @@ export async function GET(request) {
     const data = await response.json();
     console.log(`iTunes API returned ${data.resultCount} results for term "${term}"`);
     
+    // Get all results first
+    let allResults = data.results || [];
+    
+    // Apply sorting on the server side if a sort option is specified
+    if (sort && sort !== 'none') {
+      console.log(`Applying server-side sorting: ${sort}`);
+      
+      allResults.sort((a, b) => {
+        switch (sort) {
+          case 'price-low-high':
+            return (a.trackPrice || a.collectionPrice || 0) - (b.trackPrice || b.collectionPrice || 0);
+          case 'price-high-low':
+            return (b.trackPrice || b.collectionPrice || 0) - (a.trackPrice || a.collectionPrice || 0);
+          case 'name-a-z':
+            const nameA = a.trackName || a.collectionName || '';
+            const nameB = b.trackName || b.collectionName || '';
+            return nameA.localeCompare(nameB);
+          case 'name-z-a':
+            const nameADesc = a.trackName || a.collectionName || '';
+            const nameBDesc = b.trackName || b.collectionName || '';
+            return nameBDesc.localeCompare(nameADesc);
+          case 'date-newest':
+            const dateA = new Date(a.releaseDate || 0);
+            const dateB = new Date(b.releaseDate || 0);
+            return dateB - dateA;
+          case 'date-oldest':
+            const dateAOld = new Date(a.releaseDate || 0);
+            const dateBOld = new Date(b.releaseDate || 0);
+            return dateAOld - dateBOld;
+          default:
+            return 0;
+        }
+      });
+    }
+    
     // Normalize the results to a consistent count for pagination
-    // The API returns variable counts, so we'll cap it at a consistent number
-    const normalizedResults = data.results;
-    const normalizedTotal = data.resultCount > apiLimit ? apiLimit : data.resultCount;
+    const normalizedTotal = allResults.length > apiLimit ? apiLimit : allResults.length;
     
     // Calculate pagination on the server side
     const startIndex = (page - 1) * resultsPerPage;
     const endIndex = startIndex + resultsPerPage;
     // Slice the exact number of results we want to return for this page
-    const paginatedResults = normalizedResults.slice(startIndex, endIndex);
+    const paginatedResults = allResults.slice(startIndex, endIndex);
     
     return NextResponse.json({
       results: paginatedResults,
