@@ -39,7 +39,7 @@ export default function DriverDashboard() {
     const [widgets, setWidgets] = useState (initialWidgets);
     const [userId, setUserId] = useState("1"); // update to be dynamic later
     const [loading, setLoading] = useState(true);
-    const User_ID="1";
+    //const User_ID="1";
 
     useEffect(() => {
       console.log("Using User_ID:", userId); 
@@ -47,18 +47,18 @@ export default function DriverDashboard() {
       async function fetchWidgetOrder() {
         try {
           if (typeof window !== 'undefined') {
-            //const User_ID = userId;
+            const User_ID = userId;
   
             const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences?User_ID=${User_ID}`);
             const data = await response.json();
+
+            console.log("API Response", data)
   
-            if (response.ok && data.widget_order) {
-              const orderedWidgets = initialWidgets.map((widget) => {
-                return {
+            if (response.ok && Array.isArray(data.widget_order)) {
+              const orderedWidgets = initialWidgets.map((widget) => ({
                   ...widget,
                   visible: data.widget_order.includes(widget.id)
-                };
-              });
+              }));
               setWidgets(orderedWidgets);
             } else {
               console.error("Error fetching widget order:", data);
@@ -112,28 +112,32 @@ export default function DriverDashboard() {
       // update state
       setWidgets(newVisibleWidgets);
 
-      updateWidgetOrder(newVisibleWidgets.map((widget) => widget.id));
+      //updateWidgetOrder(newVisibleWidgets.map((widget) => widget.id));
+      updateWidgetOrder(newVisibleWidgets);
     };
 
     // function to update the widget order in the database
-    async function updateWidgetOrder() {
+    async function updateWidgetOrder(newVisibleWidgets) {
       try {
-        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences?User_ID=${User_ID}`, {
+        const requestBody = {
+          User_ID: userId,
+          Widget_Order: newVisibleWidgets.map((widget) => widget.id),
+        };
+        console.log("Request Body:", requestBody);
+        
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            user_id: "1", 
-            widget_order: widgets.map((w) => w.id),
-          }),
+          body: JSON.stringify(requestBody),
         });
     
         const data = await response.json();
         
         console.log("API Response:", data);
     
-        if (response.ok && data.success) { 
+        if (data.message === "Widget Order Updated or Created") { 
           console.log("Widget order updated successfully");
         } else {
           console.error("Error updating widget order:", data); 
@@ -141,7 +145,7 @@ export default function DriverDashboard() {
       } catch (error) {
         console.error("Failed to update widget order:", error);
       }
-    }
+    };
     
 
     // function to toggle widget visibility
