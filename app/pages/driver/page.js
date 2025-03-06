@@ -33,6 +33,7 @@ const initialWidgets = [
   { id: "trend", name: "Point Trend Graph", visible: true},
   { id: "notifications", name: "Notifications", visible: true},
   { id: "help", name: "Help", visible: true},
+  { id: "sponsors", name: "Sponsors", visible: true},
 ];
 
 export default function DriverDashboard() {
@@ -146,6 +147,63 @@ export default function DriverDashboard() {
     );
   }
 
+  function SponsorsWidget() {
+    const [sponsors, setSponsors] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+  
+    useEffect(() => {
+      const fetchSponsors = async () => {
+        try {
+          const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors");
+  
+          if (!response.ok) {
+            throw new Error(`Failed to fetch sponsors: ${response.statusText}`);
+          }
+  
+          const data = await response.json();
+  
+          const transformedData = data.map((sponsor) => ({
+            id: sponsor.Sponsor_Org_ID,
+            name: sponsor.Sponsor_Org_Name,
+            description: sponsor.Sponsor_Description,
+            email: sponsor.Email,
+            phone: sponsor.Phone_Number,
+          }));
+  
+          setSponsors(transformedData);
+        } catch (err) {
+          setError(err.message);
+          setSponsors([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+  
+      fetchSponsors();
+    }, []);
+  
+    return (
+      <div>
+        <h3 className="font-semibold">Sponsors</h3>
+        {loading && <p>Loading...</p>}
+        {error && <p className="text-red-500">{error}</p>}
+        {!loading && !error && sponsors.length === 0 && <p>No sponsors available.</p>}
+  
+        {!loading && !error && sponsors.length > 0 && (
+          <ul className="list-disc pl-4">
+            {sponsors.map((sponsor) => (
+              <li key={sponsor.id}>
+                <strong>{sponsor.name}</strong> - {sponsor.description} <br />
+                <strong>Contact:</strong> {sponsor.email} | <strong>Phone:</strong> {sponsor.phone}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
 
   // widget components
   // some hardcoded bc not connected to db yet
@@ -167,6 +225,8 @@ export default function DriverDashboard() {
         return <Widget title="Notifications" content="You have 3 new alerts" />;
       case "help":
         return <LinkWidget title="Help" link="/pages/driver/driverHelp" />;
+      case "sponsors":
+        return <SponsorsWidget />;
       default:
         return null;
     }
