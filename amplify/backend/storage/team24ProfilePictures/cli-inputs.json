@@ -1,0 +1,13 @@
+{
+  "resourceName": "team24ProfilePictures",
+  "policyUUID": "e65e244a",
+  "bucketName": "team24profilepictures",
+  "storageAccess": "auth",
+  "guestAccess": [],
+  "authAccess": [
+    "CREATE_AND_UPDATE",
+    "READ"
+  ],
+  "triggerFunction": "NONE",
+  "groupAccess": {}
+}
