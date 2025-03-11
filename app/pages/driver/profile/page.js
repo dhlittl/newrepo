@@ -2,6 +2,7 @@
 
 "use client";
 import { useEffect, useState } from "react";
+import { Stoage } from "aws-amplify";
 
 export default function DriverProfilePage() {
   const [driver, setDriver] = useState(null);
@@ -14,6 +15,11 @@ export default function DriverProfilePage() {
     email: "",
     phone: "",
   });
+
+  // consts for images in S3
+  const [image, setImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [imageUrl, setImageUrl] = useState(null);
 
   useEffect(() => {
     const fetchDriverProfile = async () => {
@@ -44,6 +50,15 @@ export default function DriverProfilePage() {
           email: data[0].Email,
           phone: data[0].Phone_Number,
         });
+
+        // fetch profile picture from S3
+        const fileName = `profile-pictures/${data[0].User_ID}.jpg`;
+        try{
+          const url = await Storage.get(fileName);
+          setImageUrl(url);
+        } catch {
+          console.log("No profile picture found.");
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -53,6 +68,30 @@ export default function DriverProfilePage() {
 
     fetchDriverProfile();
   }, []);
+
+  // handling profile picture file change
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    setImage(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  // handling when file is uploaded to S3 bucket for profile picture
+  const uploadFile = async () => {
+    if (!image || !driver?.id) return;
+
+    try {
+      const fileName = `profile-pictures/${driver.id}.jpg`;
+      await Storage.put(fileName, image, { contentType: image.type });
+
+      // Retrieve the new image URL after upload
+      const url = await Storage.get(fileName);
+      setImageUrl(url);
+      alert("Profile picture uploaded successfully!");
+    } catch (error) {
+      console.error("Error uploading file:", error);
+    }
+  };
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
@@ -101,7 +140,7 @@ export default function DriverProfilePage() {
             phone: updatedDriver.phone
         });
 
-        setIsEditing(false); // Close edit form
+        setIsEditing(false); // close edit form
     } catch (err) {
         console.error("Error updating profile:", err);
         setError(err.message);
@@ -120,6 +159,21 @@ export default function DriverProfilePage() {
 
       {!loading && !error && driver && (
         <div className="space-y-6">
+          {/* Profile Picture Section */}
+          <div className="p-6 border rounded-lg shadow-sm bg-gray-50 text-center">
+            <h2 className="text-xl font-semibold text-black">Profile Picture</h2>
+            {imageUrl ? (
+              <img src={imageUrl} alt="Profile" className="mx-auto rounded-full w-24 h-24 mt-3" />
+            ) : (
+              <p className="text-gray-700">No profile picture</p>
+            )}
+            <input type="file" accept="image/*" onChange={handleFileChange} className="mt-3" />
+            {previewUrl && <img src={previewUrl} alt="Preview" className="mx-auto w-24 h-24 mt-3" />}
+            <button onClick={uploadFile} className="mt-2 bg-blue-500 text-white p-2 rounded-lg">
+              Upload Profile Picture
+            </button>
+          </div>
+
           {/* Personal Information Section */}
           <div className="p-6 border rounded-lg shadow-sm bg-gray-50">
             <h2 className="text-xl font-semibold text-black">Personal Information</h2>
