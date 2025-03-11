@@ -6,7 +6,12 @@ const dummyLogs = [
   { id: 2, date: "2025-03-11", category: "Update", description: "User updated profile info." },
   { id: 3, date: "2025-03-09", category: "Logout", description: "User admin logged out." },
   { id: 4, date: "2025-03-08", category: "Delete", description: "User deleted an entry." },
-  { id: 5, date: "2025-03-11", category: "Login", description: "User driver123 logged in." }
+  { id: 5, date: "2025-03-11", category: "Login", description: "User driver123 logged in." },
+  { id: 6, date: "2025-03-13", category: "Login", description: "User admin logged in." },
+  { id: 7, date: "2025-02-11", category: "Update", description: "User updated profile info." },
+  { id: 8, date: "2025-02-19", category: "Logout", description: "User admin logged out." },
+  { id: 9, date: "2025-03-07", category: "Delete", description: "User deleted an entry." },
+  { id: 10, date: "2025-01-13", category: "Login", description: "User driver123 logged in." }
 ];
 
 export default function Logs() {
