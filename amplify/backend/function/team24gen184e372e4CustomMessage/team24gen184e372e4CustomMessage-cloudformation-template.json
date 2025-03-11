@@ -1,25 +1,55 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "{\"createdOn\":\"Windows\",\"createdBy\":\"Amplify\",\"createdWith\":\"12.14.4\",\"stackType\":\"function-Lambda\",\"metadata\":{\"whyContinueWithGen1\":\"Prefer not to answer\"}}",
+  "Description": "{\"createdOn\":\"Mac\",\"createdBy\":\"Amplify\",\"createdWith\":\"12.14.4\",\"stackType\":\"function-Lambda\",\"metadata\":{\"whyContinueWithGen1\":\"Prefer not to answer\"}}",
   "Parameters": {
-    "CloudWatchRule": {
+    "REDIRECTURL": {
       "Type": "String",
-      "Default": "NONE",
-      "Description": " Schedule Expression"
+      "Default": ""
     },
-    "deploymentBucketName": {
-      "Type": "String"
+    "EMAILMESSAGE": {
+      "Type": "String",
+      "Default": ""
+    },
+    "EMAILSUBJECT": {
+      "Type": "String",
+      "Default": ""
+    },
+    "modules": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Comma-delimited list of modules to be executed by a lambda trigger. Sent to resource as an env variable."
+    },
+    "resourceName": {
+      "Type": "String",
+      "Default": ""
+    },
+    "trigger": {
+      "Type": "String",
+      "Default": "true"
+    },
+    "functionName": {
+      "Type": "String",
+      "Default": ""
+    },
+    "roleName": {
+      "Type": "String",
+      "Default": ""
+    },
+    "parentResource": {
+      "Type": "String",
+      "Default": ""
+    },
+    "parentStack": {
+      "Type": "String",
+      "Default": ""
     },
     "env": {
       "Type": "String"
     },
+    "deploymentBucketName": {
+      "Type": "String"
+    },
     "s3Key": {
-      "Type": "String"
-    },
-    "dbHost": {
-      "Type": "String"
-    },
-    "secretsPathAmplifyAppId": {
       "Type": "String"
     }
   },
@@ -41,24 +71,16 @@
         "aws:asset:property": "Code"
       },
       "Properties": {
-        "Code": {
-          "S3Bucket": {
-            "Ref": "deploymentBucketName"
-          },
-          "S3Key": {
-            "Ref": "s3Key"
-          }
-        },
         "Handler": "index.handler",
         "FunctionName": {
           "Fn::If": [
             "ShouldNotCreateEnvResources",
-            "iTunesAPIFunction",
+            "team24gen184e372e4CustomMessage",
             {
               "Fn::Join": [
                 "",
                 [
-                  "iTunesAPIFunction",
+                  "team24gen184e372e4CustomMessage",
                   "-",
                   {
                     "Ref": "env"
@@ -73,33 +95,23 @@
             "ENV": {
               "Ref": "env"
             },
+            "MODULES": {
+              "Ref": "modules"
+            },
             "REGION": {
               "Ref": "AWS::Region"
             },
-            "DB_HOST": {
-              "Ref": "dbHost"
+            "REDIRECTURL": {
+              "Ref": "REDIRECTURL"
             },
-            "DB_PASSWORD": {
-              "Fn::Join": [
-                "",
-                [
-                  {
-                    "Fn::Sub": [
-                      "/amplify/${appId}/${env}/AMPLIFY_${functionName}_",
-                      {
-                        "appId": {
-                          "Ref": "secretsPathAmplifyAppId"
-                        },
-                        "env": {
-                          "Ref": "env"
-                        },
-                        "functionName": "iTunesAPIFunction"
-                      }
-                    ]
-                  },
-                  "DB_PASSWORD"
-                ]
-              ]
+            "EMAILSUBJECT": {
+              "Ref": "EMAILSUBJECT"
+            },
+            "EMAILMESSAGE": {
+              "Ref": "EMAILMESSAGE"
+            },
+            "RESOURCENAME": {
+              "Ref": "resourceName"
             }
           }
         },
@@ -110,8 +122,15 @@
           ]
         },
         "Runtime": "nodejs18.x",
-        "Layers": [],
-        "Timeout": 25
+        "Timeout": 25,
+        "Code": {
+          "S3Bucket": {
+            "Ref": "deploymentBucketName"
+          },
+          "S3Key": {
+            "Ref": "s3Key"
+          }
+        }
       }
     },
     "LambdaExecutionRole": {
@@ -120,12 +139,12 @@
         "RoleName": {
           "Fn::If": [
             "ShouldNotCreateEnvResources",
-            "team24gen1LambdaRole84b72f05",
+            "team24gen184e372e4CustomMessage",
             {
               "Fn::Join": [
                 "",
                 [
-                  "team24gen1LambdaRole84b72f05",
+                  "team24gen184e372e4CustomMessage",
                   "-",
                   {
                     "Ref": "env"
@@ -195,63 +214,6 @@
           ]
         }
       }
-    },
-    "AmplifyFunctionSecretsPolicy": {
-      "Type": "AWS::IAM::Policy",
-      "Properties": {
-        "PolicyName": "amplify-function-secrets-policy",
-        "Roles": [
-          {
-            "Ref": "LambdaExecutionRole"
-          }
-        ],
-        "PolicyDocument": {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "ssm:GetParameter",
-                "ssm:GetParameters"
-              ],
-              "Resource": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "arn:aws:ssm:",
-                    {
-                      "Ref": "AWS::Region"
-                    },
-                    ":",
-                    {
-                      "Ref": "AWS::AccountId"
-                    },
-                    ":parameter",
-                    {
-                      "Fn::Sub": [
-                        "/amplify/${appId}/${env}/AMPLIFY_${functionName}_",
-                        {
-                          "appId": {
-                            "Ref": "secretsPathAmplifyAppId"
-                          },
-                          "env": {
-                            "Ref": "env"
-                          },
-                          "functionName": "iTunesAPIFunction"
-                        }
-                      ]
-                    },
-                    "*"
-                  ]
-                ]
-              }
-            }
-          ]
-        }
-      },
-      "DependsOn": [
-        "LambdaExecutionRole"
-      ]
     }
   },
   "Outputs": {
@@ -268,11 +230,6 @@
         ]
       }
     },
-    "Region": {
-      "Value": {
-        "Ref": "AWS::Region"
-      }
-    },
     "LambdaExecutionRole": {
       "Value": {
         "Ref": "LambdaExecutionRole"
@@ -284,6 +241,11 @@
           "LambdaExecutionRole",
           "Arn"
         ]
+      }
+    },
+    "Region": {
+      "Value": {
+        "Ref": "AWS::Region"
       }
     }
   }
