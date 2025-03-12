@@ -2,7 +2,9 @@
 
 "use client";
 import { useEffect, useState } from "react";
-import { Stoage } from "aws-amplify";
+//import Storage from '@aws-amplify/storage'; // use this one bc of version
+import { uploadData, getUrl } from 'aws-amplify/storage';
+
 
 export default function DriverProfilePage() {
   const [driver, setDriver] = useState(null);
@@ -31,7 +33,6 @@ export default function DriverProfilePage() {
           throw new Error(`Failed to fetch driver profile: ${response.statusText}`);
         }
         const data = await response.json();
-
         console.log("API Response:", data);
 
         const transformedData = {
@@ -54,8 +55,8 @@ export default function DriverProfilePage() {
         // fetch profile picture from S3
         const fileName = `profile-pictures/${data[0].User_ID}.jpg`;
         try{
-          const url = await Storage.get(fileName);
-          setImageUrl(url);
+          const url = await getUrl({key: fileName});
+          setImageUrl(result.url);
         } catch {
           console.log("No profile picture found.");
         }
@@ -82,11 +83,15 @@ export default function DriverProfilePage() {
 
     try {
       const fileName = `profile-pictures/${driver.id}.jpg`;
-      await Storage.put(fileName, image, { contentType: image.type });
+      await uploadData({
+        key: fileName, 
+        data: image, 
+        options: { contentType: image.type }
+    });
 
       // Retrieve the new image URL after upload
-      const url = await Storage.get(fileName);
-      setImageUrl(url);
+      const { url } = await getUrl({key: fileName});
+      setImageUrl(result.url);
       alert("Profile picture uploaded successfully!");
     } catch (error) {
       console.error("Error uploading file:", error);
