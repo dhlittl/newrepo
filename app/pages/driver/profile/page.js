@@ -2,8 +2,15 @@
 
 "use client";
 import { useEffect, useState } from "react";
-//import Storage from '@aws-amplify/storage'; // use this one bc of version
 import { uploadData, getUrl } from 'aws-amplify/storage';
+
+// importing Auth in a way that works
+import * as Amplify from 'aws-amplify';
+const { Auth } = Amplify;
+//import { Amplify, Auth } from 'aws-amplify';
+//import awsconfig from './aws-exports';
+
+//Amplify.configure(awsconfig);
 
 
 export default function DriverProfilePage() {
@@ -79,6 +86,11 @@ export default function DriverProfilePage() {
 
   // handling when file is uploaded to S3 bucket for profile picture
   const uploadFile = async () => {
+
+    // authorize user
+    const user = await Auth.currentAuthenticatedUser();
+    console.log("Authenticated User", user);
+
     if (!image || !driver?.id) return;
 
     try {
