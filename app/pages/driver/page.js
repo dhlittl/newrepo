@@ -152,15 +152,12 @@ export default function DriverDashboard() {
 
     // page
     return (
-      <div className="max-w-2xl mx-auto p-4">
-        
-        <h1 className="text-2xl font-bold mb-4">Driver Dashboard</h1>
-  
-        {/* Widget Selection */}
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Select Widgets</h2>
+      <div className="w-full mx-auto p-4 flex">
+        {/* Side Panel */}
+        <div className="w-1/6 bg-gray-200 p-4 rounded-md shadow-md mr-4">
+          <h2 className="text-lg font-semibold mb-4">Select Widgets</h2>
           {widgets.map((widget) => (
-            <div key={widget.id} className="flex items-center space-x-2">
+            <div key={widget.id} className="flex items-center space-x-2 mb-2">
               <input
                 type="checkbox"
                 checked={widget.visible}
@@ -170,19 +167,24 @@ export default function DriverDashboard() {
             </div>
           ))}
         </div>
-  
-        {/* Draggable Widgets */}
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDrag}>
-        <SortableContext items={widgets.filter((w) => w.visible).map((w) => w.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-4">
-              {widgets.filter((w) => w.visible).map((widget) => (
-                <SortableWidget key={widget.id} widget={widget} />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+    
+        {/* Main Dashboard Content */}
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold mb-4">Driver Dashboard</h1>
+          
+          {/* Draggable Widgets */}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDrag}>
+            <SortableContext items={widgets.filter((w) => w.visible).map((w) => w.id)} strategy={verticalListSortingStrategy}>
+              <div className="flex flex-wrap gap-4 justify-start">
+                {widgets.filter((w) => w.visible).map((widget) => (
+                  <SortableWidget key={widget.id} widget={widget} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
       </div>
-    );
+    );    
   }
 
   // making widgets sortable
