@@ -2,27 +2,9 @@
 
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
-const checkUserSession = async () => {
-    const router = useRouter();
-    try {
-      const session = await fetchAuthSession();
-      const idToken = session.tokens?.idToken;
-      
-      if (idToken) {
-        const groups = idToken.payload["cognito:groups"] || [];
-      }
-
-      if(!groups.include("Driver")) router.push("/pages/aboutpage");
-    } catch (error) {
-      router.push("/pages/aboutpage");
-    }
-  };
 
 export default function DriverProfilePage() {
-
-  checkUserSession();
   const [driver, setDriver] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

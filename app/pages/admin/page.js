@@ -1,6 +1,5 @@
 "use client";
 import  React , { useState } from 'react';
-import { useRouter } from "next/navigation";
 
 // importing from dnd-kit for widget implementation and styling
 import {
@@ -21,21 +20,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import Link from "next/link";
 
-const checkUserSession = async () => {
-    const router = useRouter();
-    try {
-      const session = await fetchAuthSession();
-      const idToken = session.tokens?.idToken;
-      
-      if (idToken) {
-        const groups = idToken.payload["cognito:groups"] || [];
-      }
-
-      if(!groups.include("Admin")) router.push("/pages/aboutpage");
-    } catch (error) {
-      router.push("/pages/aboutpage");
-    }
-  };
 
 // setting up initial widgets that the admin user has access to
 const initialWidgets = [
@@ -45,7 +29,6 @@ const initialWidgets = [
 ];
 
 export default function AdminDashboard() {
-    checkUserSession();
     const [widgets, setWidgets] = useState (initialWidgets);
 
     // sensors for dragging widgets

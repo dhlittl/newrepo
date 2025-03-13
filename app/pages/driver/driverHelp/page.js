@@ -1,29 +1,12 @@
 // Driver Help Page
 
 "use client";
-import { useRouter } from "next/navigation";
 
 // commented out import because link isn't connected yet
 //import Link from "next/link";
 
-const checkUserSession = async () => {
-    const router = useRouter();
-    try {
-      const session = await fetchAuthSession();
-      const idToken = session.tokens?.idToken;
-      
-      if (idToken) {
-        const groups = idToken.payload["cognito:groups"] || [];
-      }
-
-      if(!groups.include("Driver")) router.push("/pages/aboutpage");
-    } catch (error) {
-      router.push("/pages/aboutpage");
-    }
-  };
 
 const HelpPage = () => {
-    checkUserSession();
     return (
         <div className="p-6 max-w-4xl mx-auto">
             <h1 className="text-3xl font-bold mb-6">Driver Help Page</h1>
