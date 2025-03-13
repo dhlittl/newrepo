@@ -41,6 +41,35 @@ export default function HelpDesk() {
     fetchPendingApplications();
   }, []);
 
+  const reviewApplication = async (applicationId, status) => {
+    try {
+      const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            application_id: applicationId,
+            sponsor_id: sponsorId,
+            status: status,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${status.toLowerCase()} application: ${response.statusText}`);
+      }
+
+      console.log(`Application ${applicationId} ${status.toLowerCase()} successfully`);
+      
+      fetchPendingApplications();
+    } catch (err) {
+      console.error(`Error updating application: ${err.message}`);
+      setError(err.message);
+    }
+  };
+
 
   return (
     <main>
@@ -56,6 +85,14 @@ export default function HelpDesk() {
           {applications.map((app) => (
             <li key={app.id}>
               {app.fname} {app.lname} - {app.email} - {app.phone} (Submitted: {app.submittedAt})
+              {" "}
+              <button onClick={() => reviewApplication(app.id, "Approved")} style={{ marginLeft: "10px", color: "green" }}>
+                Approve
+              </button>
+              {" "}
+              <button onClick={() => reviewApplication(app.id, "Denied")} style={{ marginLeft: "5px", color: "red" }}>
+                Deny
+              </button>
             </li>
           ))}
         </ul>
