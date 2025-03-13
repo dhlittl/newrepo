@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function SponsorsPage() {
   const [sponsors, setSponsors] = useState([]);
@@ -76,7 +77,15 @@ export default function SponsorsPage() {
 
   return (
     <div className="max-w-2xl mx-auto bg-white p-6 shadow-md rounded-lg">
-      <h2 className="text-xl font-semibold mb-4 text-black">Our Sponsors</h2>
+      {/* Header section with inline button */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-black">Our Sponsors</h2>
+        <Link href="/pages/admin/sponsorRegistration">
+          <button className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition">
+            Add New Sponsor
+          </button>
+        </Link>
+      </div>
 
       {/* Loading/Error Handling for Sponsors */}
       {loadingSponsors && <p className="text-gray-500">Loading sponsors...</p>}

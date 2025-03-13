@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import AdminNavbar from "./AdminNavbar";
 import DriverNavbar from "./DriverNavbar";
 import SponsorNavbar from "./SponsorNavbar";
+import DefaultNavbar from "./DefaultNavbar";
 
 const Navbar = () => {
   const pathname = usePathname(); // Get the current route path
@@ -17,8 +18,9 @@ const Navbar = () => {
     return <DriverNavbar />;
   } else if (pathname.startsWith("/pages/sponsor")) {
     return <SponsorNavbar />;
+  } else if (pathname.startsWith("/pages/defaultUser")) {
+    return <DefaultNavbar />;
   }
-
 };
 
 export default Navbar;
