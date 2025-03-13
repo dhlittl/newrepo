@@ -1,3 +1,5 @@
+// app/pages/sponsor/page.js
+
 "use client";
 import  React , { useState } from 'react';
 

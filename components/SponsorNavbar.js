@@ -1,3 +1,5 @@
+// components/SponsorNavbar.js
+
 "use client";
 export default function SponsorNavbar() {
     return (

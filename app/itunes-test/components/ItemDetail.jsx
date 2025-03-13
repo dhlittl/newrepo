@@ -1,3 +1,4 @@
+// app/itunes-test/components/ItemDetail.jsx
 'use client';
 
 import { useState } from 'react';

@@ -1,3 +1,5 @@
+// components/AdminNavbar.js
+
 "use client";
 export default function AdminNavbar() {
     return (
