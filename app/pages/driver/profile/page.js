@@ -3,13 +3,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { uploadData, getUrl } from 'aws-amplify/storage';
-
-// importing Auth in a way that works
-import * as Amplify from 'aws-amplify';
-const { Auth } = Amplify;
-
-
-//import { Amplify, Auth } from 'aws-amplify';
+//import { fetchAuthSession } from 'aws-amplify/auth';
 
 export default function DriverProfilePage() {
   const [driver, setDriver] = useState(null);
@@ -84,24 +78,28 @@ export default function DriverProfilePage() {
 
   // handling when file is uploaded to S3 bucket for profile picture
   const uploadFile = async () => {
-
-    // authorize user
-    const user = await Auth.currentAuthenticatedUser();
-    console.log("Authenticated User", user);
-
     if (!image || !driver?.id) return;
-
+  
     try {
       const fileName = `profile-pictures/${driver.id}.jpg`;
-      await uploadData({
-        key: fileName, 
-        data: image, 
-        options: { contentType: image.type }
-    });
-
-      // Retrieve the new image URL after upload
-      const { url } = await getUrl({key: fileName});
-      setImageUrl(result.url);
+      
+      const result = await uploadData({
+        key: fileName,
+        data: image,
+        options: { 
+          contentType: image.type,
+          bucket: "team24profilepictures13106-dev" 
+        }
+      });
+      console.log("Uploading file to:", fileName);
+      console.log("Upload result:", result);
+  
+      // manually construct the public URL
+      const bucketName = "team24profilepictures13106-dev";
+      const region = "us-east-1";
+      const publicUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${fileName}`;
+      
+      setImageUrl(publicUrl);
       alert("Profile picture uploaded successfully!");
     } catch (error) {
       console.error("Error uploading file:", error);
@@ -127,7 +125,7 @@ export default function DriverProfilePage() {
             Phone_Number: updatedDriver.phone || driver.phone
         };
 
-        console.log("Sending request body:", requestBody); // Debugging
+        console.log("Sending request body:", requestBody); // debugging
 
         const response = await fetch(
             "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/profile",
