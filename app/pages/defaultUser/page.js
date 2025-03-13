@@ -112,9 +112,9 @@ return (
   function getWidgetContent(id) {
     switch (id) {
       case "apply":
-        return <Widget title="Application" content="Click here to apply to a sponsor!" link="/apply" />;
+        return <Widget title="Application" content="Click here to apply to a sponsor!" link="/pages/defaultUser/applyForm" />;
       case "sponsorInfo":
-        return <Widget title="Sponsor Information" content="Click here to view information about available sponsors!" link="/sponsorInfo"/>;
+        return <Widget title="Sponsor Information" content="Click here to view information about available sponsors!" link="/pages/defaultUser/sponsorsPage"/>;
       case "help":
         return <LinkWidget title="Help" link="/help" />;
       default:
