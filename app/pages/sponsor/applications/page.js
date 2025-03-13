@@ -1,8 +1,7 @@
 "use client";
-import  React , { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 export default function ApplicationViewing() {
-
   const [applications, setApplications] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -10,10 +9,14 @@ export default function ApplicationViewing() {
 
   const fetchPendingApplications = async () => {
     try {
-      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications?sponsor_id=${sponsorId}`);
+      const response = await fetch(
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications?sponsor_id=${sponsorId}`
+      );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch pending applications: ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch pending applications: ${response.statusText}`
+        );
       }
 
       const data = await response.json();
@@ -26,7 +29,7 @@ export default function ApplicationViewing() {
         lname: app.LName,
         email: app.Email,
         phone: app.Phone,
-        submittedAt: app.Submitted_At,
+        submittedAt: new Date(app.Submitted_At).toLocaleDateString(),
       }));
 
       setApplications(transformedData);
@@ -43,7 +46,8 @@ export default function ApplicationViewing() {
 
   const reviewApplication = async (applicationId, status) => {
     try {
-      const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
+      const response = await fetch(
+        "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
         {
           method: "PUT",
           headers: {
@@ -58,11 +62,13 @@ export default function ApplicationViewing() {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to ${status.toLowerCase()} application: ${response.statusText}`);
+        throw new Error(
+          `Failed to ${status.toLowerCase()} application: ${response.statusText}`
+        );
       }
 
       console.log(`Application ${applicationId} ${status.toLowerCase()} successfully`);
-      
+
       fetchPendingApplications();
     } catch (err) {
       console.error(`Error updating application: ${err.message}`);
@@ -70,32 +76,58 @@ export default function ApplicationViewing() {
     }
   };
 
-
   return (
-    <main>
-      <h1>Pending Applications</h1>
+    <main className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg">
+      <h1 className="text-2xl font-semibold text-gray-800 mb-4">
+        Pending Applications
+      </h1>
 
-      {loading && <p>Loading...</p>}
-      {error && <p style={{ color: "red" }}>Error: {error}</p>}
-
-      {applications && applications.length === 0 && <p>No pending applications.</p>}
+      {loading && <p className="text-gray-500">Loading...</p>}
+      {error && <p className="text-red-500">Error: {error}</p>}
+      {applications && applications.length === 0 && (
+        <p className="text-gray-500">No pending applications.</p>
+      )}
 
       {applications && applications.length > 0 && (
-        <ul>
-          {applications.map((app) => (
-            <li key={app.id}>
-              {app.fname} {app.lname} - {app.email} - {app.phone} (Submitted: {app.submittedAt})
-              {" "}
-              <button onClick={() => reviewApplication(app.id, "Approved")} style={{ marginLeft: "10px", color: "green" }}>
-                Approve
-              </button>
-              {" "}
-              <button onClick={() => reviewApplication(app.id, "Denied")} style={{ marginLeft: "5px", color: "red" }}>
-                Deny
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="overflow-x-auto">
+          <table className="w-full border border-gray-300 rounded-lg shadow-sm">
+            <thead>
+              <tr className="bg-gray-100 text-gray-700">
+                <th className="px-4 py-2 border">Name</th>
+                <th className="px-4 py-2 border">Email</th>
+                <th className="px-4 py-2 border">Phone</th>
+                <th className="px-4 py-2 border">Submitted</th>
+                <th className="px-4 py-2 border">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {applications.map((app) => (
+                <tr key={app.id} className="text-center hover:bg-gray-50">
+                  <td className="px-4 py-2 border">
+                    {app.fname} {app.lname}
+                  </td>
+                  <td className="px-4 py-2 border">{app.email}</td>
+                  <td className="px-4 py-2 border">{app.phone}</td>
+                  <td className="px-4 py-2 border">{app.submittedAt}</td>
+                  <td className="px-4 py-2 border flex justify-center gap-2">
+                    <button
+                      onClick={() => reviewApplication(app.id, "Approved")}
+                      className="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => reviewApplication(app.id, "Denied")}
+                      className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                    >
+                      Deny
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );
