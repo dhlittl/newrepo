@@ -82,7 +82,8 @@ export default function DriverProfilePage() {
   
     try {
       const fileName = `profile-pictures/${driver.id}.jpg`;
-      
+
+      // upload to s3 bucket
       const result = await uploadData({
         key: fileName,
         data: image,
@@ -93,8 +94,8 @@ export default function DriverProfilePage() {
       });
       console.log("Uploading file to:", fileName);
       console.log("Upload result:", result);
-  
-      // manually construct the public URL
+        
+      // manually construct the public url
       const bucketName = "team24profilepictures13106-dev";
       const region = "us-east-1";
       const publicUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${fileName}`;
@@ -118,7 +119,7 @@ export default function DriverProfilePage() {
     e.preventDefault();
     try {
         const requestBody = {
-            User_ID: driver.id, // Ensure this is an integer
+            User_ID: driver.id,
             FName: updatedDriver.fname || driver.fname,
             LName: updatedDriver.lname || driver.lname,
             Email: updatedDriver.email || driver.email,
