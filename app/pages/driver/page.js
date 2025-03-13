@@ -91,30 +91,24 @@ export default function DriverDashboard() {
       console.log('Before Drag:', widgets);
 
       // get current order
-      const visibleWidgets = widgets.filter((w) => w.visible);
-      const oldIndex = visibleWidgets.findIndex((w) => w.id === active.id);
-      const newIndex = visibleWidgets.findIndex((w) => w.id === over.id);
+      const updatedWidgets = [...widgets];
+
+      const oldIndex = updatedWidgets.findIndex((w) => w.id === active.id);
+      const newIndex = updatedWidgets.findIndex((w) => w.id === over.id);
     
       // checking if valid indices were found
       if (oldIndex === -1 || newIndex === -1) return;
     
-      // reorder visible widgets
-      const newVisibleWidgets = arrayMove(visibleWidgets, oldIndex, newIndex);
-
-      console.log('New visible widgets:', newVisibleWidgets);
-    
       // update widget list
-      const newWidgets = widgets.map((widget) =>
-        newVisibleWidgets.find((newW) => newW.id === widget.id) || widget
-      );
+      const [movedWidget] = updatedWidgets.splice(oldIndex, 1);
+      updatedWidgets.splice(newIndex, 0, movedWidget);
     
-      console.log('Widgets Updated:', newWidgets);
+      console.log('Widgets Updated:', updatedWidgets);
 
       // update state
-      setWidgets(newVisibleWidgets);
+      setWidgets(updatedWidgets);
 
-      //updateWidgetOrder(newVisibleWidgets.map((widget) => widget.id));
-      updateWidgetOrder(newVisibleWidgets);
+      updateWidgetOrder(updatedWidgets.filter((w) => w.visible));
     };
 
     // function to update the widget order in the database

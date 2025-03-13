@@ -7,11 +7,9 @@ import { uploadData, getUrl } from 'aws-amplify/storage';
 // importing Auth in a way that works
 import * as Amplify from 'aws-amplify';
 const { Auth } = Amplify;
+
+
 //import { Amplify, Auth } from 'aws-amplify';
-//import awsconfig from './aws-exports';
-
-//Amplify.configure(awsconfig);
-
 
 export default function DriverProfilePage() {
   const [driver, setDriver] = useState(null);
