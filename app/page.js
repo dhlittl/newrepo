@@ -14,7 +14,7 @@ export default function LoginPage() {
     if (groups.includes("Admin")) return "/pages/admin";
     else if (groups.includes("Sponsor")) return "/pages/sponsor";
     else if (groups.includes("Driver")) return "/pages/driver";
-    else if (groups.includes("Basic_User")) return "/pages/aboutpage";
+    else if (groups.includes("Basic_User")) return "/pages/defaultUser";
     return "/";
   };
 
