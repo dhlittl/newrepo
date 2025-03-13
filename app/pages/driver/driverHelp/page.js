@@ -14,7 +14,7 @@ const HelpPage = () => {
             <section className="mb-8">
                 <h2 className="text-2xl font-semibold mb-4">How to Edit Your Dashboard</h2>
                 <p>
-                    To edit your dashboard use the checkboxes at the top of your page to toggle 
+                    To edit your dashboard use the checkboxes on your sidebar to toggle 
                     on and off the widgets you want to see.
                 </p>
             </section>
