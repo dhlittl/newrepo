@@ -106,30 +106,24 @@ export default function DriverDashboard() {
       console.log('Before Drag:', widgets);
 
       // get current order
-      const visibleWidgets = widgets.filter((w) => w.visible);
-      const oldIndex = visibleWidgets.findIndex((w) => w.id === active.id);
-      const newIndex = visibleWidgets.findIndex((w) => w.id === over.id);
+      const updatedWidgets = [...widgets];
+
+      const oldIndex = updatedWidgets.findIndex((w) => w.id === active.id);
+      const newIndex = updatedWidgets.findIndex((w) => w.id === over.id);
     
       // checking if valid indices were found
       if (oldIndex === -1 || newIndex === -1) return;
     
-      // reorder visible widgets
-      const newVisibleWidgets = arrayMove(visibleWidgets, oldIndex, newIndex);
-
-      console.log('New visible widgets:', newVisibleWidgets);
-    
       // update widget list
-      const newWidgets = widgets.map((widget) =>
-        newVisibleWidgets.find((newW) => newW.id === widget.id) || widget
-      );
+      const [movedWidget] = updatedWidgets.splice(oldIndex, 1);
+      updatedWidgets.splice(newIndex, 0, movedWidget);
     
-      console.log('Widgets Updated:', newWidgets);
+      console.log('Widgets Updated:', updatedWidgets);
 
       // update state
-      setWidgets(newVisibleWidgets);
+      setWidgets(updatedWidgets);
 
-      //updateWidgetOrder(newVisibleWidgets.map((widget) => widget.id));
-      updateWidgetOrder(newVisibleWidgets);
+      updateWidgetOrder(updatedWidgets.filter((w) => w.visible));
     };
 
     // function to update the widget order in the database
@@ -173,15 +167,12 @@ export default function DriverDashboard() {
 
     // page
     return (
-      <div className="max-w-2xl mx-auto p-4">
-        
-        <h1 className="text-2xl font-bold mb-4">Driver Dashboard</h1>
-  
-        {/* Widget Selection */}
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Select Widgets</h2>
+      <div className="w-full mx-auto p-4 flex">
+        {/* Side Panel */}
+        <div className="w-1/6 bg-gray-200 p-4 rounded-md shadow-md mr-4">
+          <h2 className="text-lg font-semibold mb-4">Select Widgets</h2>
           {widgets.map((widget) => (
-            <div key={widget.id} className="flex items-center space-x-2">
+            <div key={widget.id} className="flex items-center space-x-2 mb-2">
               <input
                 type="checkbox"
                 checked={widget.visible}
@@ -191,19 +182,24 @@ export default function DriverDashboard() {
             </div>
           ))}
         </div>
-  
-        {/* Draggable Widgets */}
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDrag}>
-        <SortableContext items={widgets.filter((w) => w.visible).map((w) => w.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-4">
-              {widgets.filter((w) => w.visible).map((widget) => (
-                <SortableWidget key={widget.id} widget={widget} />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+    
+        {/* Main Dashboard Content */}
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold mb-4">Driver Dashboard</h1>
+          
+          {/* Draggable Widgets */}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDrag}>
+            <SortableContext items={widgets.filter((w) => w.visible).map((w) => w.id)} strategy={verticalListSortingStrategy}>
+              <div className="flex flex-wrap gap-4 justify-start">
+                {widgets.filter((w) => w.visible).map((widget) => (
+                  <SortableWidget key={widget.id} widget={widget} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
       </div>
-    );
+    );    
   }
 
   // making widgets sortable

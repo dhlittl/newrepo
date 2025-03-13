@@ -2,6 +2,8 @@
 
 "use client";
 import { useEffect, useState } from "react";
+import { uploadData, getUrl } from 'aws-amplify/storage';
+//import { fetchAuthSession } from 'aws-amplify/auth';
 
 
 export default function DriverProfilePage() {
@@ -16,6 +18,11 @@ export default function DriverProfilePage() {
     phone: "",
   });
 
+  // consts for images in S3
+  const [image, setImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [imageUrl, setImageUrl] = useState(null);
+
   useEffect(() => {
     const fetchDriverProfile = async () => {
       try {
@@ -26,7 +33,6 @@ export default function DriverProfilePage() {
           throw new Error(`Failed to fetch driver profile: ${response.statusText}`);
         }
         const data = await response.json();
-
         console.log("API Response:", data);
 
         const transformedData = {
@@ -45,6 +51,15 @@ export default function DriverProfilePage() {
           email: data[0].Email,
           phone: data[0].Phone_Number,
         });
+
+        // fetch profile picture from S3
+        const fileName = `profile-pictures/${data[0].User_ID}.jpg`;
+        try{
+          const url = await getUrl({key: fileName});
+          setImageUrl(result.url);
+        } catch {
+          console.log("No profile picture found.");
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -54,6 +69,44 @@ export default function DriverProfilePage() {
 
     fetchDriverProfile();
   }, []);
+
+  // handling profile picture file change
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    setImage(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  // handling when file is uploaded to S3 bucket for profile picture
+  const uploadFile = async () => {
+    if (!image || !driver?.id) return;
+  
+    try {
+      const fileName = `profile-pictures/${driver.id}.jpg`;
+
+      // upload to s3 bucket
+      const result = await uploadData({
+        key: fileName,
+        data: image,
+        options: { 
+          contentType: image.type,
+          bucket: "team24profilepictures13106-dev" 
+        }
+      });
+      console.log("Uploading file to:", fileName);
+      console.log("Upload result:", result);
+        
+      // manually construct the public url
+      const bucketName = "team24profilepictures13106-dev";
+      const region = "us-east-1";
+      const publicUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${fileName}`;
+      
+      setImageUrl(publicUrl);
+      alert("Profile picture uploaded successfully!");
+    } catch (error) {
+      console.error("Error uploading file:", error);
+    }
+  };
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
@@ -67,14 +120,14 @@ export default function DriverProfilePage() {
     e.preventDefault();
     try {
         const requestBody = {
-            User_ID: driver.id, // Ensure this is an integer
+            User_ID: driver.id,
             FName: updatedDriver.fname || driver.fname,
             LName: updatedDriver.lname || driver.lname,
             Email: updatedDriver.email || driver.email,
             Phone_Number: updatedDriver.phone || driver.phone
         };
 
-        console.log("Sending request body:", requestBody); // Debugging
+        console.log("Sending request body:", requestBody); // debugging
 
         const response = await fetch(
             "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/profile",
@@ -102,7 +155,7 @@ export default function DriverProfilePage() {
             phone: updatedDriver.phone
         });
 
-        setIsEditing(false); // Close edit form
+        setIsEditing(false); // close edit form
     } catch (err) {
         console.error("Error updating profile:", err);
         setError(err.message);
@@ -121,6 +174,21 @@ export default function DriverProfilePage() {
 
       {!loading && !error && driver && (
         <div className="space-y-6">
+          {/* Profile Picture Section */}
+          <div className="p-6 border rounded-lg shadow-sm bg-gray-50 text-center">
+            <h2 className="text-xl font-semibold text-black">Profile Picture</h2>
+            {imageUrl ? (
+              <img src={imageUrl} alt="Profile" className="mx-auto rounded-full w-24 h-24 mt-3" />
+            ) : (
+              <p className="text-gray-700">No profile picture</p>
+            )}
+            <input type="file" accept="image/*" onChange={handleFileChange} className="mt-3" />
+            {previewUrl && <img src={previewUrl} alt="Preview" className="mx-auto w-24 h-24 mt-3" />}
+            <button onClick={uploadFile} className="mt-2 bg-blue-500 text-white p-2 rounded-lg">
+              Upload Profile Picture
+            </button>
+          </div>
+
           {/* Personal Information Section */}
           <div className="p-6 border rounded-lg shadow-sm bg-gray-50">
             <h2 className="text-xl font-semibold text-black">Personal Information</h2>
