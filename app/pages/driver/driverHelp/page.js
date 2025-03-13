@@ -5,6 +5,7 @@
 // commented out import because link isn't connected yet
 //import Link from "next/link";
 
+
 const HelpPage = () => {
     return (
         <div className="p-6 max-w-4xl mx-auto">

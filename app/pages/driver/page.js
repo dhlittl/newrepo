@@ -36,6 +36,21 @@ const initialWidgets = [
   { id: "sponsors", name: "Sponsors", visible: true},
 ];
 
+const checkUserSession = async () => {
+    try {
+      const session = await fetchAuthSession();
+      const idToken = session.tokens?.idToken;
+      
+      if (idToken) {
+        const groups = idToken.payload["cognito:groups"] || [];
+      }
+
+      if(!groups.include("Driver")) router.push("/pages/aboutpage");;
+    } catch (error) {
+      console.log("No active user session. User needs to sign in.");
+    }
+  };
+
 export default function DriverDashboard() {
     const [widgets, setWidgets] = useState (initialWidgets);
     const [userId, setUserId] = useState("1"); // update to be dynamic later

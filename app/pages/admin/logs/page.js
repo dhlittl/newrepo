@@ -1,6 +1,5 @@
 "use client";
 import  React , { useState } from 'react';
-
 const dummyLogs = [
   { id: 1, date: "2025-03-10", category: "Login", description: "User admin logged in." },
   { id: 2, date: "2025-03-11", category: "Update", description: "User updated profile info." },

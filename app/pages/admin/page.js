@@ -20,6 +20,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import Link from "next/link";
 
+
 // setting up initial widgets that the admin user has access to
 const initialWidgets = [
   { id: "userManagement", name: "User Management", visible: true},
