@@ -3,7 +3,26 @@ import { useState, useEffect } from 'react';
 import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
 import "@/amplify-config";
 
+import { useRouter } from "next/navigation";
+
+const checkUserSession = async () => {
+  const router = useRouter();
+  try {
+    const session = await fetchAuthSession();
+    const idToken = session.tokens?.idToken;
+    
+    if (idToken) {
+      const groups = idToken.payload["cognito:groups"] || [];
+    }
+
+    if(!groups.include("Sponsor")) router.push("/pages/aboutpage");
+  } catch (error) {
+    router.push("/pages/aboutpage");
+  }
+};
+
 export default function SponsorDashboard() {
+  checkUserSession();
   const [sponsorOrgId, setSponsorOrgId] = useState(null);
   const [drivers, setDrivers] = useState([]);
   const [loadingDrivers, setLoadingDrivers] = useState(true);

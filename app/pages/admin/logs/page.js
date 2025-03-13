@@ -1,5 +1,22 @@
 "use client";
 import  React , { useState } from 'react';
+import { useRouter } from "next/navigation";
+
+const checkUserSession = async () => {
+    const router = useRouter();
+    try {
+      const session = await fetchAuthSession();
+      const idToken = session.tokens?.idToken;
+      
+      if (idToken) {
+        const groups = idToken.payload["cognito:groups"] || [];
+      }
+
+      if(!groups.include("Admin")) router.push("/pages/aboutpage");
+    } catch (error) {
+      router.push("/pages/aboutpage");
+    }
+  };
 
 const dummyLogs = [
   { id: 1, date: "2025-03-10", category: "Login", description: "User admin logged in." },
@@ -10,6 +27,7 @@ const dummyLogs = [
 ];
 
 export default function Logs() {
+  checkUserSession();
   const [categoryFilter, setCategoryFilter] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
 
