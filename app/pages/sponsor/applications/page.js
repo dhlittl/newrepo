@@ -1,7 +1,7 @@
 "use client";
 import  React , { useState, useEffect } from 'react';
 
-export default function HelpDesk() {
+export default function ApplicationViewing() {
 
   const [applications, setApplications] = useState(null);
   const [loading, setLoading] = useState(true);
