@@ -8,6 +8,7 @@ export default function SponsorNavbar() {
           <li><a href="/pages/sponsor">Dashboard</a></li>
           <li><a href="/pages/sponsor/drivers">My Drivers</a></li>
           <li><a href="/pages/sponsor/applications">Driver Applications</a></li>
+          <li><a href="/pages/sponsor/catalog">Product Catalog</a></li>
           <li><a href="/pages/sponsor/reports">Reports</a></li>
           <li><a href="/logout">Logout</a></li>
         </ul>
