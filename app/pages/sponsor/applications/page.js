@@ -8,36 +8,36 @@ export default function HelpDesk() {
   const [error, setError] = useState(null);
   const sponsorId = 1; // Replace with dynamic value if needed
 
-  useEffect(() => {
-    const fetchPendingApplications = async () => {
-      try {
-        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications?sponsor_id=${sponsorId}`);
-  
-        if (!response.ok) {
-          throw new Error(`Failed to fetch pending applications: ${response.statusText}`);
-        }
-  
-        const data = await response.json();
-        console.log("API Response:", data);
-  
-        // Transform data to match the expected format
-        const transformedData = data.map((app) => ({
-          id: app.Application_ID,
-          fname: app.FName,
-          lname: app.LName,
-          email: app.Email,
-          phone: app.Phone,
-          submittedAt: app.Submitted_At,
-        }));
-  
-        setApplications(transformedData);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const fetchPendingApplications = async () => {
+    try {
+      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications?sponsor_id=${sponsorId}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch pending applications: ${response.statusText}`);
       }
-    };
-  
+
+      const data = await response.json();
+      console.log("API Response:", data);
+
+      // Transform data to match the expected format
+      const transformedData = data.map((app) => ({
+        id: app.Application_ID,
+        fname: app.FName,
+        lname: app.LName,
+        email: app.Email,
+        phone: app.Phone,
+        submittedAt: app.Submitted_At,
+      }));
+
+      setApplications(transformedData);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchPendingApplications();
   }, []);
 
