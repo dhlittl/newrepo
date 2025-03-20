@@ -30,6 +30,8 @@ const initialWidgets = [
 
 export default function DefaultUserDashboard() {
     const [widgets, setWidgets] = useState (initialWidgets);
+    const [userId, setUserId] = useState("1"); // update to be dynamic later
+    const [loading, setLoading] = useState(true);
 
     // sensors for dragging widgets
     const sensors = useSensors(
@@ -59,7 +61,7 @@ export default function DefaultUserDashboard() {
     // page
     return (
         <div className="max-w-2xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">Driver Dashboard</h1>
+        <h1 className="text-2xl font-bold mb-4">Default User Dashboard</h1>
     
         {/* Widget Selection */}
         <div className="mb-4">
