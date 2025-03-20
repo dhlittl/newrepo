@@ -34,6 +34,7 @@ const initialWidgets = [
   { id: "notifications", name: "Notifications", visible: true},
   { id: "help", name: "Help", visible: true},
   { id: "sponsors", name: "Sponsors", visible: true},
+  { id: "apply", name: "Applications", visible: true},
 ];
 
 const checkUserSession = async () => {
@@ -332,6 +333,8 @@ export default function DriverDashboard() {
         return <LinkWidget title="Help" link="/pages/driver/driverHelp" />;
       case "sponsors":
         return <SponsorsWidget />;
+      case "apply":
+        return <LinkWidget title="Applications" content="Want to apply to more sponsors?" link="/pages/defaultUser/applyForm" />;
       default:
         return null;
     }
