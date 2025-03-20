@@ -321,7 +321,7 @@ export default function DriverDashboard() {
       case "progress":
         return <ProgressWidget />;
       case "catalog":
-        return <LinkWidget title="Rewards Catalog" link="/catalog" />;
+        return <LinkWidget title="Rewards Catalog" link="/pages/sponsor/catalog" />;
       case "friends":
         return <Widget title="Friends" content="You have 5 friends" />;
       case "trend":
