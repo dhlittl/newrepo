@@ -1,7 +1,9 @@
 // Admin Dashboard
 
 'use client';
-import  React , { useState } from 'react';
+//import  React , { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
 
 // importing from dnd-kit for widget implementation and styling
 import {
@@ -43,7 +45,7 @@ export default function AdminDashboard() {
         if (typeof window !== 'undefined') {
           const User_ID = userId;
 
-          const response = await fetch(); // add API Gateway Link here
+          const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Admin/Dashboard/Preferences?User_ID=${User_ID}`);
           const data = await response.json();
 
           console.log("API Response", data)
@@ -113,7 +115,7 @@ export default function AdminDashboard() {
       };
       console.log("Request Body:", requestBody);
       
-      const response = await fetch(/* add API Gateway Link here */, {
+      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Admin/Dashboard/Preferences`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

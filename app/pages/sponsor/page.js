@@ -3,7 +3,9 @@
 // app/pages/sponsor/page.js
 
 'use client';
-import  React , { useState } from 'react';
+//import  React , { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
 
 // importing from dnd-kit for widget implementation and styling
 import {
@@ -45,7 +47,7 @@ export default function SponsorDashboard() {
           if (typeof window !== 'undefined') {
             const User_ID = userId;
   
-            const response = await fetch();  // add API Gateway Link here
+            const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/Dashboard/Preferences?User_ID=${User_ID}`);  // add API Gateway Link here
             const data = await response.json();
 
             console.log("API Response", data)
@@ -115,7 +117,7 @@ export default function SponsorDashboard() {
         };
         console.log("Request Body:", requestBody);
         
-        const response = await fetch( /* add API Gateway Link here in `` */, {
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/Dashboard/Preferences`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
