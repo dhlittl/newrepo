@@ -41,7 +41,7 @@ export default function DefaultUserDashboard() {
           if (typeof window !== 'undefined') {
             const User_ID = userId;
   
-            const response = await fetch(`?User_ID=${User_ID}`);
+            const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/defaultUser/Dashboard/Preferences?User_ID=${User_ID}`);
             const data = await response.json();
 
             console.log("API Response", data)
@@ -111,7 +111,7 @@ export default function DefaultUserDashboard() {
         };
         console.log("Request Body:", requestBody);
         
-        const response = await fetch(``, {
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/defaultUser/Dashboard/Preferences`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
