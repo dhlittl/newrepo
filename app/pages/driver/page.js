@@ -365,39 +365,23 @@ function LinkWidget ({ title, link }) {
 
 // progress bar widget functionality
 function ProgressWidget() {
+  // hardcoding in progress percentage for now 
   const [progress, setProgress] = useState(60);
   const [pointGoal, setPointGoal] = useState(1000);
   const [isEditing, setIsEditing] = useState(false);
   const [newGoal, setNewGoal] = useState(pointGoal);
-  const [buttonClicked, setButtonClicked] = useState(false);
 
-  // Handle goal change in edit mode
+  // handle goal change in edit mode
   const handleGoalChange = (event) => {
     setNewGoal(event.target.value);
   };
 
-  // Save new goal
+  // save new goal
   const saveGoal = () => {
-    setPointGoal(newGoal); // update goal
-    setIsEditing(false); // exit edit mode
+    setPointGoal(newGoal); // updating goal
+    setIsEditing(false);  // exit edit mode
   };
-
-  const handleEditClick = () => {
-    if (buttonClicked) return; // Prevent multiple clicks if the button has been clicked already
-    setButtonClicked(true); // Set the flag that the button is clicked
-
-    // Delay the transition to editing to prevent the immediate double-click
-    setIsEditing(true);
-  };
-
-  // Reset the button clicked state after the action is completed
-  useEffect(() => {
-    if (isEditing) {
-      // Set the button to be "clickable" again after a short period
-      const timer = setTimeout(() => setButtonClicked(false), 300); // Debounce for 300ms
-      return () => clearTimeout(timer);
-    }
-  }, [isEditing]); // Only run when `isEditing` changes
+  
 
   return (
     <div>
@@ -431,12 +415,14 @@ function ProgressWidget() {
       </div>
       <p>{`${((progress / pointGoal) * 100).toFixed(1)}% Complete`}</p>
 
-      {/* Edit Button */}
+      {/* Edit Button Below the Progress Bar */}
       {!isEditing && (
         <button
-          onClick={handleEditClick}
+          onClick={() => {
+            console.log("Edit Button Clicked");
+            setIsEditing(true);
+          }}
           className="bg-yellow-500 text-white py-1 px-3 rounded-md mt-2"
-          disabled={buttonClicked} // Disable the button temporarily after clicking
         >
           Edit Goal
         </button>
@@ -444,7 +430,6 @@ function ProgressWidget() {
     </div>
   );
 }
-
 
 // point trend graph widget functionality 
 // hard coding for example and bc not tied to db yet
