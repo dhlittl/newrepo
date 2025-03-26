@@ -16,6 +16,20 @@ export default function ApplicationForm() {
     const [sponsorId, setSponsorId] = useState("");  // creating const for sponsor ID for retreival
     const [sponsors, setSponsors] = useState([]);  // creating const for sponsors for retreival
     const [errors, setErrors] = useState({});  // creating const for errors
+
+    const [infractions, setInfractions] = useState({
+        noTrafficInfractions: false,
+        seatbeltViolation: false,
+        speeding: false,
+        distractedDriving: false,
+        recklessDriving: false,
+        dui: false,
+        runningStopSign: false,
+        runningRedLight: false,
+        other: false,
+        otherDetails: "",
+    });
+
     const filteredPolicies = policies.filter(policy => policy.Sponsor_Org_ID == sponsorId);
 
     // fetch available sponsor from backend db
@@ -85,6 +99,19 @@ export default function ApplicationForm() {
         });
     };
 
+    const handleInfractionChange = (e) => {
+        const { name, checked } = e.target;
+        setInfractions((prev) => ({
+            ...prev,
+            [name]: checked,
+            ...(name !== "noTrafficInfractions" && name !== "other" ? { otherDetails: "" } : {}),
+        }));
+    };
+
+    const handleOtherDetailsChange = (e) => {
+        setInfractions({ ...infractions, otherDetails: e.target.value });
+    };
+
 
     const validateForm = () => {
         let newErrors = {};
@@ -96,12 +123,20 @@ export default function ApplicationForm() {
             newErrors.phone = "Valid phone number is required.";
         if (!sponsorId) newErrors.sponsorId = "Please select a sponsor.";
 
+        // validate sponsor policies section
         const allAgreed = filteredPolicies.every(
             policy => agreements[String(policy.Policy_ID)] === true
           );
           if (filteredPolicies.length > 0 && !allAgreed) {
             newErrors.agreements = "You must agree to all policies";
           }
+
+        // validate infraction section
+        if (Object.values(infractions).some(value => value === true && value !== "noTrafficInfractions")) {
+            if (!infractions.otherDetails && (infractions.seatbeltViolation || infractions.speeding || infractions.distractedDriving || infractions.recklessDriving || infractions.dui || infractions.runningStopSign || infractions.runningRedLight)) {
+                newErrors.infractionDetails = "Please provide more details for the selected infraction(s).";
+            }
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -117,6 +152,7 @@ export default function ApplicationForm() {
                 lastName: formData.lastName,
                 email: formData.email,
                 phone: formData.phone,
+                infractions: infractions,
             };
         
             console.log("Submitting data:", requestData);
@@ -144,6 +180,18 @@ export default function ApplicationForm() {
                     setErrors({});
                     setSponsorId("");
                     setAgreements({});
+                    setInfractions({
+                        noTrafficInfractions: false,
+                        seatbeltViolation: false,
+                        speeding: false,
+                        distractedDriving: false,
+                        recklessDriving: false,
+                        dui: false,
+                        runningStopSign: false,
+                        runningRedLight: false,
+                        other: false,
+                        otherDetails: "",
+                    });
                 } else {
                     console.error("Error submitting application:", responseData.error);
                     alert(`Error: ${responseData.error}`);
@@ -213,6 +261,46 @@ export default function ApplicationForm() {
                     {errors.agreements && <p className="text-red-500 text-sm">{errors.agreements}</p>}
                 </div>
             )}
+
+            {/* Traffic Infractions Section */}
+            <div>
+                <h3 className="text-lg font-semibold mt-4 text-black">Traffic Violations History</h3>
+                <div className="space-y-2">
+                    {[
+                        "noTrafficInfractions",
+                        "seatbeltViolation",
+                        "speeding",
+                        "distractedDriving",
+                        "recklessDriving",
+                        "dui",
+                        "runningStopSign",
+                        "runningRedLight",
+                        "other",
+                    ].map((infraction) => (
+                        <div key={infraction} className="flex items-center">
+                            <input
+                                type="checkbox"
+                                name={infraction}
+                                checked={infractions[infraction]}
+                                onChange={handleInfractionChange}
+                                className="mr-2"
+                            />
+                            <label className="text-black">{infraction.replace(/([A-Z])/g, " $1")}</label>
+                        </div>
+                    ))}
+                    {infractions.other && (
+                        <div>
+                            <label className="text-sm font-medium text-black">Please provide details for "Other":</label>
+                            <textarea
+                                value={infractions.otherDetails}
+                                onChange={handleOtherDetailsChange}
+                                className="mt-1 p-2 w-full border rounded-md text-black"
+                            />
+                        </div>
+                    )}
+                    {errors.infractionDetails && <p className="text-red-500 text-sm">{errors.infractionDetails}</p>}
+                </div>
+            </div>
 
             <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded-md">
             Submit
