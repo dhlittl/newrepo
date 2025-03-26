@@ -117,11 +117,26 @@ export default function ApplicationForm() {
 
     const handleInfractionChange = (e) => {
         const { name, checked } = e.target;
-        setInfractions((prev) => ({
-          ...prev,
-          [name]: checked,
-        }));
-      };
+
+        setInfractions((prev) => {
+            let updatedInfractions = { ...prev, [name]: checked };
+
+            if (name === "noTrafficViolations" && checked) {
+                // If "No Traffic Violations" is checked, uncheck all other infractions
+                Object.keys(updatedInfractions).forEach((key) => {
+                    if (key !== "noTrafficViolations") {
+                        updatedInfractions[key] = false;
+                    }
+                });
+            } else if (name !== "noTrafficViolations" && checked) {
+                // If any infraction is checked, uncheck "No Traffic Violations"
+                updatedInfractions.noTrafficViolations = false;
+            }
+
+            return updatedInfractions;
+        });
+    };
+    
 
       const handleInfractionDetailsChange = (e) => {
         const { name, value } = e.target;
@@ -150,78 +165,98 @@ export default function ApplicationForm() {
             newErrors.agreements = "You must agree to all policies";
           }
 
-        // validate infraction section
-        /*if (Object.values(infractions).some(value => value === true && value !== "noTrafficInfractions")) {
-            if (!infractions.otherDetails && (infractions.seatbeltViolation || infractions.speeding || infractions.distractedDriving || infractions.recklessDriving || infractions.dui || infractions.runningStopSign || infractions.runningRedLight)) {
-                newErrors.infractionDetails = "Please provide more details for the selected infraction(s).";
-            }
-        }*/
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+    
         if (validateForm()) {
-            
-            const requestData = {
-                sponsorId: sponsorId,
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                email: formData.email,
-                phone: formData.phone,
-                infractions: infractions,
-                infractionDetails: infractionDetails,
-              };
-        
-            console.log("Submitting data:", requestData);
-        
-            try {
-                const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/application", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(requestData)
-                });
-        
-                const responseData = await response.json();
-                console.log("API Response:", responseData);
-        
-                if (response.ok) {
-                    alert("Application submitted successfully!");
-                    setFormData({
-                        firstName: '',
-                        lastName: '',
-                        email: '',
-                        phone: '',
-                    });
-                    setErrors({});
-                    setSponsorId("");
-                    setAgreements({});
-                    setInfractions({
-                        noTrafficInfractions: false,
-                        seatbeltViolation: false,
-                        speeding: false,
-                        distractedDriving: false,
-                        recklessDriving: false,
-                        dui: false,
-                        runningStopSign: false,
-                        runningRedLight: false,
-                        other: false,
-                        otherDetails: "",
-                    });
-                } else {
-                    console.error("Error submitting application:", responseData.error);
-                    alert(`Error: ${responseData.error}`);
+            let valid = true;
+    
+            // If "No Traffic Violations" is checked, allow submission
+            if (!infractions.noTrafficViolations) {
+                for (let infraction in infractions) {
+                    if (infractions[infraction] && infraction !== "noTrafficViolations") {
+                        // If an infraction is checked but no details are provided, show error
+                        if (!infractionDetails[infraction]?.trim()) {
+                            valid = false;
+                            alert(`Please provide more information for "${capitalizeFirstLetter(infraction.replace(/([A-Z])/g, " $1"))}".`);
+                            break;
+                        }
+                    }
                 }
-            } catch (error) {
-                console.error("Error:", error);
-                alert("An error occurred while submitting your application.");
+            }
+    
+            // Proceed only if the form is still valid
+            if (valid) {
+                const requestData = {
+                    sponsorId,
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    email: formData.email,
+                    phone: formData.phone,
+                    infractions,
+                    infractionDetails,
+                };
+    
+                console.log("Submitting data:", requestData);
+    
+                try {
+                    const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/application", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(requestData)
+                    });
+    
+                    const responseData = await response.json();
+                    console.log("API Response:", responseData);
+    
+                    if (response.ok) {
+                        alert("Application submitted successfully!");
+                        // Reset form state
+                        setFormData({ firstName: '', lastName: '', email: '', phone: '' });
+                        setErrors({});
+                        setSponsorId("");
+                        setAgreements({});
+                        setInfractions({
+                            noTrafficViolations: false,
+                            seatbelt: false,
+                            speeding: false,
+                            distractedDriving: false,
+                            recklessDriving: false,
+                            dui: false,
+                            runningStopSign: false,
+                            runningRedLight: false,
+                            other: false,
+                        });
+                        setInfractionDetails({
+                            seatbelt: "",
+                            speeding: "",
+                            distractedDriving: "",
+                            recklessDriving: "",
+                            dui: "",
+                            runningStopSign: "",
+                            runningRedLight: "",
+                            other: "",
+                        });
+                    } else {
+                        console.error("Error submitting application:", responseData.error);
+                        alert(`Error: ${responseData.error}`);
+                    }
+                } catch (error) {
+                    console.error("Error:", error);
+                    alert("An error occurred while submitting your application.");
+                }
             }
         }
     };
+    
+    
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
