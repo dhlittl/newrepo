@@ -365,19 +365,86 @@ function LinkWidget ({ title, link }) {
 
 // progress bar widget functionality
 function ProgressWidget() {
-  // hardcoding in progress percentage for now 
-  const progress = 60;
+  const [progress, setProgress] = useState(60);
+  const [pointGoal, setPointGoal] = useState(1000);
+  const [isEditing, setIsEditing] = useState(false);
+  const [newGoal, setNewGoal] = useState(pointGoal);
+  const [buttonClicked, setButtonClicked] = useState(false);
+
+  // Handle goal change in edit mode
+  const handleGoalChange = (event) => {
+    setNewGoal(event.target.value);
+  };
+
+  // Save new goal
+  const saveGoal = () => {
+    setPointGoal(newGoal); // update goal
+    setIsEditing(false); // exit edit mode
+  };
+
+  const handleEditClick = () => {
+    if (buttonClicked) return; // Prevent multiple clicks if the button has been clicked already
+    setButtonClicked(true); // Set the flag that the button is clicked
+
+    // Delay the transition to editing to prevent the immediate double-click
+    setIsEditing(true);
+  };
+
+  // Reset the button clicked state after the action is completed
+  useEffect(() => {
+    if (isEditing) {
+      // Set the button to be "clickable" again after a short period
+      const timer = setTimeout(() => setButtonClicked(false), 300); // Debounce for 300ms
+      return () => clearTimeout(timer);
+    }
+  }, [isEditing]); // Only run when `isEditing` changes
 
   return (
     <div>
       <h3 className="font-semibold">Progress to Goal</h3>
-        <div className="bg-gray-300 h-4 rounded-md overflow-hidden">
-          <div className="bg-blue-500 h-full" style={{ width: `${progress}%` }}></div>
+
+      {/* Editable Goal Display */}
+      {isEditing ? (
+        <div className="flex items-center space-x-2">
+          <input
+            type="number"
+            value={newGoal}
+            onChange={handleGoalChange}
+            className="p-2 border rounded-md"
+          />
+          <button
+            onClick={saveGoal}
+            className="bg-blue-600 text-white p-1 rounded-md"
+          >
+            Save
+          </button>
         </div>
-      <p>{progress}% Complete</p>
+      ) : (
+        <div className="flex items-center space-x-2">
+          <p className="text-lg">{`Goal: ${pointGoal} points`}</p>
+        </div>
+      )}
+
+      {/* Progress Bar */}
+      <div className="bg-gray-300 h-4 rounded-md overflow-hidden mt-2">
+        <div className="bg-blue-500 h-full" style={{ width: `${(progress / pointGoal) * 100}%` }}></div>
+      </div>
+      <p>{`${((progress / pointGoal) * 100).toFixed(1)}% Complete`}</p>
+
+      {/* Edit Button */}
+      {!isEditing && (
+        <button
+          onClick={handleEditClick}
+          className="bg-yellow-500 text-white py-1 px-3 rounded-md mt-2"
+          disabled={buttonClicked} // Disable the button temporarily after clicking
+        >
+          Edit Goal
+        </button>
+      )}
     </div>
   );
 }
+
 
 // point trend graph widget functionality 
 // hard coding for example and bc not tied to db yet
