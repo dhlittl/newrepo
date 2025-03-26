@@ -364,12 +364,14 @@ function LinkWidget ({ title, link }) {
 }
 
 // progress bar widget functionality
-function ProgressWidget() {
+/*function ProgressWidget() {
   // hardcoding in progress percentage for now 
   const [progress, setProgress] = useState(60);
   const [pointGoal, setPointGoal] = useState(1000);
   const [isEditing, setIsEditing] = useState(false);
   const [newGoal, setNewGoal] = useState(pointGoal);
+
+  
 
   // handle goal change in edit mode
   const handleGoalChange = (event) => {
@@ -380,56 +382,69 @@ function ProgressWidget() {
   const saveGoal = () => {
     setPointGoal(newGoal); // updating goal
     setIsEditing(false);  // exit edit mode
-  };
-  
+  };*/
+
+function ProgressWidget() {
+  const [points, setPoints] = useState(null); 
+  const [pointGoal, setPointGoal] = useState(null); 
+  const [progress, setProgress] = useState(0); 
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchProgressData() {
+      try {
+        // Fetch current points
+        const pointsResponse = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points");
+        const pointsData = await pointsResponse.json();
+        
+        if (pointsResponse.ok) {
+          setPoints(pointsData.points);  // Set current points
+        } else {
+          console.error("Error fetching points:", pointsData.message);
+        }
+
+        // Fetch point goal
+        const goalResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/pointGoal?User_ID=${User_ID}`);
+        const goalData = await goalResponse.json();
+        
+        if (goalResponse.ok) {
+          setPointGoal(goalData.point_goal);  // Set point goal
+        } else {
+          console.error("Error fetching point goal:", goalData.message);
+        }
+      } catch (error) {
+        console.error("Failed to fetch progress data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProgressData();
+  }, []);
+
+  useEffect(() => {
+    if (pointGoal !== null && points !== null) {
+      setProgress((points / pointGoal) * 100);  // Calculate the progress
+    }
+  }, [points, pointGoal]);  // Recalculate when points or pointGoal changes
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div>
       <h3 className="font-semibold">Progress to Goal</h3>
 
-      {/* Editable Goal Display */}
-      {isEditing ? (
-        <div className="flex items-center space-x-2">
-          <input
-            type="number"
-            value={newGoal}
-            onChange={handleGoalChange}
-            className="p-2 border rounded-md"
-          />
-          <button
-            onClick={saveGoal}
-            className="bg-blue-600 text-white p-1 rounded-md"
-          >
-            Save
-          </button>
-        </div>
-      ) : (
-        <div className="flex items-center space-x-2">
-          <p className="text-lg">{`Goal: ${pointGoal} points`}</p>
-        </div>
-      )}
-
       {/* Progress Bar */}
       <div className="bg-gray-300 h-4 rounded-md overflow-hidden mt-2">
-        <div className="bg-blue-500 h-full" style={{ width: `${(progress / pointGoal) * 100}%` }}></div>
+        <div className="bg-blue-500 h-full" style={{ width: `${progress}%` }}></div>
       </div>
-      <p>{`${((progress / pointGoal) * 100).toFixed(1)}% Complete`}</p>
-
-      {/* Edit Button Below the Progress Bar */}
-      {!isEditing && (
-        <button
-          onClick={() => {
-            console.log("Edit Button Clicked");
-            setIsEditing(true);
-          }}
-          className="bg-yellow-500 text-white py-1 px-3 rounded-md mt-2"
-        >
-          Edit Goal
-        </button>
-      )}
+      <p>{`${progress.toFixed(1)}% Complete`} </p>
     </div>
   );
 }
+
 
 // point trend graph widget functionality 
 // hard coding for example and bc not tied to db yet
