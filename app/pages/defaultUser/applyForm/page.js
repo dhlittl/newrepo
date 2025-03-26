@@ -18,8 +18,8 @@ export default function ApplicationForm() {
     const [errors, setErrors] = useState({});  // creating const for errors
 
     const [infractions, setInfractions] = useState({
-        noTrafficInfractions: false,
-        seatbeltViolation: false,
+        noTrafficViolations: false,
+        seatbelt: false,
         speeding: false,
         distractedDriving: false,
         recklessDriving: false,
@@ -27,8 +27,17 @@ export default function ApplicationForm() {
         runningStopSign: false,
         runningRedLight: false,
         other: false,
-        otherDetails: "",
-    });
+      });
+      const [infractionDetails, setInfractionDetails] = useState({
+        seatbelt: "",
+        speeding: "",
+        distractedDriving: "",
+        recklessDriving: "",
+        dui: "",
+        runningStopSign: "",
+        runningRedLight: "",
+        other: "",
+      });
 
     const filteredPolicies = policies.filter(policy => policy.Sponsor_Org_ID == sponsorId);
 
@@ -99,18 +108,28 @@ export default function ApplicationForm() {
         });
     };
 
+    // function to capitalize first letter in text (for infractions bug fix)
+    const capitalizeFirstLetter = (text) => {
+        return text
+          .toLowerCase()
+          .replace(/\b\w/g, (char) => char.toUpperCase());
+      };
+
     const handleInfractionChange = (e) => {
         const { name, checked } = e.target;
         setInfractions((prev) => ({
-            ...prev,
-            [name]: checked,
-            ...(name !== "noTrafficInfractions" && name !== "other" ? { otherDetails: "" } : {}),
+          ...prev,
+          [name]: checked,
         }));
-    };
+      };
 
-    const handleOtherDetailsChange = (e) => {
-        setInfractions({ ...infractions, otherDetails: e.target.value });
-    };
+      const handleInfractionDetailsChange = (e) => {
+        const { name, value } = e.target;
+        setInfractionDetails((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
+      };
 
 
     const validateForm = () => {
@@ -132,11 +151,11 @@ export default function ApplicationForm() {
           }
 
         // validate infraction section
-        if (Object.values(infractions).some(value => value === true && value !== "noTrafficInfractions")) {
+        /*if (Object.values(infractions).some(value => value === true && value !== "noTrafficInfractions")) {
             if (!infractions.otherDetails && (infractions.seatbeltViolation || infractions.speeding || infractions.distractedDriving || infractions.recklessDriving || infractions.dui || infractions.runningStopSign || infractions.runningRedLight)) {
                 newErrors.infractionDetails = "Please provide more details for the selected infraction(s).";
             }
-        }
+        }*/
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -153,7 +172,8 @@ export default function ApplicationForm() {
                 email: formData.email,
                 phone: formData.phone,
                 infractions: infractions,
-            };
+                infractionDetails: infractionDetails,
+              };
         
             console.log("Submitting data:", requestData);
         
@@ -262,22 +282,30 @@ export default function ApplicationForm() {
                 </div>
             )}
 
-            {/* Traffic Infractions Section */}
+            {/* Infraction Checkboxes */}
             <div>
-                <h3 className="text-lg font-semibold mt-4 text-black">Traffic Violations History</h3>
-                <div className="space-y-2">
-                    {[
-                        "noTrafficInfractions",
-                        "seatbeltViolation",
-                        "speeding",
-                        "distractedDriving",
-                        "recklessDriving",
-                        "dui",
-                        "runningStopSign",
-                        "runningRedLight",
-                        "other",
-                    ].map((infraction) => (
-                        <div key={infraction} className="flex items-center">
+                <h3 className="text-lg font-semibold mt-4 text-black">Driving History</h3>
+                <div>
+                {Object.keys(infractions).map((infraction) => (
+                    <div key={infraction} className="space-y-2">
+                        {/* Checkbox for "No Traffic Violations" without a text box */}
+                        {infraction === "noTrafficViolations" ? (
+                        <div className="flex items-center">
+                            <input
+                            type="checkbox"
+                            name={infraction}
+                            checked={infractions[infraction]}
+                            onChange={handleInfractionChange}
+                            className="mr-2"
+                            />
+                            <label className="text-black">
+                            {capitalizeFirstLetter(infraction.replace(/([A-Z])/g, " $1"))}
+                            </label>
+                        </div>
+                        ) : (
+                        <div className="space-y-2">
+                            {/* Other infractions will show a text box */}
+                            <div className="flex items-center">
                             <input
                                 type="checkbox"
                                 name={infraction}
@@ -285,23 +313,34 @@ export default function ApplicationForm() {
                                 onChange={handleInfractionChange}
                                 className="mr-2"
                             />
-                            <label className="text-black">{infraction.replace(/([A-Z])/g, " $1")}</label>
-                        </div>
-                    ))}
-                    {infractions.other && (
-                        <div>
-                            <label className="text-sm font-medium text-black">Please provide details for "Other":</label>
-                            <textarea
-                                value={infractions.otherDetails}
-                                onChange={handleOtherDetailsChange}
+                            <label className="text-black">
+                                {capitalizeFirstLetter(infraction.replace(/([A-Z])/g, " $1"))}
+                            </label>
+                            </div>
+
+                            {/* Textbox for infractions other than "No Traffic Violations" */}
+                            {infractions[infraction] && infraction !== "noTrafficViolations" && (
+                            <div className="mt-2 pl-6">
+                                <label className="block text-sm text-black">
+                                Please provide more information
+                                </label>
+                                <input
+                                type="text"
+                                name={infraction}
+                                value={infractionDetails[infraction]}
+                                onChange={handleInfractionDetailsChange}
                                 className="mt-1 p-2 w-full border rounded-md text-black"
-                            />
+                                />
+                            </div>
+                            )}
                         </div>
-                    )}
-                    {errors.infractionDetails && <p className="text-red-500 text-sm">{errors.infractionDetails}</p>}
+                        )}
+                    </div>
+                    ))}
                 </div>
             </div>
 
+            {/* Submission Button */}
             <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded-md">
             Submit
             </button>
