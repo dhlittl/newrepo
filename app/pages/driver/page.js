@@ -198,9 +198,9 @@ export default function DriverDashboard() {
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDrag}>
           <SortableContext items={widgets.filter((w) => w.visible).map((w) => w.id)} strategy={verticalListSortingStrategy}>
             <div className="flex flex-wrap gap-4 justify-start">
-              {widgets.filter((w) => w.visible).map((widget) => (
-                <SortableWidget key={widget.id} widget={widget} />
-              ))}
+            {widgets.filter((w) => w.visible).map((widget) => (
+              <SortableWidget key={widget.id} widget={widget} userId={userId} />
+            ))}
             </div>
           </SortableContext>
         </DndContext>
@@ -212,7 +212,7 @@ export default function DriverDashboard() {
 
 // SORTING FUNCTION
 // making widgets sortable
-function SortableWidget({widget}) {
+function SortableWidget({widget, userId}) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: widget.id,
   });
@@ -224,21 +224,21 @@ function SortableWidget({widget}) {
 
   return (
     <div ref={setNodeRef} {...attributes} {...listeners} style={style} className="bg-gray-200 p-4 rounded-md shadow-md cursor-grab">
-      {getWidgetContent(widget.id)}
+      {getWidgetContent(widget.id, userId)}
     </div>
   );
 }
 
 // WIDGET COMPONENTS
 // some hardcoded bc not connected to db yet
-function getWidgetContent(id) {
+function getWidgetContent(id, userId) {
   switch (id) {
     case "points":
       return <PointsWidget />;
     case "conversion":
       return <Widget title="Point-to-Dollar" content="1,500 pts = $1500" />;
     case "progress":
-      return <ProgressWidget />;
+      return <ProgressWidget userId={userId}/>;
     case "catalog":
       return <LinkWidget title="Rewards Catalog" link="/itunes-test" />;
     case "friends":
@@ -393,7 +393,7 @@ function ProgressWidget({ userId }) {
     async function fetchProgressData() {
       try {
         // fetch current points
-        const pointsResponse = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points?User_ID=${userId}");
+        const pointsResponse = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points");
         const pointsData = await pointsResponse.json();
         
         if (pointsResponse.ok) {
