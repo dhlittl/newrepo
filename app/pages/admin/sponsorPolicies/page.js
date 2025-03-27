@@ -58,27 +58,31 @@ export default function SponsorsPage() {
   }, []);
 
   // Fetch users when a sponsor is selected
-useEffect(() => {
-  if (!selectedSponsorId) return;
+  useEffect(() => {
+    if (!selectedSponsorId) return;
 
-  const fetchSponsorUsers = async () => {
-    setLoadingUsers(true);
-    try {
-      const response = await fetch(
-        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/${selectedSponsorId}/users`
-      );
-      if (!response.ok) throw new Error(`Failed to fetch sponsor users: ${response.statusText}`);
-      setSponsorUsers(await response.json());
-    } catch (error) {
-      console.error("Error fetching sponsor users:", error);
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
+    const fetchSponsorUsers = async () => {
+      setLoadingUsers(true);
+      try {
+        const response = await fetch(
+          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/users?sponsorOrgId=${selectedSponsorId}`
+        );
+        if (!response.ok) {
+          const errorDetails = await response.text(); // Get error details from response body
+          throw new Error(`Failed to fetch sponsor users: ${response.status} - ${errorDetails}`);
+        }
+        const data = await response.json();
+        setSponsorUsers(data);
+      } catch (error) {
+        console.error("Error fetching sponsor users:", error);
+        setError(error.message); // Update error state with the message
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
 
-  fetchSponsorUsers();
-}, [selectedSponsorId]);
-
+    fetchSponsorUsers();
+  }, [selectedSponsorId]);
 
   // Handle sponsor selection
   const handleSponsorChange = (e) => {
@@ -173,8 +177,9 @@ useEffect(() => {
             <ul className="space-y-2">
               {sponsorUsers.map((user) => (
                 <li key={user.User_ID} className="p-2 bg-gray-100 rounded-lg">
-                  <p className="text-black font-medium">{user.Name}</p>
+                  <p className="text-black font-medium">{user.FName} {user.LName}</p>
                   <p className="text-gray-700">{user.Email}</p>
+                  <p className="text-gray-700">Points Changed: {user.Num_Point_Changes}</p>
                 </li>
               ))}
             </ul>
