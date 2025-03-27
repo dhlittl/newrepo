@@ -63,6 +63,13 @@ export default function Logs() {
         >
           Sort by Date ({sortOrder === "asc" ? "Oldest" : "Newest"})
         </button>
+
+        <button
+          onClick={() => window.open("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Admin/Logs?format=csv", "_blank")}
+          className="p-2 border rounded bg-green-500 text-white"
+        >
+          Download CSV
+        </button>
       </div>
   
       {/* Log Entries */}
