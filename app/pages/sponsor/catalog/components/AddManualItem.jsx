@@ -5,22 +5,28 @@
 
 import { useState } from 'react';
 
-const AddManualItem = ({ sponsorId, onItemAdded }) => {
+const AddManualItem = ({ sponsorId, onItemAdded, pointsRatio = 100, setFeatured = false }) => {
   const [formData, setFormData] = useState({
     productName: '',
     productDescription: '',
     price: '',
     quantity: '1',
-    imageUrl: ''
+    imageUrl: '',
+    featured: setFeatured
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
+  // Calculate the equivalent point value
+  const pointValue = formData.price.trim() && !isNaN(parseFloat(formData.price)) 
+    ? Math.ceil(parseFloat(formData.price) * pointsRatio) 
+    : 0;
+
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     });
     
     // Clear error for this field when user makes a change
@@ -88,6 +94,7 @@ const AddManualItem = ({ sponsorId, onItemAdded }) => {
         price: parseFloat(formData.price),
         quantity: parseInt(formData.quantity),
         imageUrl: formData.imageUrl,
+        featured: formData.featured
       });
       
       const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/sponsors/catalog', {
@@ -102,6 +109,7 @@ const AddManualItem = ({ sponsorId, onItemAdded }) => {
           price: parseFloat(formData.price),
           quantity: parseInt(formData.quantity),
           imageUrl: formData.imageUrl,
+          featured: formData.featured
         }),
       });
       
@@ -117,7 +125,8 @@ const AddManualItem = ({ sponsorId, onItemAdded }) => {
         productDescription: '',
         price: '',
         quantity: '1',
-        imageUrl: ''
+        imageUrl: '',
+        featured: setFeatured
       });
       
       // Notify parent component
@@ -137,7 +146,8 @@ const AddManualItem = ({ sponsorId, onItemAdded }) => {
           productDescription: '',
           price: '',
           quantity: '1',
-          imageUrl: ''
+          imageUrl: '',
+          featured: setFeatured
         });
         
         // Notify parent component to simulate success
@@ -190,20 +200,34 @@ const AddManualItem = ({ sponsorId, onItemAdded }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                Price (in $) <span className="text-red-500">*</span>
+                Dollar Price <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                id="price"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                placeholder="0.00"
-                className={`w-full p-2 border rounded-md ${errors.price ? 'border-red-500' : 'border-gray-300'}`}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  id="price"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  className={`w-full p-2 pl-6 border rounded-md ${errors.price ? 'border-red-500' : 'border-gray-300'}`}
+                />
+                <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                  <span className="text-gray-500">$</span>
+                </div>
+              </div>
               {errors.price && (
                 <p className="mt-1 text-sm text-red-500">{errors.price}</p>
               )}
+              
+              {pointValue > 0 && (
+                <div className="mt-1 text-sm text-green-600 font-medium">
+                  Equivalent to {pointValue.toLocaleString()} points
+                </div>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Conversion Rate: ${(1/pointsRatio).toFixed(2)} per point ({pointsRatio} points = $1.00)
+              </p>
             </div>
             
             <div>
@@ -242,6 +266,20 @@ const AddManualItem = ({ sponsorId, onItemAdded }) => {
               <p className="mt-1 text-sm text-red-500">{errors.imageUrl}</p>
             )}
             <p className="mt-1 text-xs text-gray-500">Leave blank if no image is available</p>
+          </div>
+          
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="featured"
+              name="featured"
+              checked={formData.featured}
+              onChange={handleChange}
+              className="h-4 w-4 text-blue-600 rounded"
+            />
+            <label htmlFor="featured" className="ml-2 block text-sm text-gray-700">
+              Mark as featured product
+            </label>
           </div>
           
           <div className="flex justify-end space-x-2">
