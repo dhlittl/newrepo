@@ -54,7 +54,7 @@ const checkUserSession = async () => {
 
 export default function DriverDashboard() {
     const [widgets, setWidgets] = useState (initialWidgets);
-    const [userId, setUserId] = useState("1"); // update to be dynamic later
+    const [userId, setUserId] = useState(1); // update to be dynamic later
     const [loading, setLoading] = useState(true);
     //const User_ID="1";
 
@@ -384,31 +384,48 @@ function LinkWidget ({ title, link }) {
     setIsEditing(false);  // exit edit mode
   };*/
 
-function ProgressWidget() {
-  const [points, setPoints] = useState(null); 
-  const [pointGoal, setPointGoal] = useState(null); 
-  const [progress, setProgress] = useState(0); 
+function ProgressWidget({ userId }) {
+  const [points, setPoints] = useState(null);
+  const [pointGoal, setPointGoal] = useState(null);
+  const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [newGoal, setNewGoal] = useState('');
 
-  useEffect(() => {
+  //useEffect(() => {
+    //debug
+    useEffect(() => {
+      // Validate userId before making any API calls
+      if (!userId || userId === "undefined") {
+        console.error("Invalid User_ID");
+        setLoading(false); // Stop loading if userId is invalid
+        return; // Don't proceed with data fetching if User_ID is invalid
+      }
+  
+  
+    console.log("Using User_ID:", userId); 
+
+
     async function fetchProgressData() {
       try {
-        // Fetch current points
+        // fetch current points
         const pointsResponse = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points");
         const pointsData = await pointsResponse.json();
         
         if (pointsResponse.ok) {
-          setPoints(pointsData.points);  // Set current points
+          setPoints(pointsData.points);
         } else {
           console.error("Error fetching points:", pointsData.message);
         }
 
-        // Fetch point goal
-        const goalResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/pointGoal?User_ID=${User_ID}`);
+        // fetch point goal
+        const goalResponse = await fetch(` https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/pointGoal?User_ID=${userId}`);
         const goalData = await goalResponse.json();
         
         if (goalResponse.ok) {
-          setPointGoal(goalData.point_goal);  // Set point goal
+          console.log("Fetched Point Goal:", goalData.Point_Goal);
+          setPointGoal(goalData.point_goal);
+          setNewGoal(goalData.point_goal); 
         } else {
           console.error("Error fetching point goal:", goalData.message);
         }
@@ -420,13 +437,55 @@ function ProgressWidget() {
     }
 
     fetchProgressData();
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (pointGoal !== null && points !== null) {
-      setProgress((points / pointGoal) * 100);  // Calculate the progress
+      setProgress((points / pointGoal) * 100);
     }
-  }, [points, pointGoal]);  // Recalculate when points or pointGoal changes
+  }, [points, pointGoal]);
+
+  const handleEditClick = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelClick = () => {
+    setIsEditing(false);
+    setNewGoal(pointGoal); // Reset input to current value
+  };
+
+  const handleSaveClick = async () => {
+    console.log("Attempting to update point goal:", newGoal);
+
+    if (!newGoal || isNaN(newGoal) || newGoal <= 0) {
+      console.error("Invalid goal value:", newGoal);
+      return;
+    }
+    try {
+      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/pointGoal`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ User_ID: userId, Point_Goal: parseInt(newGoal, 10) }),
+      });
+
+      // debugging
+      const result = await response.json().catch(() => null);
+
+      console.log("Full Response:", response);
+      console.log("Response Status:", response.status);
+      console.log("Response Body:", result);
+
+      if (response.ok) {
+        console.log("Point goal updated successfully!");
+        setPointGoal(parseInt(newGoal, 10)); 
+        setIsEditing(false);
+      } else {
+        console.error("Error updating point goal");
+      }
+    } catch (error) {
+      console.error("Failed to update point goal:", error);
+    }
+  };
 
   if (loading) {
     return <div>Loading...</div>;
@@ -440,7 +499,22 @@ function ProgressWidget() {
       <div className="bg-gray-300 h-4 rounded-md overflow-hidden mt-2">
         <div className="bg-blue-500 h-full" style={{ width: `${progress}%` }}></div>
       </div>
-      <p>{`${progress.toFixed(1)}% Complete`} </p>
+      <p>{`${progress.toFixed(1)}% Complete`}</p>
+
+      {isEditing ? (
+        <div>
+          <input
+            type="number"
+            value={newGoal}
+            onChange={(e) => setNewGoal(e.target.value)}
+            className="border p-1 rounded-md"
+          />
+          <button onClick={handleSaveClick} className="ml-2 bg-green-500 text-white px-2 py-1 rounded">Save</button>
+          <button onClick={handleCancelClick} className="ml-2 bg-gray-500 text-white px-2 py-1 rounded">Cancel</button>
+        </div>
+      ) : (
+        <button onClick={handleEditClick} className="mt-2 bg-blue-500 text-white px-2 py-1 rounded">Edit Goal</button>
+      )}
     </div>
   );
 }
