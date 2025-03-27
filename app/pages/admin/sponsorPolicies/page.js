@@ -58,27 +58,27 @@ export default function SponsorsPage() {
   }, []);
 
   // Fetch users when a sponsor is selected
-  useEffect(() => {
-    if (!selectedSponsorId) return;
+useEffect(() => {
+  if (!selectedSponsorId) return;
 
-    const fetchSponsorUsers = async () => {
-      setLoadingUsers(true);
-      try {
-        const response = await fetch(
-          // Fetch the sponsor users associated with sponsor id
-          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/${selectedSponsorId}/users`
-        );
-        if (!response.ok) throw new Error(`Failed to fetch sponsor users: ${response.statusText}`);
-        setSponsorUsers(await response.json());
-      } catch (error) {
-        console.error("Error fetching sponsor users:", error);
-      } finally {
-        setLoadingUsers(false);
-      }
-    };
+  const fetchSponsorUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const response = await fetch(
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/${selectedSponsorId}/users`
+      );
+      if (!response.ok) throw new Error(`Failed to fetch sponsor users: ${response.statusText}`);
+      setSponsorUsers(await response.json());
+    } catch (error) {
+      console.error("Error fetching sponsor users:", error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
-    fetchSponsorUsers();
-  }, [selectedSponsorId]);
+  fetchSponsorUsers();
+}, [selectedSponsorId]);
+
 
   // Handle sponsor selection
   const handleSponsorChange = (e) => {
