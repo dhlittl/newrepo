@@ -1,12 +1,12 @@
 // app/pages/sponsor/catalog/ITunesSearch.jsx
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import ITunesFilters from './components/ITunesFilters';
 import ItemDetail from './components/ItemDetail';
-import ItemCard from '@/components/catalog/ItemCard';
 
-export default function ITunesSearch({ onAddToCatalog, pointsRatio = 100, catalogItems = [] }) {
+export default function ITunesSearch({ onAddToCatalog }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState([]);
   const [filteredResults, setFilteredResults] = useState([]);
@@ -21,32 +21,30 @@ export default function ITunesSearch({ onAddToCatalog, pointsRatio = 100, catalo
   });
   const [sortOrder, setSortOrder] = useState('none');
   const [selectedItem, setSelectedItem] = useState(null);
-  const [selectedItems, setSelectedItems] = useState([]);
-  const [addedItems, setAddedItems] = useState({});
   const resultsPerPage = 10;
 
-  const fetchResults = async (page = 1, retryForEmptyResults = true) => {
+  const fetchResults = async (page = 1) => {
     setLoading(true);
-    setHasSearched(true);
-    
+    setHasSearched(true); // Mark that a search has been performed
     try {
-      // Request more results per page to account for already added items
-      const requestLimit = resultsPerPage * 2;
+      let apiUrl = `/api/itunes?term=${encodeURIComponent(searchTerm)}&page=${page}&resultsPerPage=${resultsPerPage}`;
       
-      let apiUrl = `/api/itunes?term=${encodeURIComponent(searchTerm)}&page=${page}&resultsPerPage=${requestLimit}`;
-      
-      // Add filters to URL
+      // Add media type filter if not 'all'
       if (filters.mediaType !== 'all') {
         apiUrl += `&media=${filters.mediaType}`;
       }
       
+      // Add entity filter if specified
       if (filters.entity) {
         apiUrl += `&entity=${filters.entity}`;
       }
       
+      // Add sort parameter if specified
       if (sortOrder !== 'none') {
         apiUrl += `&sort=${sortOrder}`;
       }
+      
+      console.log("Calling API with URL:", apiUrl);
       
       const response = await fetch(apiUrl);
       
@@ -55,29 +53,11 @@ export default function ITunesSearch({ onAddToCatalog, pointsRatio = 100, catalo
       }
       
       const data = await response.json();
-      
-      // Update results but don't update filtered results yet - we'll do that in useEffect
       setResults(data.results || []);
+      setFilteredResults(data.results || []);
       setTotalResults(data.totalResults || 0);
       setTotalPages(data.totalPages || 1);
       setCurrentPage(data.currentPage || 1);
-      
-      // If all results on this page are already in the catalog,
-      // and we have more pages, automatically fetch the next page
-      const filteredResults = (data.results || []).filter(item => {
-        const itemName = item.trackName || item.collectionName || '';
-        return !catalogItems.some(catalogItem => 
-          catalogItem.Product_Name.toLowerCase() === itemName.toLowerCase()
-        );
-      });
-      
-      // If after filtering we have no results but there are more pages and we're allowed to retry
-      if (filteredResults.length === 0 && page < data.totalPages && retryForEmptyResults) {
-        // Fetch the next page
-        return fetchResults(page + 1, retryForEmptyResults);
-      }
-      
-      setFilteredResults(filteredResults);
     } catch (error) {
       console.error('Error fetching iTunes data:', error);
     } finally {
@@ -85,114 +65,11 @@ export default function ITunesSearch({ onAddToCatalog, pointsRatio = 100, catalo
     }
   };
 
-  // Update filtered results when results or catalogItems change
+  // Update filtered results when results change
+  // Note: We're now handling sorting on the server side
   useEffect(() => {
-    // Filter out items that are already in the catalog or have been added in this session
-    const filteredResults = results.filter(item => {
-      const itemId = item.trackId || item.collectionId;
-      
-      // Check if this item has been marked as added
-      if (addedItems[itemId]) {
-        return false;
-      }
-      
-      // Check if this item exists in the catalog
-      const alreadyInCatalog = catalogItems.some(catalogItem => {
-        // Look for catalog items with matching names
-        const itemName = item.trackName || item.collectionName || '';
-        return catalogItem.Product_Name.toLowerCase() === itemName.toLowerCase();
-      });
-      
-      return !alreadyInCatalog;
-    });
-    
-    setFilteredResults(filteredResults);
-    
-    // If after filtering we have very few results but there are more pages available,
-    // automatically fetch the next page to maintain a good user experience
-    if (filteredResults.length < 3 && currentPage < totalPages && hasSearched && searchTerm) {
-      // We use a timeout to avoid potential infinite loops and to make sure
-      // the UI updates first with what we have
-      const timer = setTimeout(() => {
-        fetchResults(currentPage + 1, false); // Don't recursively retry to avoid potential issues
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [results, catalogItems, addedItems, currentPage, totalPages, hasSearched, searchTerm]);
-  
-  // Function to handle selecting items for bulk add
-  const handleSelectItem = (itemId) => {
-    setSelectedItems(prev => {
-      if (prev.includes(itemId)) {
-        return prev.filter(id => id !== itemId);
-      } else {
-        return [...prev, itemId];
-      }
-    });
-  };
-  
-  // Function to handle bulk add
-  const handleBulkAdd = () => {
-    if (selectedItems.length === 0) {
-      alert('Please select items to add');
-      return;
-    }
-    
-    // Find the items corresponding to the selected IDs
-    const itemsToAdd = filteredResults.filter(item => {
-      const itemId = item.trackId || item.collectionId;
-      return selectedItems.includes(itemId);
-    });
-    
-    // Add each item to the catalog
-    let successCount = 0;
-    const newAddedItems = {...addedItems};
-    
-    itemsToAdd.forEach(item => {
-      try {
-        onAddToCatalog(item);
-        
-        // Mark this item as added
-        const itemId = item.trackId || item.collectionId;
-        newAddedItems[itemId] = true;
-        
-        successCount++;
-      } catch (err) {
-        console.error(`Error adding item ${item.trackName || item.collectionName}:`, err);
-      }
-    });
-    
-    // Update the added items state
-    setAddedItems(newAddedItems);
-    
-    // Clear selection
-    setSelectedItems([]);
-    
-    // Show success message
-    alert(`${successCount} item${successCount !== 1 ? 's' : ''} added successfully!`);
-    
-    // If we've added all items on the current page, refresh results to pull in new items
-    if (successCount === filteredResults.length && searchTerm) {
-      fetchResults(currentPage);
-    }
-  };
-  
-  // Function to mark an individual item as added
-  const handleItemAdded = (itemId) => {
-    setAddedItems(prev => ({
-      ...prev,
-      [itemId]: true
-    }));
-    
-    // If this was the last visible item on the page, refresh to get next set of results
-    if (filteredResults.length === 1 && searchTerm) {
-      fetchResults(currentPage);
-    } else if (filteredResults.length <= 3 && searchTerm) {
-      // If we're getting low on items on the current page, refresh to ensure page stays full
-      fetchResults(currentPage);
-    }
-  };
+    setFilteredResults([...results]);
+  }, [results]);
 
   // Handle search submission
   const handleSearch = (e) => {
@@ -229,16 +106,49 @@ export default function ITunesSearch({ onAddToCatalog, pointsRatio = 100, catalo
     
     // If it's a filter that affects the API call, refetch data immediately
     if ((filterType === 'mediaType' || filterType === 'entity') && hasSearched && searchTerm.trim()) {
-      // Reset to page 1 when filters change and use enhanced fetch with retry
-      setFilters(updatedFilters); // Ensure filters are updated before fetch
+      // Create a new function that uses the updated filters directly
+      const doFetch = async () => {
+        setLoading(true);
+        try {
+          let apiUrl = `/api/itunes?term=${encodeURIComponent(searchTerm)}&page=1&resultsPerPage=${resultsPerPage}`;
+          
+          // Use the updated filters for the API call
+          if (updatedFilters.mediaType !== 'all') {
+            apiUrl += `&media=${updatedFilters.mediaType}`;
+          }
+          
+          if (updatedFilters.entity) {
+            apiUrl += `&entity=${updatedFilters.entity}`;
+          }
+          
+          // Include current sort order
+          if (sortOrder !== 'none') {
+            apiUrl += `&sort=${sortOrder}`;
+          }
+          
+          console.log("Calling API with URL:", apiUrl);
+          
+          const response = await fetch(apiUrl);
+          
+          if (!response.ok) {
+            throw new Error(`Error: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          setResults(data.results || []);
+          setFilteredResults(data.results || []);
+          setTotalResults(data.totalResults || 0);
+          setTotalPages(data.totalPages || 1);
+          setCurrentPage(1); // Reset to page 1 when filters change
+        } catch (error) {
+          console.error('Error fetching iTunes data:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
       
-      // Clear selected items when changing filters
-      setSelectedItems([]);
-      
-      // Fetch with delay to ensure state is updated
-      setTimeout(() => {
-        fetchResults(1, true);
-      }, 10);
+      // Execute the fetch immediately
+      doFetch();
     }
   };
 
@@ -248,8 +158,48 @@ export default function ITunesSearch({ onAddToCatalog, pointsRatio = 100, catalo
     
     // If we have results and a search has been performed, refetch with the new sort order
     if (hasSearched && searchTerm.trim()) {
-      // Reset to page 1 when sorting changes and use enhanced fetch
-      fetchResults(1, true);
+      // Reset to page 1 when sorting changes
+      const doSortedFetch = async () => {
+        setLoading(true);
+        try {
+          let apiUrl = `/api/itunes?term=${encodeURIComponent(searchTerm)}&page=1&resultsPerPage=${resultsPerPage}`;
+          
+          // Add media type filter if not 'all'
+          if (filters.mediaType !== 'all') {
+            apiUrl += `&media=${filters.mediaType}`;
+          }
+          
+          // Add entity filter if specified
+          if (filters.entity) {
+            apiUrl += `&entity=${filters.entity}`;
+          }
+          
+          // Add sort parameter
+          apiUrl += `&sort=${sortValue}`;
+          
+          console.log("Calling API with sorted URL:", apiUrl);
+          
+          const response = await fetch(apiUrl);
+          
+          if (!response.ok) {
+            throw new Error(`Error: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          // Update state with new sorted results
+          setResults(data.results || []);
+          setFilteredResults(data.results || []);
+          setTotalResults(data.totalResults || 0);
+          setTotalPages(data.totalPages || 1);
+          setCurrentPage(1); // Reset to page 1
+        } catch (error) {
+          console.error('Error fetching sorted iTunes data:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      doSortedFetch();
     }
   };
 
@@ -285,17 +235,6 @@ export default function ITunesSearch({ onAddToCatalog, pointsRatio = 100, catalo
     return description;
   };
 
-  // Select all items for bulk actions
-  const handleSelectAll = (select) => {
-    if (select) {
-      // Get all item IDs
-      const allIds = filteredResults.map(item => item.trackId || item.collectionId);
-      setSelectedItems(allIds);
-    } else {
-      setSelectedItems([]);
-    }
-  };
-
   return (
     <div className="container mx-auto">
       <form onSubmit={handleSearch} className="mb-4">
@@ -316,35 +255,6 @@ export default function ITunesSearch({ onAddToCatalog, pointsRatio = 100, catalo
           </button>
         </div>
       </form>
-
-      <div className="mb-4 bg-gray-50 p-3 rounded text-sm text-gray-600">
-        <p>Point conversion rate: {pointsRatio} points = $1.00</p>
-      </div>
-      
-      {/* Bulk actions */}
-      <div className="mb-4 bg-gray-50 p-3 rounded-lg border flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            checked={selectedItems.length > 0 && selectedItems.length === filteredResults.length}
-            onChange={(e) => handleSelectAll(e.target.checked)}
-            className="h-4 w-4 cursor-pointer"
-          />
-          <span className="text-sm font-medium">
-            {selectedItems.length > 0 
-              ? `${selectedItems.length} item${selectedItems.length === 1 ? '' : 's'} selected` 
-              : 'Select All'}
-          </span>
-        </div>
-        
-        <button
-          onClick={handleBulkAdd}
-          disabled={selectedItems.length === 0}
-          className="px-3 py-1 text-sm bg-green-500 text-white rounded disabled:opacity-50"
-        >
-          Add Selected Items
-        </button>
-      </div>
 
       <ITunesFilters 
         onFilterChange={handleFilterChange} 
@@ -376,24 +286,83 @@ export default function ITunesSearch({ onAddToCatalog, pointsRatio = 100, catalo
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredResults.map((item, index) => {
-              // Get a unique identifier for this item
-              const itemId = item.trackId || item.collectionId;
-              const isItemAdded = addedItems[itemId] || false;
+              // Create a deterministic unique key based on multiple properties
+              const uniqueKey = item.trackId || 
+                                item.collectionId || 
+                                `${item.artistId}-${item.collectionName}-${index}`;
               
+              // Determine the name to display
+              let displayName = 'Unknown Item';
+              if (item.trackName) {
+                displayName = item.trackName;
+              } else if (item.collectionName) {
+                displayName = item.collectionName;
+              }
+
+              // Determine the price to display
+              let priceDisplay = 'Not available';
+              if (item.trackPrice !== undefined) {
+                priceDisplay = `$${item.trackPrice}`;
+              } else if (item.collectionPrice !== undefined) {
+                priceDisplay = `$${item.collectionPrice}`;
+              }
+
+              // Determine the media type display
+              let mediaTypeDisplay = item.wrapperType || 'unknown type';
+              if (item.wrapperType === 'track' && item.kind) {
+                mediaTypeDisplay = item.kind;
+              }
+
+              // Format release date
+              let releaseDate = '';
+              if (item.releaseDate) {
+                releaseDate = new Date(item.releaseDate).toLocaleDateString();
+              }
+
               return (
-                <ItemCard 
-                  key={itemId || `${item.artistId}-${item.collectionName}-${index}`}
-                  item={item}
-                  onAddToCatalog={(item) => {
-                    onAddToCatalog(item);
-                    handleItemAdded(itemId);
-                  }}
-                  onSelect={handleSelectItem}
-                  onViewDetails={setSelectedItem}
-                  isSelected={selectedItems.includes(itemId)}
-                  isAdded={isItemAdded}
-                  pointsRatio={pointsRatio}
-                />
+                <div 
+                  key={uniqueKey} 
+                  className="border rounded p-4 flex flex-col shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="text-xs text-gray-500 mb-1 bg-gray-100 px-2 py-1 rounded-full inline-block self-start">
+                    {mediaTypeDisplay}
+                  </div>
+                  <img 
+                    src={item.artworkUrl100 || '/placeholder-image.jpg'} 
+                    alt={displayName} 
+                    className="w-24 h-24 object-cover mx-auto mb-2 rounded"
+                  />
+                  <h3 className="font-medium text-lg line-clamp-2">
+                    {displayName}
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {item.artistName || 'Unknown Artist'}
+                  </p>
+                  <div className="mt-auto pt-2 flex flex-col gap-1">
+                    <p className="font-bold text-blue-600">
+                      {priceDisplay}
+                    </p>
+                    {releaseDate && (
+                      <p className="text-xs text-gray-500">
+                        Released: {releaseDate}
+                      </p>
+                    )}
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => setSelectedItem(item)}
+                      className="bg-gray-200 text-gray-800 px-3 py-1 rounded hover:bg-gray-300 transition text-sm"
+                    >
+                      View Details
+                    </button>
+                    <button
+                      onClick={() => onAddToCatalog(item)}
+                      className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition text-sm"
+                    >
+                      Add to Catalog
+                    </button>
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -439,7 +408,6 @@ export default function ITunesSearch({ onAddToCatalog, pointsRatio = 100, catalo
           item={selectedItem} 
           onClose={() => setSelectedItem(null)} 
           onAddToCatalog={onAddToCatalog}
-          pointsRatio={pointsRatio}
         />
       )}
     </div>
