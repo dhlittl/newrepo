@@ -1,6 +1,23 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+// Import your auth helper – adjust the import as needed based on your project setup
+import { fetchAuthSession } from '@aws-amplify/auth'; // Adjust if needed
+
+// Helper function to get the Cognito ID token
+const getAuthToken = async () => {
+  try {
+    const session = await fetchAuthSession();
+    const idToken = session.tokens?.idToken;
+    // Return the raw JWT token if available
+    if (idToken) {
+      return idToken.jwtToken;
+    }
+  } catch (error) {
+    console.error("Error fetching auth token:", error);
+  }
+  return null;
+};
 
 export default function SponsorsPage() {
   const [sponsors, setSponsors] = useState([]);
@@ -57,25 +74,40 @@ export default function SponsorsPage() {
     fetchPolicies();
   }, []);
 
-  // Fetch users when a sponsor is selected
+  // Fetch sponsor users when a sponsor is selected
   useEffect(() => {
     if (!selectedSponsorId) return;
 
     const fetchSponsorUsers = async () => {
       setLoadingUsers(true);
       try {
+        // Get the Cognito authentication token
+        const token = await getAuthToken();
+        if (!token) {
+          throw new Error("Authentication token not found.");
+        }
+
         const response = await fetch(
-          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/users?sponsorOrgId=${selectedSponsorId}`
+          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/users?sponsorOrgId=${selectedSponsorId}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
         );
+
         if (!response.ok) {
           const errorDetails = await response.text(); // Get error details from response body
           throw new Error(`Failed to fetch sponsor users: ${response.status} - ${errorDetails}`);
         }
+
         const data = await response.json();
         setSponsorUsers(data);
       } catch (error) {
         console.error("Error fetching sponsor users:", error);
-        setError(error.message); // Update error state with the message
+        setError(error.message);
       } finally {
         setLoadingUsers(false);
       }
