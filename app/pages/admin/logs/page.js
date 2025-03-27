@@ -14,7 +14,10 @@ export default function Logs() {
         setLoading(true);
         const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Admin/Logs`);
         const data = await response.json();
-        setLogs(data);
+        console.log("Full response data:", data);
+        console.log("data.logs =", data.logs);
+        console.log("Is Array?", Array.isArray(data.logs));
+        setLogs(data.logs);
       } catch (err) {
         console.error("Error fetching logs:", err);
         setError("Failed to load logs.");
