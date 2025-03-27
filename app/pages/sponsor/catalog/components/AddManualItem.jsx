@@ -1,5 +1,6 @@
 // app/pages/sponsor/catalog/components/AddManualItem.jsx
 
+
 'use client';
 
 import { useState } from 'react';
