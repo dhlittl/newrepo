@@ -385,8 +385,8 @@ function ProgressWidget({ userId }) {
     console.log('userId:', userId);
     if (userId == null|| userId === "undefined") {
       console.error("Invalid User_ID");
-      setLoading(false); // Stop loading if userId is invalid
-      return; // Don't proceed with data fetching if User_ID is invalid
+      setLoading(false); // stop loading if userId is invalid
+      return;
     }
     console.log("Using User_ID:", userId); 
 
@@ -435,7 +435,7 @@ function ProgressWidget({ userId }) {
 
   const handleCancelClick = () => {
     setIsEditing(false);
-    setNewGoal(pointGoal); // Reset input to current value
+    setNewGoal(pointGoal); 
   };
 
   const handleSaveClick = async () => {
