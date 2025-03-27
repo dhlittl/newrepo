@@ -1,34 +1,45 @@
 "use client";
-import  React , { useState } from 'react';
-const dummyLogs = [
-  { id: 1, date: "2025-03-10", category: "Login", description: "User admin logged in." },
-  { id: 2, date: "2025-03-11", category: "Update", description: "User updated profile info." },
-  { id: 3, date: "2025-03-09", category: "Logout", description: "User admin logged out." },
-  { id: 4, date: "2025-03-08", category: "Delete", description: "User deleted an entry." },
-  { id: 5, date: "2025-03-11", category: "Login", description: "User driver123 logged in." },
-  { id: 6, date: "2025-03-13", category: "Login", description: "User admin logged in." },
-  { id: 7, date: "2025-02-11", category: "Update", description: "User updated profile info." },
-  { id: 8, date: "2025-02-19", category: "Logout", description: "User admin logged out." },
-  { id: 9, date: "2025-03-07", category: "Delete", description: "User deleted an entry." },
-  { id: 10, date: "2025-01-13", category: "Login", description: "User driver123 logged in." }
-];
+import  React , { useState, useEffect } from 'react';
 
 export default function Logs() {
+  const [logs, setLogs] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const filteredLogs = dummyLogs.filter(log =>
-    categoryFilter ? log.category === categoryFilter : true
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Admin/Logs`);
+        const data = await response.json();
+        setLogs(data);
+      } catch (err) {
+        console.error("Error fetching logs:", err);
+        setError("Failed to load logs.");
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    fetchLogs();
+  }, []);
+
+  const filteredLogs = logs.filter(log =>
+    categoryFilter ? log.Event_Type === categoryFilter : true
   );
-
+  
   const sortedLogs = [...filteredLogs].sort((a, b) =>
-    sortOrder === "asc" ? new Date(a.date) - new Date(b.date) : new Date(b.date) - new Date(a.date)
+    sortOrder === "asc"
+      ? new Date(a.Timestamp) - new Date(b.Timestamp)
+      : new Date(b.Timestamp) - new Date(a.Timestamp)
   );
 
   return (
     <div className="p-4 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Audit Logs</h1>
-      
+  
       {/* Filters and Sorting */}
       <div className="flex justify-between mb-4">
         <select
@@ -42,7 +53,7 @@ export default function Logs() {
           <option value="Update">Update</option>
           <option value="Delete">Delete</option>
         </select>
-        
+  
         <button
           onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
           className="p-2 border rounded bg-blue-500 text-white"
@@ -50,12 +61,13 @@ export default function Logs() {
           Sort by Date ({sortOrder === "asc" ? "Oldest" : "Newest"})
         </button>
       </div>
-
+  
       {/* Log Entries */}
       <ul className="space-y-2">
         {sortedLogs.map((log) => (
-          <li key={log.id} className="p-2 border-b">
-            <span className="font-semibold">{log.date}</span> - {log.category}: {log.description}
+          <li key={log.Audit_ID} className="p-2 border-b">
+            <span className="font-semibold">{new Date(log.Timestamp).toLocaleString()}</span>{" "}
+            – <span className="font-medium">{log.Event_Type}</span>: {log.Action_Description}
           </li>
         ))}
       </ul>
