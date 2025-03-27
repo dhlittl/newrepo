@@ -18,10 +18,11 @@ export default function SponsorReportsPage() {
 
     setLoading(true);
     setError(null);
+    const sponsorId = 1;
 
     try {
       const response = await fetch(
-        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/reports?type=report_driver_applications&start_date=${startDate}&end_date=${endDate}`
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/reports?type=report_driver_applications&start_date=${startDate}&end_date=${endDate}&sponsor_id=${sponsorId}`
       );
 
       const result = await response.json();
