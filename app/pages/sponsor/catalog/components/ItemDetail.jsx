@@ -1,18 +1,47 @@
 // app/pages/sponsor/catalog/components/ItemDetail.jsx
 'use client';
 
-const ItemDetail = ({ item, onClose, onAddToCatalog }) => {
+import { useState, useEffect } from 'react';
+
+const ItemDetail = ({ item, onClose, onAddToCatalog, pointsRatio = 100 }) => {
+  const [isAdded, setIsAdded] = useState(false);
+  
   if (!item) return null;
+  
+  // Listen for item-added events
+  useEffect(() => {
+    const handleItemAdded = (event) => {
+      const itemId = item.trackId || item.collectionId;
+      if (event.detail.id === itemId) {
+        setIsAdded(true);
+      }
+    };
+    
+    window.addEventListener('item-added', handleItemAdded);
+    return () => {
+      window.removeEventListener('item-added', handleItemAdded);
+    };
+  }, [item]);
 
   // Determine content-specific fields
   const displayName = item.trackName || item.collectionName || 'Unknown Item';
   const artist = item.artistName || 'Unknown Artist';
-  const price = item.trackPrice !== undefined 
-    ? `$${item.trackPrice}` 
+  
+  // Price and points conversion
+  const dollarPrice = item.trackPrice !== undefined 
+    ? item.trackPrice 
     : item.collectionPrice !== undefined 
-      ? `$${item.collectionPrice}` 
-      : 'Not available';
+      ? item.collectionPrice 
+      : null;
       
+  const formattedPrice = dollarPrice !== null 
+    ? `${dollarPrice.toFixed(2)}` 
+    : 'Not available';
+    
+  const pointPrice = dollarPrice !== null 
+    ? Math.ceil(dollarPrice * pointsRatio) 
+    : null;
+  
   // Format release date
   let releaseDate = '';
   if (item.releaseDate) {
@@ -60,8 +89,15 @@ const ItemDetail = ({ item, onClose, onAddToCatalog }) => {
               <div className="font-semibold">Type:</div>
               <div className="capitalize">{mediaTypeDisplay}</div>
               
-              <div className="font-semibold">Price:</div>
-              <div className="font-bold text-blue-600">{price}</div>
+              <div className="font-semibold">Dollar Price:</div>
+              <div className="font-bold text-blue-600">{formattedPrice}</div>
+              
+              {pointPrice !== null && (
+                <>
+                  <div className="font-semibold">Point Price:</div>
+                  <div className="font-bold text-green-600">{pointPrice.toLocaleString()} points</div>
+                </>
+              )}
               
               {releaseDate && (
                 <>
@@ -131,15 +167,28 @@ const ItemDetail = ({ item, onClose, onAddToCatalog }) => {
             </a>
           )}
           
-          <button
-            onClick={() => {
-              onAddToCatalog(item);
-              onClose();
-            }}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
-          >
-            Add to Catalog
-          </button>
+          {isAdded ? (
+            <button
+              disabled
+              className="bg-gray-400 text-white px-4 py-2 rounded cursor-not-allowed"
+            >
+              Added to Catalog
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                onAddToCatalog(item);
+                // Don't close the modal, just update local state to show it's been added
+                const addedEvent = new CustomEvent('item-added', { 
+                  detail: { id: item.trackId || item.collectionId } 
+                });
+                window.dispatchEvent(addedEvent);
+              }}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+            >
+              Add to Catalog ({pointPrice?.toLocaleString() || '?'} points)
+            </button>
+          )}
         </div>
       </div>
     </div>
