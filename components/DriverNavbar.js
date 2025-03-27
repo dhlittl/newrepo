@@ -3,6 +3,7 @@
 "use client";
 import Link from "next/link";
 import { UserIcon } from "@heroicons/react/24/outline";
+import SignOutButton from "@/components/SignOutButton";
 
 
 export default function DriverNavbar() {
@@ -11,7 +12,9 @@ export default function DriverNavbar() {
         <ul>
           <li><a href="/pages/driver">Dashboard</a></li>
           <li><a href="/pages/driver/driverHelp">Help</a></li>
-          <li><a href="/logout">Logout</a></li>
+          <li><a>
+            <SignOutButton />
+          </a></li>
         </ul>
 
         {/* Profile Icon in Top Right Corner */}
