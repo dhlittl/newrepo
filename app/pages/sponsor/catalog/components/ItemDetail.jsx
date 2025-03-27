@@ -1,33 +1,55 @@
 // app/pages/sponsor/catalog/components/ItemDetail.jsx
 'use client';
 
-const ItemDetail = ({ item, onClose, onAddToCatalog }) => {
+import { useState, useEffect } from 'react';
+import { getDisplayName, getDollarPrice, formatPriceDisplay, calculatePointPrice, getMediaTypeDisplay } from '@/utils/catalog';
+
+const ItemDetail = ({ item, onClose, onAddToCatalog, pointsRatio = 100 }) => {
+  const [isAdded, setIsAdded] = useState(false);
+  
   if (!item) return null;
+  
+  // Listen for item-added events
+  useEffect(() => {
+    const handleItemAdded = (event) => {
+      const itemId = item.trackId || item.collectionId;
+      if (event.detail.id === itemId) {
+        setIsAdded(true);
+      }
+    };
+    
+    window.addEventListener('item-added', handleItemAdded);
+    return () => {
+      window.removeEventListener('item-added', handleItemAdded);
+    };
+  }, [item]);
 
-  // Determine content-specific fields
-  const displayName = item.trackName || item.collectionName || 'Unknown Item';
+  // Extract item details using utility functions
+  const displayName = getDisplayName(item);
   const artist = item.artistName || 'Unknown Artist';
-  const price = item.trackPrice !== undefined 
-    ? `$${item.trackPrice}` 
-    : item.collectionPrice !== undefined 
-      ? `$${item.collectionPrice}` 
-      : 'Not available';
-      
+  const dollarPrice = getDollarPrice(item);
+  const formattedPrice = formatPriceDisplay(dollarPrice);
+  const pointPrice = calculatePointPrice(dollarPrice, pointsRatio);
+  const mediaTypeDisplay = getMediaTypeDisplay(item);
+  
   // Format release date
-  let releaseDate = '';
-  if (item.releaseDate) {
-    releaseDate = new Date(item.releaseDate).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  }
+  const releaseDate = item.releaseDate 
+    ? new Date(item.releaseDate).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    : '';
 
-  // Determine the media type display
-  let mediaTypeDisplay = item.wrapperType || 'unknown type';
-  if (item.wrapperType === 'track' && item.kind) {
-    mediaTypeDisplay = item.kind;
-  }
+  // Handle add to catalog
+  const handleAddItem = () => {
+    onAddToCatalog(item);
+    // Dispatch event to update other components
+    const addedEvent = new CustomEvent('item-added', { 
+      detail: { id: item.trackId || item.collectionId } 
+    });
+    window.dispatchEvent(addedEvent);
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
@@ -60,8 +82,15 @@ const ItemDetail = ({ item, onClose, onAddToCatalog }) => {
               <div className="font-semibold">Type:</div>
               <div className="capitalize">{mediaTypeDisplay}</div>
               
-              <div className="font-semibold">Price:</div>
-              <div className="font-bold text-blue-600">{price}</div>
+              <div className="font-semibold">Dollar Price:</div>
+              <div className="font-bold text-blue-600">{formattedPrice}</div>
+              
+              {pointPrice !== null && (
+                <>
+                  <div className="font-semibold">Point Price:</div>
+                  <div className="font-bold text-green-600">{pointPrice.toLocaleString()} points</div>
+                </>
+              )}
               
               {releaseDate && (
                 <>
@@ -105,17 +134,10 @@ const ItemDetail = ({ item, onClose, onAddToCatalog }) => {
           </div>
         </div>
         
-        {item.description && (
+        {(item.description || item.longDescription) && (
           <div className="p-4 border-t">
             <p className="font-semibold mb-1">Description:</p>
-            <p className="text-sm">{item.description}</p>
-          </div>
-        )}
-        
-        {item.longDescription && (
-          <div className="p-4 border-t">
-            <p className="font-semibold mb-1">Full Description:</p>
-            <p className="text-sm">{item.longDescription}</p>
+            <p className="text-sm">{item.description || item.longDescription}</p>
           </div>
         )}
         
@@ -131,15 +153,21 @@ const ItemDetail = ({ item, onClose, onAddToCatalog }) => {
             </a>
           )}
           
-          <button
-            onClick={() => {
-              onAddToCatalog(item);
-              onClose();
-            }}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
-          >
-            Add to Catalog
-          </button>
+          {isAdded ? (
+            <button
+              disabled
+              className="bg-gray-400 text-white px-4 py-2 rounded cursor-not-allowed"
+            >
+              Added to Catalog
+            </button>
+          ) : (
+            <button
+              onClick={handleAddItem}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+            >
+              Add to Catalog ({pointPrice?.toLocaleString() || '?'} points)
+            </button>
+          )}
         </div>
       </div>
     </div>
