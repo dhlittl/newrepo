@@ -1,25 +1,12 @@
 // app/pages/sponsor/catalog/components/ManageCatalogItem.jsx
-
 'use client';
 
-import { useState } from 'react';
+import { formatDate, calculatePointPrice } from '@/utils/catalog';
+import ConfirmButton from '@/components/ui/ConfirmButton';
 
 const ManageCatalogItem = ({ item, onRemove, onToggleFeature, isSelected, onSelect, pointsRatio }) => {
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  
-  // Format timestamp
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
   // Calculate the point value based on the price
-  const pointPrice = item.Price ? Math.ceil(parseFloat(item.Price) * pointsRatio) : 0;
+  const pointPrice = item.Price ? calculatePointPrice(parseFloat(item.Price), pointsRatio) : 0;
 
   return (
     <div className={`border rounded-lg shadow-sm overflow-hidden ${isSelected ? 'border-blue-500 ring-2 ring-blue-300' : ''} ${item.Featured ? 'border-yellow-400 bg-yellow-50' : ''}`}>
@@ -90,29 +77,13 @@ const ManageCatalogItem = ({ item, onRemove, onToggleFeature, isSelected, onSele
         <div className="p-2 bg-gray-50 text-xs text-gray-500 border-t flex justify-between items-center">
           <div>Added: {formatDate(item.Created_At)}</div>
           
-          {confirmDelete ? (
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setConfirmDelete(false)}
-                className="px-2 py-1 bg-gray-200 rounded"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={onRemove}
-                className="px-2 py-1 bg-red-500 text-white rounded"
-              >
-                Confirm
-              </button>
-            </div>
-          ) : (
-            <button 
-              onClick={() => setConfirmDelete(true)}
-              className="px-2 py-1 text-red-500 hover:bg-red-50 rounded"
-            >
-              Remove
-            </button>
-          )}
+          <ConfirmButton
+            onConfirm={onRemove}
+            buttonText="Remove"
+            buttonClass="px-2 py-1 text-red-500 hover:bg-red-50 rounded"
+            confirmText="Confirm"
+            cancelText="Cancel"
+          />
         </div>
       </div>
     </div>

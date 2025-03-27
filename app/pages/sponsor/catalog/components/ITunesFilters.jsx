@@ -1,15 +1,14 @@
 // app/pages/sponsor/catalog/components/ITunesFilters.jsx
-
 'use client';
 
 import { useState, useEffect } from 'react';
+import { MEDIA_TYPES, ENTITY_OPTIONS } from '@/constants/itunesMedia';
 
 const ITunesFilters = ({ onFilterChange, onSortChange, currentFilters }) => {
   const [mediaType, setMediaType] = useState(currentFilters?.mediaType || 'all');
   const [entity, setEntity] = useState(currentFilters?.entity || '');
   const [sortBy, setSortBy] = useState('none');
-  const [entityOptions, setEntityOptions] = useState([]);
-
+  
   // Update local state when props change
   useEffect(() => {
     if (currentFilters) {
@@ -18,75 +17,15 @@ const ITunesFilters = ({ onFilterChange, onSortChange, currentFilters }) => {
     }
   }, [currentFilters]);
 
-  // Define entity options based on selected media type
-  useEffect(() => {
-    let options = [];
-    
-    switch(mediaType) {
-      case 'movie':
-        options = [
-          { value: 'movieArtist', label: 'Movie Artist' },
-          { value: 'movie', label: 'Movie' }
-        ];
-        break;
-      case 'podcast':
-        options = [
-          { value: 'podcastAuthor', label: 'Podcast Author' },
-          { value: 'podcast', label: 'Podcast' }
-        ];
-        break;
-      case 'music':
-        options = [
-          { value: 'musicArtist', label: 'Music Artist' },
-          { value: 'musicTrack', label: 'Song' },
-          { value: 'album', label: 'Album' },
-          { value: 'musicVideo', label: 'Music Video' },
-          { value: 'mix', label: 'Mix' }
-        ];
-        break;
-      case 'audiobook':
-        options = [
-          { value: 'audiobookAuthor', label: 'Audiobook Author' },
-          { value: 'audiobook', label: 'Audiobook' }
-        ];
-        break;
-      case 'tvShow':
-        options = [
-          { value: 'tvEpisode', label: 'TV Episode' },
-          { value: 'tvSeason', label: 'TV Season' }
-        ];
-        break;
-      case 'software':
-        options = [
-          { value: 'software', label: 'Software' },
-          { value: 'iPadSoftware', label: 'iPad App' },
-          { value: 'macSoftware', label: 'Mac App' }
-        ];
-        break;
-      case 'ebook':
-        options = [
-          { value: 'ebook', label: 'eBook' }
-        ];
-        break;
-      default:
-        options = [];
-    }
-    
-    setEntityOptions(options);
-  }, [mediaType]);
-
   const handleMediaTypeChange = (e) => {
     const value = e.target.value;
     setMediaType(value);
-    // We'll let the parent component handle the entity reset
-    // Trigger the filter change immediately
     onFilterChange('mediaType', value);
   };
 
   const handleEntityChange = (e) => {
     const value = e.target.value;
     setEntity(value);
-    // Trigger the filter change immediately
     onFilterChange('entity', value);
   };
 
@@ -95,6 +34,9 @@ const ITunesFilters = ({ onFilterChange, onSortChange, currentFilters }) => {
     setSortBy(value);
     onSortChange(value);
   };
+
+  // Get entity options for current media type
+  const entityOptions = ENTITY_OPTIONS[mediaType] || [];
 
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:justify-between">
@@ -109,16 +51,9 @@ const ITunesFilters = ({ onFilterChange, onSortChange, currentFilters }) => {
             onChange={handleMediaTypeChange}
             className="w-full p-2 border rounded-md"
           >
-            <option value="all">All Types</option>
-            <option value="movie">Movies</option>
-            <option value="podcast">Podcasts</option>
-            <option value="music">Music</option>
-            <option value="musicVideo">Music Videos</option>
-            <option value="audiobook">Audiobooks</option>
-            <option value="shortFilm">Short Films</option>
-            <option value="tvShow">TV Shows</option>
-            <option value="software">Software</option>
-            <option value="ebook">eBooks</option>
+            {MEDIA_TYPES.map(type => (
+              <option key={type.value} value={type.value}>{type.label}</option>
+            ))}
           </select>
         </div>
         

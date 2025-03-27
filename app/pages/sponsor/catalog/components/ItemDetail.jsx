@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getDisplayName, getDollarPrice, formatPriceDisplay, calculatePointPrice, getMediaTypeDisplay } from '@/utils/catalog';
 
 const ItemDetail = ({ item, onClose, onAddToCatalog, pointsRatio = 100 }) => {
   const [isAdded, setIsAdded] = useState(false);
@@ -23,40 +24,32 @@ const ItemDetail = ({ item, onClose, onAddToCatalog, pointsRatio = 100 }) => {
     };
   }, [item]);
 
-  // Determine content-specific fields
-  const displayName = item.trackName || item.collectionName || 'Unknown Item';
+  // Extract item details using utility functions
+  const displayName = getDisplayName(item);
   const artist = item.artistName || 'Unknown Artist';
-  
-  // Price and points conversion
-  const dollarPrice = item.trackPrice !== undefined 
-    ? item.trackPrice 
-    : item.collectionPrice !== undefined 
-      ? item.collectionPrice 
-      : null;
-      
-  const formattedPrice = dollarPrice !== null 
-    ? `${dollarPrice.toFixed(2)}` 
-    : 'Not available';
-    
-  const pointPrice = dollarPrice !== null 
-    ? Math.ceil(dollarPrice * pointsRatio) 
-    : null;
+  const dollarPrice = getDollarPrice(item);
+  const formattedPrice = formatPriceDisplay(dollarPrice);
+  const pointPrice = calculatePointPrice(dollarPrice, pointsRatio);
+  const mediaTypeDisplay = getMediaTypeDisplay(item);
   
   // Format release date
-  let releaseDate = '';
-  if (item.releaseDate) {
-    releaseDate = new Date(item.releaseDate).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  }
+  const releaseDate = item.releaseDate 
+    ? new Date(item.releaseDate).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    : '';
 
-  // Determine the media type display
-  let mediaTypeDisplay = item.wrapperType || 'unknown type';
-  if (item.wrapperType === 'track' && item.kind) {
-    mediaTypeDisplay = item.kind;
-  }
+  // Handle add to catalog
+  const handleAddItem = () => {
+    onAddToCatalog(item);
+    // Dispatch event to update other components
+    const addedEvent = new CustomEvent('item-added', { 
+      detail: { id: item.trackId || item.collectionId } 
+    });
+    window.dispatchEvent(addedEvent);
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
@@ -141,17 +134,10 @@ const ItemDetail = ({ item, onClose, onAddToCatalog, pointsRatio = 100 }) => {
           </div>
         </div>
         
-        {item.description && (
+        {(item.description || item.longDescription) && (
           <div className="p-4 border-t">
             <p className="font-semibold mb-1">Description:</p>
-            <p className="text-sm">{item.description}</p>
-          </div>
-        )}
-        
-        {item.longDescription && (
-          <div className="p-4 border-t">
-            <p className="font-semibold mb-1">Full Description:</p>
-            <p className="text-sm">{item.longDescription}</p>
+            <p className="text-sm">{item.description || item.longDescription}</p>
           </div>
         )}
         
@@ -176,14 +162,7 @@ const ItemDetail = ({ item, onClose, onAddToCatalog, pointsRatio = 100 }) => {
             </button>
           ) : (
             <button
-              onClick={() => {
-                onAddToCatalog(item);
-                // Don't close the modal, just update local state to show it's been added
-                const addedEvent = new CustomEvent('item-added', { 
-                  detail: { id: item.trackId || item.collectionId } 
-                });
-                window.dispatchEvent(addedEvent);
-              }}
+              onClick={handleAddItem}
               className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
             >
               Add to Catalog ({pointPrice?.toLocaleString() || '?'} points)
