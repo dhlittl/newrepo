@@ -54,7 +54,8 @@ const checkUserSession = async () => {
 
 export default function DriverDashboard() {
     const [widgets, setWidgets] = useState (initialWidgets);
-    const [userId, setUserId] = useState(1); // update to be dynamic later
+    //const [userId, setUserId] = useState(1); // update to be dynamic later
+    const userId = 1;
     const [loading, setLoading] = useState(true);
     //const User_ID="1";
 
@@ -392,52 +393,49 @@ function ProgressWidget({ userId }) {
   const [isEditing, setIsEditing] = useState(false);
   const [newGoal, setNewGoal] = useState('');
 
-  //useEffect(() => {
-    //debug
-    useEffect(() => {
-      // Validate userId before making any API calls
-      if (!userId || userId === "undefined") {
-        console.error("Invalid User_ID");
-        setLoading(false); // Stop loading if userId is invalid
-        return; // Don't proceed with data fetching if User_ID is invalid
+
+useEffect(() => {
+  // debug
+  console.log('userId:', userId);
+  if (userId == null|| userId === "undefined") {
+    console.error("Invalid User_ID");
+    setLoading(false); // Stop loading if userId is invalid
+    return; // Don't proceed with data fetching if User_ID is invalid
+  }
+  console.log("Using User_ID:", userId); 
+
+  async function fetchProgressData() {
+    try {
+      // fetch current points
+      const pointsResponse = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points?User_ID=${userId}");
+      const pointsData = await pointsResponse.json();
+      
+      if (pointsResponse.ok) {
+        setPoints(pointsData.points);
+      } else {
+        console.error("Error fetching points:", pointsData.message);
       }
-  
-  
-    console.log("Using User_ID:", userId); 
 
-
-    async function fetchProgressData() {
-      try {
-        // fetch current points
-        const pointsResponse = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points");
-        const pointsData = await pointsResponse.json();
-        
-        if (pointsResponse.ok) {
-          setPoints(pointsData.points);
-        } else {
-          console.error("Error fetching points:", pointsData.message);
-        }
-
-        // fetch point goal
-        const goalResponse = await fetch(` https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/pointGoal?User_ID=${userId}`);
-        const goalData = await goalResponse.json();
-        
-        if (goalResponse.ok) {
-          console.log("Fetched Point Goal:", goalData.Point_Goal);
-          setPointGoal(goalData.point_goal);
-          setNewGoal(goalData.point_goal); 
-        } else {
-          console.error("Error fetching point goal:", goalData.message);
-        }
-      } catch (error) {
-        console.error("Failed to fetch progress data:", error);
-      } finally {
-        setLoading(false);
+      // fetch point goal
+      const goalResponse = await fetch(` https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/pointGoal?User_ID=${userId}`);
+      const goalData = await goalResponse.json();
+      
+      if (goalResponse.ok) {
+        console.log("Fetched Point Goal:", goalData.Point_Goal);
+        setPointGoal(goalData.point_goal);
+        setNewGoal(goalData.point_goal); 
+      } else {
+        console.error("Error fetching point goal:", goalData.message);
       }
+    } catch (error) {
+      console.error("Failed to fetch progress data:", error);
+    } finally {
+      setLoading(false);
     }
+  }
 
-    fetchProgressData();
-  }, [userId]);
+  fetchProgressData();
+}, [userId]);
 
   useEffect(() => {
     if (pointGoal !== null && points !== null) {
@@ -494,8 +492,8 @@ function ProgressWidget({ userId }) {
   return (
     <div>
       <h3 className="font-semibold">Progress to Goal</h3>
+      <p>Goal: {pointGoal} points</p>
 
-      {/* Progress Bar */}
       <div className="bg-gray-300 h-4 rounded-md overflow-hidden mt-2">
         <div className="bg-blue-500 h-full" style={{ width: `${progress}%` }}></div>
       </div>
