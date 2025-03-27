@@ -56,7 +56,7 @@ export default function DriverProfilePage() {
         const fileName = `profile-pictures/${data[0].User_ID}.jpg`;
         try{
           const url = await getUrl({key: fileName});
-          setImageUrl(result.url);
+          setImageUrl(url);
         } catch {
           console.log("No profile picture found.");
         }
@@ -85,19 +85,19 @@ export default function DriverProfilePage() {
       const fileName = `profile-pictures/${driver.id}.jpg`;
 
       // upload to s3 bucket
-      const result = await uploadData({
+      await uploadData({
         key: fileName,
         data: image,
         options: { 
           contentType: image.type,
-          bucket: "team24profilepictures13106-dev" 
+          //bucket: "team24profilepictures13106-dev" 
         }
       });
-      console.log("Uploading file to:", fileName);
-      console.log("Upload result:", result);
+      //console.log("Uploading file to:", fileName);
+      //console.log("Upload result:", result);
         
       // manually construct the public url
-      const bucketName = "team24profilepictures13106-dev";
+      /*const bucketName = "team24profilepictures13106-dev";
       const region = "us-east-1";
       const publicUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${fileName}`;
       
@@ -105,6 +105,14 @@ export default function DriverProfilePage() {
       alert("Profile picture uploaded successfully!");
     } catch (error) {
       console.error("Error uploading file:", error);
+    }
+  };*/
+      const url = await getUrl({ key: fileName });
+      setImageUrl(url);
+      alert("Profile picture uploaded successfully!");
+    } catch (err) {
+      console.error("Error uploading file:", err);
+      alert("Failed to upload profile picture.");
     }
   };
 
