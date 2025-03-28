@@ -156,7 +156,7 @@ export default function SponsorDrivers() {
               className="bg-blue-500 text-white py-2 px-4 rounded"
               onClick={openBulkEditModal}
             >
-              Edit Selected Drivers
+              Edit Points
             </button>
           </div>
 
