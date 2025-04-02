@@ -106,11 +106,55 @@ export default function SponsorDrivers() {
     setIsModalOpen(true);
   };
 
-  // Handle bulk update (UI only)
-  const handleBulkUpdate = () => {
-    // ***Implement Database call here***
-    console.log("Updating drivers", selectedDriverIds, "by", pointsChange, "points. Reason:", reason);
-    setIsModalOpen(false);
+  const handleBulkUpdate = async () => {
+    if (!pointsChange || isNaN(pointsChange)) {
+      alert("Please enter a valid number for points.");
+      return;
+    }
+
+    const sponsorUserId = effectiveSponsorId;
+  
+    try {
+  
+      for (const driverId of selectedDriverIds) {
+        const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            Driver_ID: driverId,
+            Sponsor_User_ID: sponsorUserId,
+            Point_Balance: parseInt(pointsChange),
+            Reason: reason
+          })
+        });
+  
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(`Failed to update Driver ${driverId}: ${errData.error || response.statusText}`);
+        }
+      }
+  
+      alert("Points updated successfully!");
+      setIsModalOpen(false);
+      setSelectedDriverIds([]);
+      setPointsChange("");
+      setReason("");
+  
+      // Optionally refetch drivers to reflect updated balances
+      if (effectiveSponsorId) {
+        const refreshDrivers = await fetch(
+          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers?sponsorOrgId=${effectiveSponsorId}`
+        );
+        const refreshedData = await refreshDrivers.json();
+        setDrivers(refreshedData);
+      }
+  
+    } catch (err) {
+      console.error("Error updating points:", err);
+      alert("Error updating points: " + err.message);
+    }
   };
 
   return (
