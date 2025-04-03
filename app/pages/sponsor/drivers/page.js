@@ -144,10 +144,9 @@ export default function SponsorDrivers() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        Reason_ID: reasonData.Reason_ID,
-        Sponsor_Org_ID: reasonData.Sponsor_Org_ID,
-        Reason: reasonData.Reason,
-        Points: reasonData.Points,
+        reasonId: reasonData.Reason_ID,
+        reason: reasonData.Reason,
+        points: reasonData.Points,
       }),
     });
 
@@ -170,16 +169,16 @@ export default function SponsorDrivers() {
     const reasonData = updatedReasons[index];
   
     // PUT request to update the points on the backend
-    fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey${reasonData.Reason_ID}?sponsorOrgId=${effectiveSponsorId}`, {
+    console.log(reasonData)
+    fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        Reason_ID: reasonData.Reason_ID,
-        Sponsor_Org_ID: reasonData.Sponsor_Org_ID,
-        Reason: reasonData.Reason,
-        Points: reasonData.Points,
+        reasonId: reasonData.Reason_ID,
+        reason: reasonData.Reason,
+        points: reasonData.Points,
       }),
     })
     .then(response => {
@@ -200,15 +199,15 @@ export default function SponsorDrivers() {
 
   // handle adding new reason
   const handleAddReason = async (reasonData) => {
-    const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?sponsorOrgId=${effectiveSponsorId}`, {
+    const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        Sponsor_Org_ID: reasonData.Sponsor_Org_ID,
-        Reason: reasonData.Reason,
-        Points: reasonData.Points,
+        sponsorOrgId: effectiveSponsorId,
+        reason: reasonData.Reason,
+        points: reasonData.Points,
       }),
     });
 
