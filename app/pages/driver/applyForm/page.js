@@ -87,15 +87,15 @@ export default function ApplicationForm() {
 
 
     // handle the sponsor change and check for previous associated
-    const handleSponsorChange = (e) => {
+    /*const handleSponsorChange = (e) => {
         console.log("Selected Sponsor ID:", e.target.value);
         setSponsorId(e.target.value);
 
         // store sponsor choice in dropdown locally
         // holds in case user refreshes page or comes back to application later
         localStorage.setItem("selectedSponsor", e.target.value); 
-    }
-    /*const handleSponsorChange = async (e) => {
+    }*/
+    const handleSponsorChange = async (e) => {
         const selectedSponsorId = e.target.value;
         setSponsorId(selectedSponsorId);
     
@@ -107,7 +107,9 @@ export default function ApplicationForm() {
             const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/${selectedSponsorId}/drivers`, {
                 method: "GET",  // Ensure you specify GET method if you're just fetching
                 headers: {
-                    "Authorization": `Bearer ${authToken}`,  // Send the token in the Authorization header
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Headers": "Content-Type",
+                    "Access-Control-Allow-Methods": "OPTIONS,GET,PUT,POST,DELETE",
                     "Content-Type": "application/json"
                 }
             });
@@ -130,7 +132,7 @@ export default function ApplicationForm() {
         } catch (error) {
             console.error("Error checking user association:", error);
         }
-    };*/
+    };
         
 
     // handle the agreement change
