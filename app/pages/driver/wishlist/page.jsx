@@ -126,7 +126,7 @@ export default function WishlistPage() {
         <h1 className="text-2xl font-bold mb-6">Your Wishlist</h1>
         <div className="bg-gray-100 p-8 rounded-lg text-center">
           <p className="text-lg mb-4">Your wishlist is empty</p>
-          <Link href="pages/driver/catalog" className="bg-blue-500 text-white px-4 py-2 rounded-md">
+          <Link href="/pages/driver/catalog" className="bg-blue-500 text-white px-4 py-2 rounded-md">
             Browse Catalog
           </Link>
         </div>
