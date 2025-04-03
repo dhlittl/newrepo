@@ -12,6 +12,7 @@ export default function AdminNavbar() {
           <li><a href="/pages/admin/logs">Audit Logs</a></li>
           <li><a href="/pages/admin/helpDesk">Help Desk</a></li>
           <li><a href="/pages/admin/sponsorPolicies">Sponsors</a></li>
+          <li><a href="/pages/admin/CreateUserAccount">New User</a></li>
           <li><a>
             <SignOutButton />
           </a></li>
