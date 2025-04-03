@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect } from 'react';
+import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function ReceiptPage() {
+function ReceiptPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
   const [receiptData, setReceiptData] = useState(null);
@@ -160,3 +161,12 @@ export default function ReceiptPage() {
     </div>
   );
 }
+
+export default function PageWrapper() {
+    return (
+      <Suspense fallback={<div>Loading...</div>}>
+        <ReceiptPage />
+      </Suspense>
+    );
+  }
+  

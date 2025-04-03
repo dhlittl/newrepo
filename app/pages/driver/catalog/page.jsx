@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect } from 'react';
+import React, { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function DriverCatalogPage() {
+function DriverCatalogPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -442,5 +443,14 @@ export default function DriverCatalogPage() {
         </div>
       )}
     </div>
+  );
+
+}
+
+export default function PageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DriverCatalogPage />
+    </Suspense>
   );
 }
