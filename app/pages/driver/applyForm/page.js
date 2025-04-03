@@ -1,4 +1,4 @@
-// Default User Application Form
+// Driver Application Form
 
 "use client";
 import {useEffect, useState} from "react";
@@ -86,15 +86,54 @@ export default function ApplicationForm() {
     }, [sponsorId]);
 
 
-    // handle the sponsor change
-    const handleSponsorChange = (e) => {
+    // handle the sponsor change and check for previous associated
+    /*const handleSponsorChange = (e) => {
         console.log("Selected Sponsor ID:", e.target.value);
         setSponsorId(e.target.value);
 
         // store sponsor choice in dropdown locally
         // holds in case user refreshes page or comes back to application later
         localStorage.setItem("selectedSponsor", e.target.value); 
-    }
+    }*/
+    const handleSponsorChange = async (e) => {
+        const selectedSponsorId = e.target.value;
+        setSponsorId(selectedSponsorId);
+    
+        // Assuming you have a way to get the auth token (maybe from localStorage or context)
+        const authToken = localStorage.getItem("authToken");  // Replace with your actual token retrieval method
+    
+        // Fetch drivers associated with the selected sponsor
+        try {
+            const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/${selectedSponsorId}/drivers`, {
+                method: "GET",  // Ensure you specify GET method if you're just fetching
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Headers": "Content-Type",
+                    "Access-Control-Allow-Methods": "OPTIONS,GET,PUT,POST,DELETE",
+                    "Content-Type": "application/json"
+                }
+            });
+    
+            const data = await response.json();
+    
+            // Log the response data to inspect the structure
+            console.log("Response data:", data);
+    
+            // Assuming the drivers are in a property like "drivers" or directly as an array
+            const drivers = Array.isArray(data) ? data : data.drivers || [];  // Adjust based on your API response
+    
+            // Check if current user is already associated with the sponsor
+            const isUserAssociated = drivers.some(driver => driver.User_ID === userId);
+    
+            if (isUserAssociated) {
+                alert("You are already associated with this sponsor.");
+                setSponsorId("");  // Reset the sponsor selection
+            }
+        } catch (error) {
+            console.error("Error checking user association:", error);
+        }
+    };
+        
 
     // handle the agreement change
     const handleAgreementChange = (policyId) => {

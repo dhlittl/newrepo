@@ -252,7 +252,7 @@ function getWidgetContent(id, userId) {
     case "sponsors":
       return <SponsorsWidget />;
     case "apply":
-      return <LinkWidget title="Applications" content="Want to apply to more sponsors?" link="/pages/defaultUser/applyForm" />;
+      return <LinkWidget title="Applications" content="Want to apply to more sponsors?" link="/pages/driver/applyForm" />;
     default:
       return null;
   }
