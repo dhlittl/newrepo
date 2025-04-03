@@ -12,10 +12,12 @@ export default function SponsorDrivers() {
   const [error, setError] = useState(null);
   const [selectedDriverIds, setSelectedDriverIds] = useState([]);
 
-  // Modal state for bulk edit
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [pointsChange, setPointsChange] = useState(""); // Keep as string for proper input handling
+  const [pointsChange, setPointsChange] = useState("");
   const [reason, setReason] = useState("");
+
+  const [bonusMessage, setBonusMessage] = useState("");
+  const [bonusLoading, setBonusLoading] = useState(false);
 
   useEffect(() => {
     const getSponsorIdFromUser = async () => {
@@ -76,7 +78,6 @@ export default function SponsorDrivers() {
     fetchDrivers();
   }, [effectiveSponsorId]);
 
-  // Toggle checkbox for each driver row
   const toggleDriverSelection = (driverId) => {
     setSelectedDriverIds((prev) =>
       prev.includes(driverId)
@@ -85,17 +86,14 @@ export default function SponsorDrivers() {
     );
   };
 
-  // Select all drivers
   const selectAllDrivers = () => {
     setSelectedDriverIds(drivers.map(driver => driver.Driver_ID));
   };
 
-  // Clear selection
   const clearSelection = () => {
     setSelectedDriverIds([]);
   };
 
-  // Open modal for bulk edit
   const openBulkEditModal = () => {
     if (selectedDriverIds.length === 0) {
       alert("Please select at least one driver.");
@@ -113,9 +111,8 @@ export default function SponsorDrivers() {
     }
 
     const sponsorUserId = effectiveSponsorId;
-  
+
     try {
-  
       for (const driverId of selectedDriverIds) {
         const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points", {
           method: "POST",
@@ -129,32 +126,76 @@ export default function SponsorDrivers() {
             Reason: reason
           })
         });
-  
+
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(`Failed to update Driver ${driverId}: ${errData.error || response.statusText}`);
         }
       }
-  
+
       alert("Points updated successfully!");
       setIsModalOpen(false);
       setSelectedDriverIds([]);
       setPointsChange("");
       setReason("");
-  
-      // Optionally refetch drivers to reflect updated balances
-      if (effectiveSponsorId) {
-        const refreshDrivers = await fetch(
-          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers?sponsorOrgId=${effectiveSponsorId}`
-        );
-        const refreshedData = await refreshDrivers.json();
-        setDrivers(refreshedData);
-      }
-  
+
+      const refreshDrivers = await fetch(
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers?sponsorOrgId=${effectiveSponsorId}`
+      );
+      const refreshedData = await refreshDrivers.json();
+      setDrivers(refreshedData);
+
     } catch (err) {
       console.error("Error updating points:", err);
       alert("Error updating points: " + err.message);
     }
+  };
+
+  const runWeeklyBonus = async () => {
+    if (!effectiveSponsorId) {
+      alert("Sponsor ID not found.");
+      return;
+    }
+
+    setBonusLoading(true);
+    setBonusMessage("");
+
+    try {
+      const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          action: "give_weekly_bonus",
+          Sponsor_Org_ID: parseInt(effectiveSponsorId),
+          week_start: "2025-03-31",
+          week_end: "2025-04-06"
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Bonus failed.");
+      }
+
+      setBonusMessage("✅ " + result.message);
+      setTimeout(() => setBonusMessage(""), 5000);
+
+      const refreshDrivers = await fetch(
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers?sponsorOrgId=${effectiveSponsorId}`
+      );
+      const refreshedData = await refreshDrivers.json();
+      setDrivers(refreshedData);
+
+    } catch (err) {
+      console.error("Bonus error:", err);
+      setBonusMessage("❌ " + err.message);
+      setTimeout(() => setBonusMessage(""), 5000);
+    }
+
+    setBonusLoading(false);
   };
 
   return (
@@ -183,25 +224,18 @@ export default function SponsorDrivers() {
 
       {!loadingDrivers && drivers.length > 0 && (
         <>
-          <div className="mb-4 flex items-center gap-4">
-            <button 
-              className="bg-gray-500 text-white py-2 px-4 rounded"
-              onClick={selectAllDrivers}
+          <div className="mb-4 flex flex-wrap items-center gap-4">
+            <button className="bg-gray-500 text-white py-2 px-4 rounded" onClick={selectAllDrivers}>Select All</button>
+            <button className="bg-gray-500 text-white py-2 px-4 rounded" onClick={clearSelection}>Clear Selection</button>
+            <button className="bg-blue-500 text-white py-2 px-4 rounded" onClick={openBulkEditModal}>Edit Points</button>
+            <button
+              className="bg-green-600 text-white py-2 px-4 rounded"
+              onClick={runWeeklyBonus}
+              disabled={bonusLoading}
             >
-              Select All
+              {bonusLoading ? "Running..." : "Give Weekly Bonus"}
             </button>
-            <button 
-              className="bg-gray-500 text-white py-2 px-4 rounded"
-              onClick={clearSelection}
-            >
-              Clear Selection
-            </button>
-            <button 
-              className="bg-blue-500 text-white py-2 px-4 rounded"
-              onClick={openBulkEditModal}
-            >
-              Edit Points
-            </button>
+            {bonusMessage && <p className="text-sm text-gray-700">{bonusMessage}</p>}
           </div>
 
           <div className="overflow-x-auto">
