@@ -15,7 +15,18 @@ export default function SponsorDrivers() {
   // Modal state for bulk edit
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pointsChange, setPointsChange] = useState(""); // Keep as string for proper input handling
+
+  // Points_Key Reason Table
   const [reason, setReason] = useState("");
+  const [reasons, setReasons] = useState([]); // store the reasons table
+
+  // For Editing Points_Key table
+  const [isEditing, setIsEditing] = useState(false);
+  const [newReason, setNewReason] = useState("");
+  const [newPoints, setNewPoints] = useState("");
+
+  // for testing: was having auth problems trying to test - anna
+  const HARD_CODED_SPONSOR_ID = 1;
 
   useEffect(() => {
     const getSponsorIdFromUser = async () => {
@@ -76,6 +87,17 @@ export default function SponsorDrivers() {
     fetchDrivers();
   }, [effectiveSponsorId]);
 
+  // Fetch Reasons table when modal opens
+  useEffect(() => {
+    if (isModalOpen && effectiveSponsorId) {
+      console.log("Fetching reasons for Sponsor Org ID:", effectiveSponsorId);
+      fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?sponsorOrgId=${effectiveSponsorId}`)
+        .then(response => response.json())
+        .then(data => setReasons(data))
+        .catch(error => console.error("Error fetching reasons table:", error));
+    }
+  }, [isModalOpen, effectiveSponsorId]);
+
   // Toggle checkbox for each driver row
   const toggleDriverSelection = (driverId) => {
     setSelectedDriverIds((prev) =>
@@ -112,6 +134,99 @@ export default function SponsorDrivers() {
     console.log("Updating drivers", selectedDriverIds, "by", pointsChange, "points. Reason:", reason);
     setIsModalOpen(false);
   };
+
+  // Functions for handling editing Points_Key table
+  // handle editing existing reason
+  const handleEditReason = async (reasonData) => {
+    const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        Reason_ID: reasonData.Reason_ID,
+        Sponsor_Org_ID: reasonData.Sponsor_Org_ID,
+        Reason: reasonData.Reason,
+        Points: reasonData.Points,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update reason');
+    }
+
+    const data = await response.json();
+    console.log(data);
+    //return data; // Returns the updated reason
+  };
+
+  // handle editing existing points
+  const handleEditPoints = async (reasonData) => {
+    const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        Reason_ID: reasonData.Reason_ID,
+        Sponsor_Org_ID: reasonData.Sponsor_Org_ID,
+        Reason: reasonData.Reason,
+        Points: reasonData.Points,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update points');
+    }
+
+    const data = await response.json();
+    console.log(data);
+    //return data; // Returns the updated reason
+  }
+  
+
+  // handle adding new reason
+  const handleAddReason = async (reasonData) => {
+    const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        Sponsor_Org_ID: reasonData.Sponsor_Org_ID,
+        Reason: reasonData.Reason,
+        Points: reasonData.Points,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to add reason');
+    }
+
+    const data = await response.json();
+    setReasons([...reasons, data]); 
+    //return data; // Returns the newly added reason
+  };
+  
+
+  // handle deleting reason
+  const handleDeleteReason = async (reasonId) => {
+    const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?Reason_ID=${reasonId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete reason');
+    }
+
+    const data = await response.json();
+    setReasons(reasons.filter(reason => reason.Reason_ID !== reasonId));
+    //return data; // Returns confirmation of the deletion
+  };
+
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 shadow-md rounded-lg">
@@ -197,10 +312,108 @@ export default function SponsorDrivers() {
 
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[75vh] overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4">
               Update Points for Selected Drivers
             </h3>
+
+            {/* Toggle Edit Mode */}
+            <div className="mb-4 flex justify-between items-center">
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                className="bg-blue-500 text-white py-2 px-4 rounded"
+              >
+                {isEditing ? "Save Changes" : "Edit Table"}
+              </button>
+            </div>
+
+            {/* Reasons Table */}
+            <h4 className="text-md font-semibold mb-2">Point Change Key</h4>
+            <table className="w-full border-collapse border border-gray-300 mb-4">
+              <thead>
+                <tr className="bg-gray-200">
+                  <th className="border p-2">Reason</th>
+                  <th className="border p-2">Points</th>
+                  <th className="border p-2">Date Added</th>
+                  {isEditing && <th className="border p-2">Actions</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {reasons.length > 0 ? (
+                  reasons.map((reason, index) => (
+                    <tr key={reason.Reason_ID}>
+                      <td className="border p-2">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={reason.Reason}
+                            onChange={(e) => handleEditReason(e, index)}
+                            className="p-2 border rounded"
+                          />
+                        ) : (
+                          reason.Reason
+                        )}
+                      </td>
+                      <td className="border p-2">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            value={reason.Points}
+                            onChange={(e) => handleEditPoints(e, index)}
+                            className="p-2 border rounded"
+                          />
+                        ) : (
+                          reason.Points
+                        )}
+                      </td>
+                      <td className="border p-2">{reason.Date_Added}</td>
+                      {isEditing && (
+                        <td className="border p-2">
+                          <button
+                            onClick={() => handleDeleteReason(reason.Reason_ID)}
+                            className="bg-red-500 text-white py-1 px-3 rounded"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="10" className="border p-2 text-center">No reasons found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+
+            {/* Add New Row (if in edit mode) */}
+            {isEditing && (
+              <div className="mb-4 flex gap-4">
+                <input
+                  type="text"
+                  value={newReason}
+                  onChange={(e) => setNewReason(e.target.value)}
+                  className="p-2 border rounded w-full"
+                  placeholder="New Reason"
+                />
+                <input
+                  type="number"
+                  value={newPoints}
+                  onChange={(e) => setNewPoints(e.target.value)}
+                  className="p-2 border rounded w-full"
+                  placeholder="Points"
+                />
+                <button
+                  onClick={handleAddReason}
+                  className="bg-green-500 text-white py-2 px-4 rounded"
+                >
+                  Add Reason
+                </button>
+              </div>
+            )}
+
             <input 
               type="text"
               value={pointsChange}
