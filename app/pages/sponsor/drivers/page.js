@@ -138,7 +138,7 @@ export default function SponsorDrivers() {
   // Functions for handling editing Points_Key table
   // handle editing existing reason
   const handleEditReason = async (reasonData) => {
-    const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
+    const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?sponsorOrgId=${effectiveSponsorId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -161,8 +161,16 @@ export default function SponsorDrivers() {
   };
 
   // handle editing existing points
-  const handleEditPoints = async (reasonData) => {
-    const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
+  const handleEditPoints = (e, index) => {
+    const updatedReasons = [...reasons];  // Make a copy of the current reasons array
+    updatedReasons[index].Points = e.target.value;  // Update the Points value at the specified index
+    setReasons(updatedReasons);  // Update the state to reflect the new points value
+  
+    // Now update the database (only after updating the state)
+    const reasonData = updatedReasons[index];
+  
+    // PUT request to update the points on the backend
+    fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey${reasonData.Reason_ID}?sponsorOrgId=${effectiveSponsorId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -173,21 +181,26 @@ export default function SponsorDrivers() {
         Reason: reasonData.Reason,
         Points: reasonData.Points,
       }),
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Failed to update points');
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Points updated successfully:', data);
+    })
+    .catch(error => {
+      console.error('Error updating points:', error);
     });
-
-    if (!response.ok) {
-      throw new Error('Failed to update points');
-    }
-
-    const data = await response.json();
-    console.log(data);
-    //return data; // Returns the updated reason
-  }
+  };
+  
   
 
   // handle adding new reason
   const handleAddReason = async (reasonData) => {
-    const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
+    const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?sponsorOrgId=${effectiveSponsorId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -206,6 +219,9 @@ export default function SponsorDrivers() {
     const data = await response.json();
     setReasons([...reasons, data]); 
     //return data; // Returns the newly added reason
+    // clear input fields after
+    setNewReason("");
+    setNewPoints("");
   };
   
 
