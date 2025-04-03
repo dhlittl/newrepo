@@ -46,6 +46,7 @@ export default function ApplicationViewing() {
 
   const reviewApplication = async (applicationId, status) => {
     try {
+      // Step 1: Update the application status via your existing API
       const response = await fetch(
         "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
         {
@@ -60,21 +61,47 @@ export default function ApplicationViewing() {
           }),
         }
       );
-
+  
       if (!response.ok) {
         throw new Error(
           `Failed to ${status.toLowerCase()} application: ${response.statusText}`
         );
       }
-
+  
       console.log(`Application ${applicationId} ${status.toLowerCase()} successfully`);
-
-      fetchPendingApplications();
+  
+      // Step 2: Call the Lambda function if the application is approved
+      if (status === "Approved") {
+        const application = applications.find(app => app.id === applicationId);
+  
+        const lambdaResponse = await fetch(
+          "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: application.email, // Pass the email of the approved application
+            }),
+          }
+        );
+  
+        if (!lambdaResponse.ok) {
+          throw new Error(`Failed to invoke Lambda function: ${lambdaResponse.statusText}`);
+        }
+  
+        console.log(`Lambda invoked for ${application.email}`);
+  
+        // Step 3: Refresh the applications list
+        fetchPendingApplications();
+      }
+  
     } catch (err) {
       console.error(`Error updating application: ${err.message}`);
       setError(err.message);
     }
-  };
+  };  
 
   return (
     <main className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg">
