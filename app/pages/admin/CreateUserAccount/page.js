@@ -12,28 +12,31 @@ async function doTheSignInThang(formData, setSuccessMessage, setFormData) {
   try {
     const formattedPhone = formatPhoneNumber(formData.phone);
 
-    const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/defaultUser", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username: formData.username,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formattedPhone,
-        accountType: formData.accountType,
-        sponsorOrgId: formData.accountType === "Sponsor" ? formData.sponsorOrgId : null,
-        numPointChanges: formData.accountType === "Sponsor" ? 0 : null,
-      }),
-    });
+    const response = await fetch(
+      "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/defaultUser",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formattedPhone,
+          accountType: formData.accountType,
+          sponsorOrgId: formData.accountType === "Sponsor" ? formData.sponsorOrgId : null,
+          numPointChanges: formData.accountType === "Sponsor" ? 0 : null,
+          cognitoSub: "", // As originally provided
+        }),
+      }
+    );
 
     const data = await response.json();
 
     if (response.ok) {
       setSuccessMessage("Account created successfully!");
-      // Clear form fields
       setFormData({
         username: "",
         password: "",
@@ -45,7 +48,7 @@ async function doTheSignInThang(formData, setSuccessMessage, setFormData) {
         sponsorOrgId: "",
       });
     } else {
-      console.error("Error during user creation:", data.error);
+      console.error("Error during user creation:", data.error || "Unknown error");
     }
   } catch (error) {
     console.error("Error during sign-up:", error);
