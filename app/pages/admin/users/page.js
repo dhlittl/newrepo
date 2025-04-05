@@ -111,7 +111,13 @@ export default function ShowUsers() {
   return (
     <main className="p-4">
       <h1 className="text-2xl font-bold mb-4">List of Users</h1>
-      <div className="flex items-center mb-4">
+       {/* Add User Button & Filter */}
+       <div className="flex items-center mb-4 space-x-4">
+        <Link href="/pages/admin/CreateUserAccount">
+          <button className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition">
+            Add New User
+          </button>
+        </Link>
         <div>
           <label htmlFor="filter" className="mr-2">Filter by User Type:</label>
           <select

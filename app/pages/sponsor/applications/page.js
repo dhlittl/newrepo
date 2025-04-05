@@ -5,26 +5,23 @@ export default function ApplicationViewing() {
   const [applications, setApplications] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const sponsorId = 1; // Replace with dynamic value if needed
+  const [sponsorId, setSponsorId] = useState(1);
 
   const fetchPendingApplications = async () => {
     try {
       const response = await fetch(
         `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications?sponsor_id=${sponsorId}`
       );
-
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch pending applications: ${response.statusText}`
-        );
+        throw new Error(`Failed to fetch: ${response.statusText}`);
       }
 
       const data = await response.json();
       console.log("API Response:", data);
 
-      // Transform data to match the expected format
       const transformedData = data.map((app) => ({
         id: app.Application_ID,
+        user_id: app.User_ID,
         fname: app.FName,
         lname: app.LName,
         email: app.Email,
@@ -42,18 +39,15 @@ export default function ApplicationViewing() {
 
   useEffect(() => {
     fetchPendingApplications();
-  }, []);
+  }, [sponsorId]);
 
   const reviewApplication = async (applicationId, status) => {
     try {
-      // Step 1: Update the application status via your existing API
       const response = await fetch(
         "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             application_id: applicationId,
             sponsor_id: sponsorId,
@@ -61,19 +55,23 @@ export default function ApplicationViewing() {
           }),
         }
       );
-  
+
       if (!response.ok) {
         throw new Error(
           `Failed to ${status.toLowerCase()} application: ${response.statusText}`
         );
       }
-  
+
       console.log(`Application ${applicationId} ${status.toLowerCase()} successfully`);
-  
-      // Step 2: Call the Lambda function if the application is approved
+
       if (status === "Approved") {
         const application = applications.find(app => app.id === applicationId);
-  
+
+        console.log("Calling POST to promote user:", {
+          url: "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
+          body: { user_id: application.user_id }
+        });
+        
         const lambdaResponse = await fetch(
           "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
           {
@@ -82,38 +80,48 @@ export default function ApplicationViewing() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              email: application.email, // Pass the email of the approved application
+              user_id: application.user_id, // <-- Send user ID instead of email
             }),
           }
         );
-  
+
         if (!lambdaResponse.ok) {
+          const errorText = await lambdaResponse.text();  // Read full response body
+          console.error("Failed POST response:", lambdaResponse.status, errorText);
           throw new Error(`Failed to invoke Lambda function: ${lambdaResponse.statusText}`);
         }
-  
-        console.log(`Lambda invoked for ${application.email}`);
-  
-        // Step 3: Refresh the applications list
+
+        console.log(`Lambda invoked for user_id ${application.user_id}`);
         fetchPendingApplications();
       }
-  
+
     } catch (err) {
       console.error(`Error updating application: ${err.message}`);
       setError(err.message);
     }
-  };  
+  };
 
   return (
     <main className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg">
-      <h1 className="text-2xl font-semibold text-gray-800 mb-4">
-        Pending Applications
-      </h1>
+      <h1 className="text-2xl font-semibold text-gray-800 mb-4">Pending Applications</h1>
+
+      <div className="mb-4">
+        <label htmlFor="sponsor-select" className="text-gray-700">Select Sponsor:</label>
+        <select
+          id="sponsor-select"
+          className="ml-2 p-2 border rounded"
+          value={sponsorId}
+          onChange={(e) => setSponsorId(Number(e.target.value))}
+        >
+          <option value={1}>Sponsor 1</option>
+          <option value={2}>Sponsor 2</option>
+          <option value={3}>Sponsor 3</option>
+        </select>
+      </div>
 
       {loading && <p className="text-gray-500">Loading...</p>}
       {error && <p className="text-red-500">Error: {error}</p>}
-      {applications && applications.length === 0 && (
-        <p className="text-gray-500">No pending applications.</p>
-      )}
+      {applications && applications.length === 0 && <p>No pending applications.</p>}
 
       {applications && applications.length > 0 && (
         <div className="overflow-x-auto">
@@ -130,9 +138,7 @@ export default function ApplicationViewing() {
             <tbody>
               {applications.map((app) => (
                 <tr key={app.id} className="text-center hover:bg-gray-50">
-                  <td className="px-4 py-2 border">
-                    {app.fname} {app.lname}
-                  </td>
+                  <td className="px-4 py-2 border">{app.fname} {app.lname}</td>
                   <td className="px-4 py-2 border">{app.email}</td>
                   <td className="px-4 py-2 border">{app.phone}</td>
                   <td className="px-4 py-2 border">{app.submittedAt}</td>

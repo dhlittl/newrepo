@@ -4,6 +4,7 @@
 import {useEffect, useState} from "react";
 
 export default function ApplicationForm() {
+    const [userId, setUserId] = useState("");
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
@@ -149,6 +150,7 @@ export default function ApplicationForm() {
 
     const validateForm = () => {
         let newErrors = {};
+        if(!userId) newErrors.userId = "UserId required.";
         if(!formData.firstName.trim()) newErrors.firstName = "First name is required.";
         if(!formData.lastName.trim()) newErrors.lastName = "Last name is required.";
         if(!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email))
@@ -194,6 +196,7 @@ export default function ApplicationForm() {
             if (valid) {
                 const requestData = {
                     sponsorId,
+                    userId,
                     firstName: formData.firstName,
                     lastName: formData.lastName,
                     email: formData.email,
@@ -281,6 +284,18 @@ export default function ApplicationForm() {
                         })}
                 </select>
                 {errors.sponsorId && <p className="text-red-500 text-sm">{errors.sponsorId}</p>}
+            </div>
+            
+            {/* REMOVE THIS LATER */}
+            <div>
+                <label className="block text-sm font-medium text-black">User ID</label>
+                <input
+                    type="text"
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                    className="mt-1 p-2 w-full border rounded-md text-black"
+                />
+                {errors.userId && <p className="text-red-500 text-sm">{errors.userId}</p>}
             </div>
 
             {/* User Input Fields */}

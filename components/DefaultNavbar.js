@@ -7,7 +7,7 @@ export default function DefaultNavbar() {
           <li><a href="/pages/defaultUser/applyForm">Application Form</a></li>
           <li><a href="/pages/defaultUser/sponsorsPage">Sponsors</a></li>
           <li><a href="/pages/help">Help</a></li>
-          <li><a href="/">About</a></li>
+          <li><a href="/pages/aboutPage">About</a></li>
         </ul>
       </nav>
     );
