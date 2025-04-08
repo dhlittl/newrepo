@@ -26,7 +26,7 @@ const IDTest = () => {
         }
 
         // API endpoint with email as a query parameter
-        const apiUrl = `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/CurrentUser/?username=${encodeURIComponent(username)}`;
+        const apiUrl = `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/CurrentUser/?username=${encodeURIComponent(username)}`;
 
         const response = await fetch(apiUrl, {
           method: "GET",
