@@ -18,6 +18,27 @@ export async function handleSignUp({ username, password, given_name, family_name
       }
     });
 
+    const response = await fetch(
+      "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/defaultUser",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: username,
+          firstName: given_name,
+          lastName: family_name,
+          email: email,
+          phone: phone_number,
+          accountType: 'Default',
+          sponsorOrgId: null,
+          numPointChanges: null,
+          cognitoSub: "", // As originally provided
+        }),
+      }
+    );
+
     console.log(userId);
   } catch (error) {
     console.log('error signing up:', error);

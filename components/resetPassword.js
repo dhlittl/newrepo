@@ -43,7 +43,7 @@ export default function ResetPasswordClient() {
         newPassword: formData.newPassword,
       });
       setMessage('Password reset successful! Redirecting to login...');
-      setTimeout(() => router.push('/'), 2500);
+      setTimeout(() => router.push('/pages/login'), 2500);
     } catch (error) {
       console.error('Reset password error:', error);
       setErrors({ auth: error.message || 'Something went wrong.' });
