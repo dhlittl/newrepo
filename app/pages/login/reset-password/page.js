@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { confirmResetPassword } from "aws-amplify/auth";
+export const dynamic = "force-dynamic";
+
 
 export default function ResetPasswordPage() {
   const router = useRouter();
