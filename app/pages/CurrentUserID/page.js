@@ -19,14 +19,14 @@ const IDTest = () => {
       console.log("Fetching about data...");
       try {
         // Get current user's email from AWS Amplify Auth
-        const {email, username} = await getCurrentUser();
+        const {username, signInDetails} = await getCurrentUser();
 
-        if (!email) {
-          throw new Error("User email not found");
+        if (!username) {
+          throw new Error("Username not found");
         }
 
         // API endpoint with email as a query parameter
-        const apiUrl = `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/CurrentUser/?email=${encodeURIComponent(email)}`;
+        const apiUrl = `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/CurrentUser/?username=${encodeURIComponent(username)}`;
 
         const response = await fetch(apiUrl, {
           method: "GET",
