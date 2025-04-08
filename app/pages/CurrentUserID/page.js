@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Amplify } from "aws-amplify";
 import awsExports from "../../../aws-exports";
-import { Auth } from "aws-amplify";
+import { getCurrentUser } from "aws-amplify/auth";
 
 Amplify.configure(awsExports);
 
@@ -19,8 +19,7 @@ const IDTest = () => {
       console.log("Fetching about data...");
       try {
         // Get current user's email from AWS Amplify Auth
-        const currentUser = await Auth.currentUserInfo();
-        const email = currentUser?.attributes?.email;
+        const {email, username} = await getCurrentUser();
 
         if (!email) {
           throw new Error("User email not found");
