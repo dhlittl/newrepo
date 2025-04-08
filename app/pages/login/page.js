@@ -120,11 +120,11 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <div className="mt-4 text-center">
-        <button onClick={() => router.push("/signup")} className="text-blue-500 hover:underline">
-          Create Account
+      <div className="mt-2 text-center">
+        <button onClick={() => router.push("/pages/login/forgot-password")} className="text-blue-500 hover:underline">
+          Forgot Password?
         </button>
-      </div>
+        </div>
     </div>
   );
 }
