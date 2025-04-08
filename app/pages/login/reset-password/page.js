@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import ResetPasswordClient from '@/components/ResetPasswordClient';
+import ResetPasswordClient from '@/components/resetPassword';
 
 export const dynamic = 'force-dynamic';
 
