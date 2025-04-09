@@ -20,6 +20,7 @@ const IDTest = () => {
       try {
         // Get current user's email from AWS Amplify Auth
         const {username, signInDetails} = await getCurrentUser();
+        console.log(username);
 
         if (!username) {
           throw new Error("Username not found");
