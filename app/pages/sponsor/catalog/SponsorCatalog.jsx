@@ -331,6 +331,54 @@ export default function SponsorCatalog({ sponsorId }) {
       alert(`Error updating feature status: ${err.message}`);
     }
   };
+  
+  // Handle updating item quantity
+  const handleUpdateQuantity = async (productId, quantity) => {
+    try {
+      console.log(`Updating quantity for product ${productId} to ${quantity}`);
+      
+      // Update local state optimistically
+      setCatalogItems(prev => 
+        prev.map(item => 
+          item.Product_ID === productId 
+            ? { ...item, Quantity: quantity } 
+            : item
+        )
+      );
+      
+      // Call the Lambda function API to update the quantity in the database
+      const response = await fetch(
+        'https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/sponsors/catalog', 
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            productId: productId,
+            quantity: quantity,
+            sponsorId: sponsorId
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Error updating quantity: ${response.statusText}`);
+      }
+      
+      // If we get here, the update was successful
+      console.log('Quantity updated successfully');
+    } catch (err) {
+      console.error('Error updating quantity:', err);
+      
+      // Handle connection errors gracefully during testing
+      if (err.message.includes('Failed to fetch') || err.message.includes('Network error')) {
+        console.log('API connection error, but continuing with local state update for testing');
+      } else {
+        alert(`Error updating quantity: ${err.message}`);
+      }
+    }
+  };
 
   // Handle selecting an item (for bulk operations)
   const handleSelectItem = (productId) => {
@@ -532,6 +580,7 @@ export default function SponsorCatalog({ sponsorId }) {
                   isSelected={selectedItems.includes(item.Product_ID)}
                   onSelect={handleSelectItem}
                   pointsRatio={pointsRatio}
+                  onUpdateQuantity={handleUpdateQuantity}
                 />
               ))}
             </div>
