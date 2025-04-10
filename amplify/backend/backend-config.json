@@ -8,7 +8,7 @@
             "UserPoolId"
           ],
           "category": "auth",
-          "resourceName": "team24gen15339fb54"
+          "resourceName": "team24gen1v4fccea1a0"
         },
         {
           "attributes": [
@@ -16,7 +16,7 @@
             "Name"
           ],
           "category": "function",
-          "resourceName": "AdminQueries79e996a3"
+          "resourceName": "AdminQueriese3b8663c"
         }
       ],
       "providerPlugin": "awscloudformation",
@@ -24,8 +24,8 @@
     }
   },
   "auth": {
-    "team24gen15339fb54": {
-      "customAuth": true,
+    "team24gen1v4fccea1a0": {
+      "customAuth": false,
       "dependsOn": [
         {
           "attributes": [
@@ -33,7 +33,7 @@
             "Name"
           ],
           "category": "function",
-          "resourceName": "team24gen15339fb54PostConfirmation",
+          "resourceName": "team24gen1v4fccea1a0PostConfirmation",
           "triggerProvider": "Cognito"
         }
       ],
@@ -47,10 +47,7 @@
           "passwordPolicyMinLength": 8
         },
         "signupAttributes": [
-          "EMAIL",
-          "FAMILY_NAME",
-          "GIVEN_NAME",
-          "PHONE_NUMBER"
+          "EMAIL"
         ],
         "socialProviders": [],
         "usernameAttributes": [],
@@ -71,7 +68,7 @@
             "IdentityPoolId"
           ],
           "category": "auth",
-          "resourceName": "team24gen15339fb54"
+          "resourceName": "team24gen1v4fccea1a0"
         }
       ],
       "providerPlugin": "awscloudformation",
@@ -79,7 +76,7 @@
     }
   },
   "function": {
-    "AdminQueries79e996a3": {
+    "AdminQueriese3b8663c": {
       "build": true,
       "dependsOn": [
         {
@@ -87,28 +84,16 @@
             "UserPoolId"
           ],
           "category": "auth",
-          "resourceName": "team24gen15339fb54"
+          "resourceName": "team24gen1v4fccea1a0"
         }
       ],
       "providerPlugin": "awscloudformation",
       "service": "Lambda"
     },
-    "team24gen15339fb54PostConfirmation": {
+    "team24gen1v4fccea1a0PostConfirmation": {
       "build": true,
       "providerPlugin": "awscloudformation",
       "service": "Lambda"
-    },
-    "team24gen184e372e4CustomMessage": {
-      "build": true,
-      "providerPlugin": "awscloudformation",
-      "service": "Lambda"
-    }
-  },
-  "hosting": {
-    "amplifyhosting": {
-      "lastPushTimeStamp": "2025-02-27T08:54:44.960Z",
-      "service": "amplifyhosting",
-      "type": "cicd"
     }
   },
   "parameters": {
@@ -125,6 +110,22 @@
         {
           "category": "function",
           "resourceName": "AdminQueries79e996a3"
+        }
+      ]
+    },
+    "AMPLIFY_function_AdminQueriese3b8663c_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "AdminQueriese3b8663c"
+        }
+      ]
+    },
+    "AMPLIFY_function_AdminQueriese3b8663c_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "AdminQueriese3b8663c"
         }
       ]
     },
@@ -168,6 +169,30 @@
         }
       ]
     },
+    "AMPLIFY_function_team24gen1v4fccea1a0PostConfirmation_GROUP": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen1v4fccea1a0PostConfirmation"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen1v4fccea1a0PostConfirmation_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen1v4fccea1a0PostConfirmation"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen1v4fccea1a0PostConfirmation_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen1v4fccea1a0PostConfirmation"
+        }
+      ]
+    },
     "AMPLIFY_hosting_amplifyhosting_appId": {
       "usedBy": [
         {
@@ -183,6 +208,13 @@
           "resourceName": "amplifyhosting"
         }
       ]
+    }
+  },
+  "storage": {
+    "s318806dca": {
+      "dependsOn": [],
+      "providerPlugin": "awscloudformation",
+      "service": "S3"
     }
   }
 }

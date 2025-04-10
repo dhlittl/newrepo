@@ -2,7 +2,7 @@
   "providers": [
     "awscloudformation"
   ],
-  "projectName": "Team24Gen1v3",
+  "projectName": "Team24Gen1v4",
   "version": "3.1",
   "frontend": "javascript",
   "javascript": {

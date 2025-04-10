@@ -1,21 +1,22 @@
 {
   "dev": {
     "awscloudformation": {
-      "AuthRoleName": "amplify-team24gen1v3-dev-22982-authRole",
-      "UnauthRoleArn": "arn:aws:iam::274815321855:role/amplify-team24gen1v3-dev-22982-unauthRole",
-      "AuthRoleArn": "arn:aws:iam::274815321855:role/amplify-team24gen1v3-dev-22982-authRole",
+      "AuthRoleName": "amplify-team24gen1v4-dev-2887a-authRole",
+      "UnauthRoleArn": "arn:aws:iam::274815321855:role/amplify-team24gen1v4-dev-2887a-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::274815321855:role/amplify-team24gen1v4-dev-2887a-authRole",
       "Region": "us-east-1",
-      "DeploymentBucketName": "amplify-team24gen1v3-dev-22982-deployment",
-      "UnauthRoleName": "amplify-team24gen1v3-dev-22982-unauthRole",
-      "StackName": "amplify-team24gen1v3-dev-22982",
-      "StackId": "arn:aws:cloudformation:us-east-1:274815321855:stack/amplify-team24gen1v3-dev-22982/bc035240-15ba-11f0-aa20-0eeb3232c81b",
-      "AmplifyAppId": "d1ob9fm4mtahh",
-      "AuthTriggerTemplateURL": "https://s3.amazonaws.com/amplify-team24gen1v3-dev-22982-deployment/amplify-cfn-templates/auth/auth-trigger-cloudformation-template.json"
+      "DeploymentBucketName": "amplify-team24gen1v4-dev-2887a-deployment",
+      "UnauthRoleName": "amplify-team24gen1v4-dev-2887a-unauthRole",
+      "StackName": "amplify-team24gen1v4-dev-2887a",
+      "StackId": "arn:aws:cloudformation:us-east-1:274815321855:stack/amplify-team24gen1v4-dev-2887a/404160e0-15d1-11f0-baa0-0ed90967629b",
+      "AmplifyAppId": "d432exw6fpj7",
+      "AuthTriggerTemplateURL": "https://s3.amazonaws.com/amplify-team24gen1v4-dev-2887a-deployment/amplify-cfn-templates/auth/auth-trigger-cloudformation-template.json"
     },
     "categories": {
       "auth": {
         "team24gen15339fb54": {},
-        "userPoolGroups": {}
+        "userPoolGroups": {},
+        "team24gen1v4fccea1a0": {}
       },
       "function": {
         "team24gen15339fb54PostConfirmation": {
@@ -30,6 +31,15 @@
         "AdminQueries79e996a3": {
           "deploymentBucketName": "amplify-team24gen1v3-dev-22982-deployment",
           "s3Key": "amplify-builds/AdminQueries79e996a3-5642733157774d362b44-build.zip"
+        },
+        "team24gen1v4fccea1a0PostConfirmation": {
+          "GROUP": "defaultUser",
+          "deploymentBucketName": "amplify-team24gen1v4-dev-2887a-deployment",
+          "s3Key": "amplify-builds/team24gen1v4fccea1a0PostConfirmation-58744369644a2b6f7169-build.zip"
+        },
+        "AdminQueriese3b8663c": {
+          "deploymentBucketName": "amplify-team24gen1v4-dev-2887a-deployment",
+          "s3Key": "amplify-builds/AdminQueriese3b8663c-5642733157774d362b44-build.zip"
         }
       },
       "hosting": {
@@ -40,6 +50,9 @@
       },
       "api": {
         "AdminQueries": {}
+      },
+      "storage": {
+        "s318806dca": {}
       }
     }
   }

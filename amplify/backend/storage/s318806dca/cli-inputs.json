@@ -1,0 +1,13 @@
+{
+  "resourceName": "s318806dca",
+  "policyUUID": "18806dca",
+  "bucketName": "team24profilepicture",
+  "storageAccess": "auth",
+  "guestAccess": [],
+  "authAccess": [
+    "CREATE_AND_UPDATE",
+    "READ",
+    "DELETE"
+  ],
+  "triggerFunction": "NONE"
+}
