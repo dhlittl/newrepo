@@ -46,12 +46,12 @@ const IDTest = () => {
         const parsedData = data.body ? JSON.parse(data.body) : data;
 
         if (
-          !parsedData.User_ID
+          !parsedData[0]?.User_ID
         ) {
           throw new Error("Missing required fields in response");
         }
 
-        setAboutData(parsedData);
+        setAboutData(parsedData[0]);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching data:", err);

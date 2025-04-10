@@ -101,7 +101,7 @@
       }
     ],
     "thirdPartyAuth": false,
-    "userPoolGroups": true,
+    "userPoolGroups": false,
     "adminQueries": true,
     "triggers": {
       "PostConfirmation": [

@@ -39,5 +39,11 @@ export type AmplifyDependentResourcesAttributes = {
       "Name": "string",
       "Region": "string"
     }
+  },
+  "storage": {
+    "team24profilepictures": {
+      "BucketName": "string",
+      "Region": "string"
+    }
   }
 }

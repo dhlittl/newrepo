@@ -8,7 +8,7 @@
   "resourceName": "team24gen1v4fccea1a0PostConfirmation",
   "parentStack": "auth",
   "triggerEnvs": "[]",
-  "triggerDir": "C:\\snapshot\\amplify-cli\\build\\node_modules\\@aws-amplify\\amplify-category-auth\\provider-utils\\awscloudformation\\triggers\\PostConfirmation",
+  "triggerDir": "/snapshot/amplify-cli/build/node_modules/@aws-amplify/amplify-category-auth/provider-utils/awscloudformation/triggers/PostConfirmation",
   "triggerTemplate": "PostConfirmation.json.ejs",
   "triggerEventPath": "PostConfirmation.event.json",
   "roleName": "team24gen1v4fccea1a0PostConfirmation",

@@ -137,5 +137,12 @@
         }
       ]
     }
+  },
+  "storage": {
+    "team24profilepictures": {
+      "dependsOn": [],
+      "providerPlugin": "awscloudformation",
+      "service": "S3"
+    }
   }
 }
