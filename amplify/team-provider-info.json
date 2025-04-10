@@ -1,51 +1,45 @@
 {
   "dev": {
     "awscloudformation": {
-      "AuthRoleName": "amplify-team24gen1-dev-13106-authRole",
-      "UnauthRoleArn": "arn:aws:iam::274815321855:role/amplify-team24gen1-dev-13106-unauthRole",
-      "AuthRoleArn": "arn:aws:iam::274815321855:role/amplify-team24gen1-dev-13106-authRole",
+      "AuthRoleName": "amplify-team24gen1v3-dev-22982-authRole",
+      "UnauthRoleArn": "arn:aws:iam::274815321855:role/amplify-team24gen1v3-dev-22982-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::274815321855:role/amplify-team24gen1v3-dev-22982-authRole",
       "Region": "us-east-1",
-      "DeploymentBucketName": "amplify-team24gen1-dev-13106-deployment",
-      "UnauthRoleName": "amplify-team24gen1-dev-13106-unauthRole",
-      "StackName": "amplify-team24gen1-dev-13106",
-      "StackId": "arn:aws:cloudformation:us-east-1:274815321855:stack/amplify-team24gen1-dev-13106/03426b20-f4e4-11ef-ba22-0afff54f33d1",
-      "AmplifyAppId": "d3ty33cs4lcdx0",
-      "AuthTriggerTemplateURL": "https://s3.amazonaws.com/amplify-team24gen1-dev-13106-deployment/amplify-cfn-templates/auth/auth-trigger-cloudformation-template.json"
+      "DeploymentBucketName": "amplify-team24gen1v3-dev-22982-deployment",
+      "UnauthRoleName": "amplify-team24gen1v3-dev-22982-unauthRole",
+      "StackName": "amplify-team24gen1v3-dev-22982",
+      "StackId": "arn:aws:cloudformation:us-east-1:274815321855:stack/amplify-team24gen1v3-dev-22982/bc035240-15ba-11f0-aa20-0eeb3232c81b",
+      "AmplifyAppId": "d1ob9fm4mtahh",
+      "AuthTriggerTemplateURL": "https://s3.amazonaws.com/amplify-team24gen1v3-dev-22982-deployment/amplify-cfn-templates/auth/auth-trigger-cloudformation-template.json"
     },
     "categories": {
+      "auth": {
+        "team24gen15339fb54": {},
+        "userPoolGroups": {}
+      },
+      "function": {
+        "team24gen15339fb54PostConfirmation": {
+          "deploymentBucketName": "amplify-team24gen1v3-dev-22982-deployment",
+          "s3Key": "amplify-builds/team24gen15339fb54PostConfirmation-4c636a524a3249373466-build.zip",
+          "GROUP": "defaultUser"
+        },
+        "team24gen184e372e4CustomMessage": {
+          "deploymentBucketName": "amplify-team24gen1v3-dev-22982-deployment",
+          "s3Key": "amplify-builds/team24gen184e372e4CustomMessage-2f54486e484748625350-build.zip"
+        },
+        "AdminQueries79e996a3": {
+          "deploymentBucketName": "amplify-team24gen1v3-dev-22982-deployment",
+          "s3Key": "amplify-builds/AdminQueries79e996a3-5642733157774d362b44-build.zip"
+        }
+      },
       "hosting": {
         "amplifyhosting": {
-          "appId": "d3ty33cs4lcdx0",
+          "appId": "d1ob9fm4mtahh",
           "type": "cicd"
         }
       },
-      "function": {
-        "iTunesAPIFunction": {},
-        "team24gen15339fb54DefineAuthChallenge": {
-          "deploymentBucketName": "amplify-team24gen1-dev-13106-deployment",
-          "s3Key": "amplify-builds/team24gen15339fb54DefineAuthChallenge-5238716d3835644b672b-build.zip"
-        },
-        "team24gen15339fb54CreateAuthChallenge": {
-          "deploymentBucketName": "amplify-team24gen1-dev-13106-deployment",
-          "s3Key": "amplify-builds/team24gen15339fb54CreateAuthChallenge-3638624572665566476d-build.zip"
-        },
-        "team24gen15339fb54VerifyAuthChallengeResponse": {
-          "RECAPTCHASECRET": "hapdri",
-          "deploymentBucketName": "amplify-team24gen1-dev-13106-deployment",
-          "s3Key": "amplify-builds/team24gen15339fb54VerifyAuthChallengeResponse-4d4e7339444e6b792b4c-build.zip"
-        },
-        "team24gen15339fb54PostConfirmation": {
-          "GROUP": "Basic_User",
-          "deploymentBucketName": "amplify-team24gen1-dev-13106-deployment",
-          "s3Key": "amplify-builds/team24gen15339fb54PostConfirmation-4c636a524a3249373466-build.zip"
-        },
-        "team24gen184e372e4CustomMessage": {
-          "deploymentBucketName": "amplify-team24gen1-dev-13106-deployment",
-          "s3Key": "amplify-builds/team24gen184e372e4CustomMessage-2f54486e484748625350-build.zip"
-        }
-      },
-      "auth": {
-        "team24gen15339fb54": {}
+      "api": {
+        "AdminQueries": {}
       }
     }
   }

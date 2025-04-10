@@ -1,4 +1,11 @@
 export type AmplifyDependentResourcesAttributes = {
+  "api": {
+    "AdminQueries": {
+      "ApiId": "string",
+      "ApiName": "string",
+      "RootUrl": "string"
+    }
+  },
   "auth": {
     "team24gen15339fb54": {
       "AppClientID": "string",
@@ -9,17 +16,16 @@ export type AmplifyDependentResourcesAttributes = {
       "UserPoolArn": "string",
       "UserPoolId": "string",
       "UserPoolName": "string"
+    },
+    "userPoolGroups": {
+      "adminGroupRole": "string",
+      "defaultUserGroupRole": "string",
+      "driverGroupRole": "string",
+      "sponsorGroupRole": "string"
     }
   },
   "function": {
-    "team24gen15339fb54CreateAuthChallenge": {
-      "Arn": "string",
-      "LambdaExecutionRole": "string",
-      "LambdaExecutionRoleArn": "string",
-      "Name": "string",
-      "Region": "string"
-    },
-    "team24gen15339fb54DefineAuthChallenge": {
+    "AdminQueries79e996a3": {
       "Arn": "string",
       "LambdaExecutionRole": "string",
       "LambdaExecutionRoleArn": "string",
@@ -27,13 +33,6 @@ export type AmplifyDependentResourcesAttributes = {
       "Region": "string"
     },
     "team24gen15339fb54PostConfirmation": {
-      "Arn": "string",
-      "LambdaExecutionRole": "string",
-      "LambdaExecutionRoleArn": "string",
-      "Name": "string",
-      "Region": "string"
-    },
-    "team24gen15339fb54VerifyAuthChallengeResponse": {
       "Arn": "string",
       "LambdaExecutionRole": "string",
       "LambdaExecutionRoleArn": "string",
