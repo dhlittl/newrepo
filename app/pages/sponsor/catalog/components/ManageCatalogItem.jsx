@@ -4,8 +4,10 @@
 
 import { useState } from 'react';
 
-const ManageCatalogItem = ({ item, onRemove, onToggleFeature, isSelected, onSelect, pointsRatio }) => {
+const ManageCatalogItem = ({ item, onRemove, onToggleFeature, isSelected, onSelect, pointsRatio, onUpdateQuantity }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isEditingQuantity, setIsEditingQuantity] = useState(false);
+  const [quantityValue, setQuantityValue] = useState(item.Quantity || 0);
   
   // Format timestamp
   const formatDate = (dateString) => {
@@ -20,6 +22,18 @@ const ManageCatalogItem = ({ item, onRemove, onToggleFeature, isSelected, onSele
 
   // Calculate the point value based on the price
   const pointPrice = item.Price ? Math.ceil(parseFloat(item.Price) * pointsRatio) : 0;
+
+  // Handle quantity change
+  const handleQuantityChange = (e) => {
+    const value = parseInt(e.target.value);
+    setQuantityValue(isNaN(value) ? 0 : Math.max(0, value));
+  };
+
+  // Handle quantity save
+  const handleQuantitySave = () => {
+    onUpdateQuantity(item.Product_ID, quantityValue);
+    setIsEditingQuantity(false);
+  };
 
   return (
     <div className={`border rounded-lg shadow-sm overflow-hidden ${isSelected ? 'border-blue-500 ring-2 ring-blue-300' : ''} ${item.Featured ? 'border-yellow-400 bg-yellow-50' : ''}`}>
@@ -80,8 +94,46 @@ const ManageCatalogItem = ({ item, onRemove, onToggleFeature, isSelected, onSele
                 </div>
               </div>
               
-              <div className="text-sm text-gray-500">
-                Qty: {item.Quantity || 0}
+              <div className="text-sm">
+                {isEditingQuantity ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      value={quantityValue}
+                      onChange={handleQuantityChange}
+                      className="w-16 p-1 border rounded text-center"
+                    />
+                    <div className="flex gap-1">
+                      <button
+                        onClick={handleQuantitySave}
+                        className="p-1 bg-blue-500 text-white rounded"
+                        title="Save"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => {
+                          setQuantityValue(item.Quantity || 0);
+                          setIsEditingQuantity(false);
+                        }}
+                        className="p-1 bg-gray-300 rounded"
+                        title="Cancel"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsEditingQuantity(true)}
+                    className="text-blue-600 hover:underline flex items-center"
+                    title="Edit Quantity"
+                  >
+                    <span>Qty: {item.Quantity || 0}</span>
+                    <span className="ml-1 text-xs">✏️</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

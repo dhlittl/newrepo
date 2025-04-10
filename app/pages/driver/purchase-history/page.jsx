@@ -10,65 +10,51 @@ export default function PurchaseHistoryPage() {
   const [userId, setUserId] = useState(1); // For testing
   
   useEffect(() => {
-    // In a real app, we'd fetch the order history from the backend
-    // For example:
-    // const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Driver/orders?driverId=${userId}`);
-    // const data = await response.json();
-    // setOrders(data.orders);
-    
-    // Check localStorage for our most recent purchase
-    const latestReceipt = localStorage.getItem('latestReceipt');
-    let latestOrder = null;
-    
-    if (latestReceipt) {
+    const fetchOrderHistory = async () => {
       try {
-        latestOrder = JSON.parse(latestReceipt);
+        setLoading(true);
+        
+        // Fetch orders from the API
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Driver/orders?driverId=${userId}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch orders: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.orders && Array.isArray(data.orders)) {
+          console.log("Fetched orders:", data.orders);
+          setOrders(data.orders);
+        } else {
+          console.error("Invalid order data format:", data);
+          setOrders([]);
+        }
       } catch (err) {
-        console.error("Error parsing latest receipt:", err);
-      }
-    }
-    
-    // Generate some sample order history data
-    const sampleOrders = [
-      {
-        orderId: "ORD-" + Math.floor(Math.random() * 10000),
-        orderDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        totalPoints: 2500,
-        status: 'Delivered',
-        items: [
-          {
-            Product_ID: 101,
-            Product_Name: "Wireless Headphones",
-            pointPrice: 2500,
-            quantity: 1
+        console.error("Error fetching order history:", err);
+        
+        // Check localStorage for at least our most recent purchase
+        const latestReceipt = localStorage.getItem('latestReceipt');
+        const ordersList = [];
+        
+        if (latestReceipt) {
+          try {
+            const latestOrder = JSON.parse(latestReceipt);
+            latestOrder.status = 'Processing'; // Assume processing status for new orders
+            ordersList.push(latestOrder);
+          } catch (err) {
+            console.error("Error parsing latest receipt:", err);
           }
-        ]
-      },
-      {
-        orderId: "ORD-" + Math.floor(Math.random() * 10000),
-        orderDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-        totalPoints: 1800,
-        status: 'Delivered',
-        items: [
-          {
-            Product_ID: 102,
-            Product_Name: "Gift Card",
-            pointPrice: 1800,
-            quantity: 1
-          }
-        ]
+        }
+        
+        setOrders(ordersList);
+      } finally {
+        setLoading(false);
       }
-    ];
+    };
     
-    // If we have a latest order, add it to the beginning of the list
-    if (latestOrder) {
-      latestOrder.status = 'Processing';
-      sampleOrders.unshift(latestOrder);
-    }
-    
-    setOrders(sampleOrders);
-    setLoading(false);
-  }, []);
+    fetchOrderHistory();
+  }, [userId]);
   
   const viewReceipt = (order) => {
     // Store the order in localStorage so the receipt page can access it

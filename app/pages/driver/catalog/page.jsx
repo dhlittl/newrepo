@@ -143,10 +143,11 @@ function DriverCatalogPage() {
   // Fetch sponsor info to get points ratio
   const fetchSponsorInfo = async () => {
     try {
-      // This would be a real API call in production
-      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/sponsors/${sponsorId}`);
+      // Use the correct API endpoint from your API Gateway
+      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/sponsors/catalog?sponsorId=${sponsorId}`);
       
       if (!response.ok) {
+        console.error("Failed to fetch sponsor info, status:", response.status);
         // Default to 100 points per dollar (0.01 per point)
         setSponsorInfo({
           name: "Test Sponsor",
@@ -156,9 +157,14 @@ function DriverCatalogPage() {
       }
       
       const data = await response.json();
+      console.log("Sponsor info response:", data);
+      
+      // Assuming the sponsor info is in the response
+      const sponsorData = data.sponsor || {};
+      
       setSponsorInfo({
-        name: data.Sponsor_Org_Name || "Test Sponsor",
-        pointsRatio: data.Points_Ratio || 100
+        name: sponsorData.Sponsor_Org_Name || "Test Sponsor",
+        pointsRatio: sponsorData.Points_Ratio || 100
       });
     } catch (err) {
       console.error("Error fetching sponsor info:", err);

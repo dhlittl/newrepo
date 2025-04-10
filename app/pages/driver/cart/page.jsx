@@ -105,20 +105,22 @@ export default function CartPage() {
     }
     
     try {
-      // Prepare order data
+      // Prepare order data - using proper field names for Lambda
       const orderData = {
-        userId: userId,
+        driverId: userId, // Changed from userId to driverId to match Lambda expectations
+        userId: userId,   // Keep userId for backward compatibility
         items: cartItems.map(item => ({
           productId: item.Product_ID,
           quantity: item.quantity,
-          pointPrice: item.pointPrice,
-          totalPoints: item.pointPrice * item.quantity
+          pointPrice: item.pointPrice
         })),
         totalPoints: totalPoints,
         orderDate: new Date().toISOString()
       };
       
-      // This would be a real API call in production
+      console.log("Sending order data:", JSON.stringify(orderData));
+      
+      // Make the API call to the endpoint
       const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Driver/orders', {
         method: 'POST',
         headers: {
@@ -127,9 +129,16 @@ export default function CartPage() {
         body: JSON.stringify(orderData)
       });
       
-      // For testing, we'll simulate a successful response
-      // In production, you'd handle the actual API response
-      const orderId = Math.floor(Math.random() * 1000000);
+      // Parse the actual API response
+      const responseData = await response.json();
+      console.log("Order API response:", responseData);
+      
+      if (!response.ok) {
+        throw new Error(responseData.error || "Failed to place order");
+      }
+      
+      // Use the actual orderId from the response, or fallback to random if not available
+      const orderId = responseData.orderId || Math.floor(Math.random() * 1000000);
       
       // Clear the cart after successful checkout
       clearCart();
@@ -148,18 +157,11 @@ export default function CartPage() {
       
     } catch (err) {
       console.error("Error during checkout:", err);
-      alert("There was an error processing your order. Please try again.");
+      alert(`There was an error processing your order: ${err.message}`);
       
-      // For testing purposes, still redirect to receipt
-      const orderId = Math.floor(Math.random() * 1000000);
-      const receiptData = {
-        orderId: orderId,
-        orderDate: new Date().toISOString(),
-        items: cartItems,
-        totalPoints: totalPoints
-      };
-      localStorage.setItem('latestReceipt', JSON.stringify(receiptData));
-      router.push(`/driver/receipt?orderId=${orderId}`);
+      // Don't proceed with checkout on error to avoid misleading the user
+      // Instead, let them try again or contact support
+      return;
     }
   };
   

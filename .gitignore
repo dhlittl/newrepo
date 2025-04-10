@@ -61,3 +61,10 @@ amplifytools.xcconfig
 .secret-*
 **.sample
 #amplify-do-not-edit-end
+
+#AI stuff from Davis
+CLAUDE.md
+DUMP20250410.sql
+driver_cat_lambda_function.py
+send_purchase_receipt_email.py
+team24api-AboutPage-swagger-apigateway.json
