@@ -3,10 +3,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { uploadData, getUrl } from 'aws-amplify/storage';
-//import { fetchAuthSession } from 'aws-amplify/auth';
+import { withAuthenticator } from "@aws-amplify/ui-react";
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 
-export default function DriverProfilePage() {
+function DriverProfilePage() {
   const [driver, setDriver] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -55,8 +56,8 @@ export default function DriverProfilePage() {
         // fetch profile picture from S3
         const fileName = `profile-pictures/${data[0].User_ID}.jpg`;
         try{
-          const url = await getUrl({key: fileName});
-          setImageUrl(url);
+          const url = await getUrl({key: fileName, options: { accessLevel: "protected", validateObjectExistence: true, } });
+          setImageUrl(url.url);
         } catch {
           console.log("No profile picture found.");
         }
@@ -82,6 +83,9 @@ export default function DriverProfilePage() {
     if (!image || !driver?.id) return;
   
     try {
+
+      const { identityId } = await fetchAuthSession();
+
       const fileName = `profile-pictures/${driver.id}.jpg`;
 
       // upload to s3 bucket
@@ -90,25 +94,17 @@ export default function DriverProfilePage() {
         data: image,
         options: { 
           contentType: image.type,
-          //bucket: "team24profilepictures13106-dev" 
+          accessLevel: "protected"
         }
       });
-      //console.log("Uploading file to:", fileName);
-      //console.log("Upload result:", result);
-        
-      // manually construct the public url
-      /*const bucketName = "team24profilepictures13106-dev";
-      const region = "us-east-1";
-      const publicUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${fileName}`;
-      
-      setImageUrl(publicUrl);
-      alert("Profile picture uploaded successfully!");
-    } catch (error) {
-      console.error("Error uploading file:", error);
-    }
-  };*/
-      const url = await getUrl({ key: fileName });
-      setImageUrl(url);
+
+      const url = await getUrl({ 
+        key: fileName,
+        options: {
+          accessLevel: "protected"
+        }
+       });
+      setImageUrl(url.url);
       alert("Profile picture uploaded successfully!");
     } catch (err) {
       console.error("Error uploading file:", err);
@@ -292,3 +288,5 @@ export default function DriverProfilePage() {
     </div>
   );
 }
+
+export default withAuthenticator(DriverProfilePage);
