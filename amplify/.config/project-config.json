@@ -1,8 +1,6 @@
 {
-  "providers": [
-    "awscloudformation"
-  ],
-  "projectName": "Team24Gen1v3",
+  "whyContinueWithGen1": "Prefer not to answer",
+  "projectName": "Team24Gen1v4",
   "version": "3.1",
   "frontend": "javascript",
   "javascript": {
@@ -13,5 +11,8 @@
       "BuildCommand": "npm run-script build",
       "StartCommand": "npm run-script start"
     }
-  }
+  },
+  "providers": [
+    "awscloudformation"
+  ]
 }

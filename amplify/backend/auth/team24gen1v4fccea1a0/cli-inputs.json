@@ -1,10 +1,10 @@
 {
   "version": "1",
   "cognitoConfig": {
-    "identityPoolName": "team24gen15339fb54_identitypool_5339fb54",
+    "identityPoolName": "team24gen1v4fccea1a0_identitypool_fccea1a0",
     "allowUnauthenticatedIdentities": false,
-    "resourceNameTruncated": "team245339fb54",
-    "userPoolName": "team24gen15339fb54_userpool_5339fb54",
+    "resourceNameTruncated": "team24fccea1a0",
+    "userPoolName": "team24gen1v4fccea1a0_userpool_fccea1a0",
     "autoVerifiedAttributes": [
       "email"
     ],
@@ -20,28 +20,25 @@
     "passwordPolicyMinLength": 8,
     "passwordPolicyCharacters": [],
     "requiredAttributes": [
-      "email",
-      "family_name",
-      "given_name",
-      "phone_number"
+      "email"
     ],
     "aliasAttributes": [],
     "userpoolClientGenerateSecret": false,
     "userpoolClientRefreshTokenValidity": 30,
     "userpoolClientWriteAttributes": [
       "address",
+      "family_name",
       "middle_name",
       "gender",
+      "given_name",
       "name",
       "nickname",
+      "phone_number",
       "preferred_username",
       "picture",
       "profile",
       "website",
-      "email",
-      "family_name",
-      "given_name",
-      "phone_number"
+      "email"
     ],
     "userpoolClientReadAttributes": [
       "address",
@@ -64,17 +61,12 @@
       "email_verified",
       "phone_number_verified"
     ],
-    "userpoolClientLambdaRole": "team245339fb54_userpoolclient_lambda_role",
+    "userpoolClientLambdaRole": "team24fccea1a0_userpoolclient_lambda_role",
     "userpoolClientSetAttributes": true,
-    "sharedId": "5339fb54",
-    "resourceName": "team24gen15339fb54",
+    "sharedId": "fccea1a0",
+    "resourceName": "team24gen1v4fccea1a0",
     "authSelections": "identityPoolAndUserPool",
     "useDefault": "manual",
-    "triggers": {
-      "PostConfirmation": [
-        "add-to-group"
-      ]
-    },
     "userPoolGroupList": [
       "admin",
       "sponsor",
@@ -100,7 +92,7 @@
     "dependsOn": [
       {
         "category": "function",
-        "resourceName": "team24gen15339fb54PostConfirmation",
+        "resourceName": "team24gen1v4fccea1a0PostConfirmation",
         "triggerProvider": "Cognito",
         "attributes": [
           "Arn",
@@ -108,18 +100,23 @@
         ]
       }
     ],
-    "permissions": [
-      "{\n  \"policyName\": \"AddToGroupCognito\",\n  \"trigger\": \"PostConfirmation\",\n  \"effect\": \"Allow\",\n  \"actions\": [\n    \"cognito-idp:AdminAddUserToGroup\",\n    \"cognito-idp:GetGroup\",\n    \"cognito-idp:CreateGroup\"\n  ],\n  \"resource\": {\n    \"paramType\": \"!GetAtt\",\n    \"keys\": [\n      \"UserPool\",\n      \"Arn\"\n    ]\n  }\n}"
-    ],
-    "authTriggerConnections": "[\n  {\n    \"triggerType\": \"PostConfirmation\",\n    \"lambdaFunctionName\": \"team24gen15339fb54PostConfirmation\"\n  }\n]",
     "thirdPartyAuth": false,
     "userPoolGroups": true,
     "adminQueries": true,
+    "triggers": {
+      "PostConfirmation": [
+        "add-to-group"
+      ]
+    },
     "hostedUI": false,
     "adminQueryGroup": "admin",
     "authProviders": [],
     "parentStack": {
       "Ref": "AWS::StackId"
-    }
+    },
+    "authTriggerConnections": "[\n  {\n    \"triggerType\": \"PostConfirmation\",\n    \"lambdaFunctionName\": \"team24gen1v4fccea1a0PostConfirmation\"\n  }\n]",
+    "permissions": [
+      "{\n  \"policyName\": \"AddToGroupCognito\",\n  \"trigger\": \"PostConfirmation\",\n  \"effect\": \"Allow\",\n  \"actions\": [\n    \"cognito-idp:AdminAddUserToGroup\",\n    \"cognito-idp:GetGroup\",\n    \"cognito-idp:CreateGroup\"\n  ],\n  \"resource\": {\n    \"paramType\": \"!GetAtt\",\n    \"keys\": [\n      \"UserPool\",\n      \"Arn\"\n    ]\n  }\n}"
+    ]
   }
 }

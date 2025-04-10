@@ -1,13 +1,42 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "{\"createdOn\":\"Mac\",\"createdBy\":\"Amplify\",\"createdWith\":\"13.0.0\",\"stackType\":\"function-Lambda\",\"metadata\":{\"whyContinueWithGen1\":\"\"}}",
+  "Description": "{\"createdOn\":\"Windows\",\"createdBy\":\"Amplify\",\"createdWith\":\"12.14.4\",\"stackType\":\"function-Lambda\",\"metadata\":{\"whyContinueWithGen1\":\"Prefer not to answer\"}}",
   "Parameters": {
+    "GROUP": {
+      "Type": "String",
+      "Default": ""
+    },
+    "modules": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Comma-delimited list of modules to be executed by a lambda trigger. Sent to resource as an env variable."
+    },
+    "resourceName": {
+      "Type": "String",
+      "Default": ""
+    },
+    "trigger": {
+      "Type": "String",
+      "Default": "true"
+    },
+    "functionName": {
+      "Type": "String",
+      "Default": ""
+    },
+    "roleName": {
+      "Type": "String",
+      "Default": ""
+    },
+    "parentResource": {
+      "Type": "String",
+      "Default": ""
+    },
+    "parentStack": {
+      "Type": "String",
+      "Default": ""
+    },
     "env": {
       "Type": "String"
-    },
-    "authteam24gen15339fb54UserPoolId": {
-      "Type": "String",
-      "Default": "authteam24gen15339fb54UserPoolId"
     },
     "deploymentBucketName": {
       "Type": "String"
@@ -38,12 +67,12 @@
         "FunctionName": {
           "Fn::If": [
             "ShouldNotCreateEnvResources",
-            "AdminQueries79e996a3",
+            "team24gen1v4fccea1a0PostConfirmation",
             {
               "Fn::Join": [
                 "",
                 [
-                  "AdminQueries79e996a3",
+                  "team24gen1v4fccea1a0PostConfirmation",
                   "-",
                   {
                     "Ref": "env"
@@ -58,9 +87,14 @@
             "ENV": {
               "Ref": "env"
             },
-            "GROUP": "admin",
-            "USERPOOL": {
-              "Ref": "authteam24gen15339fb54UserPoolId"
+            "MODULES": {
+              "Ref": "modules"
+            },
+            "REGION": {
+              "Ref": "AWS::Region"
+            },
+            "GROUP": {
+              "Ref": "GROUP"
             }
           }
         },
@@ -70,7 +104,7 @@
             "Arn"
           ]
         },
-        "Runtime": "nodejs22.x",
+        "Runtime": "nodejs18.x",
         "Timeout": 25,
         "Code": {
           "S3Bucket": {
@@ -88,12 +122,12 @@
         "RoleName": {
           "Fn::If": [
             "ShouldNotCreateEnvResources",
-            "AdminQueries79e996a3LambdaRole",
+            "team24gen1v4fccea1a0PostConfirmation",
             {
               "Fn::Join": [
                 "",
                 [
-                  "AdminQueries79e996a3LambdaRole",
+                  "team24gen1v4fccea1a0PostConfirmation",
                   "-",
                   {
                     "Ref": "env"
@@ -159,41 +193,6 @@
                   }
                 ]
               }
-            },
-            {
-              "Effect": "Allow",
-              "Action": [
-                "cognito-idp:ListUsersInGroup",
-                "cognito-idp:AdminUserGlobalSignOut",
-                "cognito-idp:AdminEnableUser",
-                "cognito-idp:AdminDisableUser",
-                "cognito-idp:AdminRemoveUserFromGroup",
-                "cognito-idp:AdminAddUserToGroup",
-                "cognito-idp:AdminListGroupsForUser",
-                "cognito-idp:AdminGetUser",
-                "cognito-idp:AdminConfirmSignUp",
-                "cognito-idp:ListUsers",
-                "cognito-idp:ListGroups"
-              ],
-              "Resource": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "arn:aws:cognito-idp:",
-                    {
-                      "Ref": "AWS::Region"
-                    },
-                    ":",
-                    {
-                      "Ref": "AWS::AccountId"
-                    },
-                    ":userpool/",
-                    {
-                      "Ref": "authteam24gen15339fb54UserPoolId"
-                    }
-                  ]
-                ]
-              }
             }
           ]
         }
@@ -214,11 +213,6 @@
         ]
       }
     },
-    "Region": {
-      "Value": {
-        "Ref": "AWS::Region"
-      }
-    },
     "LambdaExecutionRole": {
       "Value": {
         "Ref": "LambdaExecutionRole"
@@ -230,6 +224,11 @@
           "LambdaExecutionRole",
           "Arn"
         ]
+      }
+    },
+    "Region": {
+      "Value": {
+        "Ref": "AWS::Region"
       }
     }
   }
