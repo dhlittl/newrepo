@@ -113,6 +113,62 @@
         }
       ]
     },
+    "AMPLIFY_function_AdminQueriese3b8663c_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "AdminQueriese3b8663c"
+        }
+      ]
+    },
+    "AMPLIFY_function_AdminQueriese3b8663c_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "AdminQueriese3b8663c"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen15339fb54PostConfirmation_GROUP": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen1v4fccea1a0PostConfirmation"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen1v4fccea1a0PostConfirmation_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen1v4fccea1a0PostConfirmation"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen1v4fccea1a0PostConfirmation_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen15339fb54PostConfirmation"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen184e372e4CustomMessage_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen184e372e4CustomMessage"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen184e372e4CustomMessage_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen184e372e4CustomMessage"
+        }
+      ]
+    },
     "AMPLIFY_function_team24gen1v4fccea1a0PostConfirmation_GROUP": {
       "usedBy": [
         {
@@ -136,10 +192,26 @@
           "resourceName": "team24gen1v4fccea1a0PostConfirmation"
         }
       ]
+    },
+    "AMPLIFY_hosting_amplifyhosting_appId": {
+      "usedBy": [
+        {
+          "category": "hosting",
+          "resourceName": "amplifyhosting"
+        }
+      ]
+    },
+    "AMPLIFY_hosting_amplifyhosting_type": {
+      "usedBy": [
+        {
+          "category": "hosting",
+          "resourceName": "amplifyhosting"
+        }
+      ]
     }
   },
   "storage": {
-    "team24profilepictures": {
+    "s318806dca": {
       "dependsOn": [],
       "providerPlugin": "awscloudformation",
       "service": "S3"

@@ -14,10 +14,24 @@
     },
     "categories": {
       "auth": {
-        "team24gen1v4fccea1a0": {},
-        "userPoolGroups": {}
+        "team24gen15339fb54": {},
+        "userPoolGroups": {},
+        "team24gen1v4fccea1a0": {}
       },
       "function": {
+        "team24gen1v4fccea1a0PostConfirmation": {
+          "GROUP": "defaultUser",
+          "deploymentBucketName": "amplify-team24gen1v4-dev-2887a-deployment",
+          "s3Key": "amplify-builds/team24gen1v4fccea1a0PostConfirmation-58744369644a2b6f7169-build.zip"
+        },
+        "team24gen184e372e4CustomMessage": {
+          "deploymentBucketName": "amplify-team24gen1v3-dev-22982-deployment",
+          "s3Key": "amplify-builds/team24gen184e372e4CustomMessage-2f54486e484748625350-build.zip"
+        },
+        "AdminQueries79e996a3": {
+          "deploymentBucketName": "amplify-team24gen1v3-dev-22982-deployment",
+          "s3Key": "amplify-builds/AdminQueries79e996a3-5642733157774d362b44-build.zip"
+        },
         "team24gen1v4fccea1a0PostConfirmation": {
           "GROUP": "defaultUser",
           "deploymentBucketName": "amplify-team24gen1v4-dev-2887a-deployment",
@@ -28,8 +42,17 @@
           "s3Key": "amplify-builds/AdminQueriese3b8663c-5642733157774d362b44-build.zip"
         }
       },
+      "hosting": {
+        "amplifyhosting": {
+          "appId": "d1ob9fm4mtahh",
+          "type": "cicd"
+        }
+      },
       "api": {
         "AdminQueries": {}
+      },
+      "storage": {
+        "s318806dca": {}
       }
     }
   }

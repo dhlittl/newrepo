@@ -1,5 +1,7 @@
 {
-  "whyContinueWithGen1": "Prefer not to answer",
+  "providers": [
+    "awscloudformation"
+  ],
   "projectName": "Team24Gen1v4",
   "version": "3.1",
   "frontend": "javascript",
