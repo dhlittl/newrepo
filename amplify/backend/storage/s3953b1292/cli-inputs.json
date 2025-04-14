@@ -1,7 +1,7 @@
 {
-  "resourceName": "s318806dca",
-  "policyUUID": "18806dca",
-  "bucketName": "team24profilepicture",
+  "resourceName": "s3953b1292",
+  "policyUUID": "953b1292",
+  "bucketName": "team24picturesnew",
   "storageAccess": "auth",
   "guestAccess": [],
   "authAccess": [
