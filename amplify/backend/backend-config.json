@@ -97,19 +97,19 @@
     }
   },
   "parameters": {
-    "AMPLIFY_function_AdminQueriese3b8663c_deploymentBucketName": {
+    "AMPLIFY_function_AdminQueries79e996a3_deploymentBucketName": {
       "usedBy": [
         {
           "category": "function",
-          "resourceName": "AdminQueriese3b8663c"
+          "resourceName": "AdminQueries79e996a3"
         }
       ]
     },
-    "AMPLIFY_function_AdminQueriese3b8663c_s3Key": {
+    "AMPLIFY_function_AdminQueries79e996a3_s3Key": {
       "usedBy": [
         {
           "category": "function",
-          "resourceName": "AdminQueriese3b8663c"
+          "resourceName": "AdminQueries79e996a3"
         }
       ]
     },
@@ -130,22 +130,6 @@
       ]
     },
     "AMPLIFY_function_team24gen15339fb54PostConfirmation_GROUP": {
-      "usedBy": [
-        {
-          "category": "function",
-          "resourceName": "team24gen1v4fccea1a0PostConfirmation"
-        }
-      ]
-    },
-    "AMPLIFY_function_team24gen1v4fccea1a0PostConfirmation_deploymentBucketName": {
-      "usedBy": [
-        {
-          "category": "function",
-          "resourceName": "team24gen1v4fccea1a0PostConfirmation"
-        }
-      ]
-    },
-    "AMPLIFY_function_team24gen1v4fccea1a0PostConfirmation_s3Key": {
       "usedBy": [
         {
           "category": "function",
@@ -211,7 +195,7 @@
     }
   },
   "storage": {
-    "s318806dca": {
+    "s3953b1292": {
       "dependsOn": [],
       "providerPlugin": "awscloudformation",
       "service": "S3"
