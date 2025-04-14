@@ -3,6 +3,7 @@
 // IMPORTS
 'use client';
 import  React , { useState, useEffect } from 'react';
+import { getCurrentUser } from 'aws-amplify/auth';
 
 // importing from dnd-kit for widget implementation and styling
 import {
@@ -38,60 +39,119 @@ const initialWidgets = [
   { id: "help", name: "Help", visible: true},
   { id: "sponsors", name: "Sponsors", visible: true},
   { id: "apply", name: "Applications", visible: true},
+  { id: "sponsorInfo", name: "Sponsor Information", visible: true},
 ];
-
-const checkUserSession = async () => {
-    try {
-      const session = await fetchAuthSession();
-      const idToken = session.tokens?.idToken;
-      
-      if (idToken) {
-        const groups = idToken.payload["cognito:groups"] || [];
-      }
-
-      if(!groups.include("Driver")) router.push("/pages/aboutpage");;
-    } catch (error) {
-      console.log("No active user session. User needs to sign in.");
-    }
-  };
-
 
 // OVERALL DRIVER DASHBOARD AND FUNCTIONS
 export default function DriverDashboard() {
+  const [cognitoSub, setCognitoSub] = useState(null);
+  const [userId, setUserId] = useState(null);
   const [widgets, setWidgets] = useState (initialWidgets);
   //const [userId, setUserId] = useState(1); // update to be dynamic later
-  const userId = 1;
+  //const userId = 1;
   const [loading, setLoading] = useState(true);
   //const User_ID="1";
 
+  // fetch current user (gets coginto_sub)
   useEffect(() => {
-    console.log("Using User_ID:", userId); 
-    // fetch initial widget order
-    async function fetchWidgetOrder() {
+    async function fetchUser() {
       try {
-        if (typeof window !== 'undefined') {
-          const User_ID = userId;
-
-          const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences?User_ID=${User_ID}`);
-          const data = await response.json();
-
-          console.log("API Response", data)
-
-          if (response.ok && Array.isArray(data.widget_order)) {
-            const orderedWidgets = initialWidgets.map((widget) => ({
-                ...widget,
-                visible: data.widget_order.includes(widget.id)
-            }));
-            setWidgets(orderedWidgets);
-          } else {
-            console.error("Error fetching widget order:", data);
-          }
-        }
+        const user = await getCurrentUser();
+        setCognitoSub(user.userId);
+          
+        console.log("Fetched Cognito user ID:", user.userId);
       } catch (error) {
-        console.error("Failed to fetch widget order:", error);
+        console.error("Error fetching current user:", error);
       }
     }
 
+    fetchUser();
+  }, []);
+
+
+  useEffect(() => {
+    async function fetchDatabaseUserId() {
+      try {
+        const user = await getCurrentUser();
+        const cognitoSub = user.userId;
+        console.log("Cognito Sub:", cognitoSub);
+            
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/user/cognito/${cognitoSub}`);
+        const data = await response.json();
+            
+        if (response.ok && data.userId) {
+          setUserId(data.userId);
+          console.log("Database User ID:", data.userId);
+          //fetchWidgetOrder(data.userId);
+        } else {
+          console.error("Error fetching database user ID:", data.error || "Unknown error");
+        }
+      } catch (error) {
+        console.error("Error in user ID mapping:", error);
+      }
+    }
+
+    fetchDatabaseUserId();
+  }, []);
+
+  useEffect(() => {
+    if (!userId) {
+      console.warn('Invalid User_ID');
+      return;
+    }
+  
+    console.log('Using User_ID:', userId);
+  
+    const fetchWidgetOrder = async () => {
+      try {
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Preferences?User_ID=${userId}`);
+        const data = await response.json();
+    
+        console.log('Fetched widget order:', data);
+    
+        // check if data has a widget_order property that's an array
+        if (data && data.widget_order && Array.isArray(data.widget_order)) {
+          const widgetOrder = data.widget_order;
+          console.log('Widget order array:', widgetOrder);
+          
+          // mark all widgets as not visible
+          const updatedWidgets = initialWidgets.map(widget => ({
+            ...widget,
+            visible: false
+          }));
+          
+          // make the widgets in the order visible and reorder them
+          const reorderedWidgets = [];
+          
+          // add widgets that are in the order list
+          widgetOrder.forEach(widgetId => {
+            const widget = initialWidgets.find(w => w.id === widgetId);
+            if (widget) {
+              reorderedWidgets.push({
+                ...widget,
+                visible: true
+              });
+            }
+          });
+          
+          // add remaining widgets (not visible)
+          initialWidgets.forEach(widget => {
+            if (!widgetOrder.includes(widget.id)) {
+              reorderedWidgets.push({
+                ...widget,
+                visible: false
+              });
+            }
+          });
+          
+          console.log('Reordered widgets:', reorderedWidgets);
+          setWidgets(reorderedWidgets);
+        }
+      } catch (error) {
+        console.error('Failed to fetch widget order:', error);
+      }
+    };
+  
     fetchWidgetOrder();
   }, [userId]);
 
@@ -167,9 +227,16 @@ export default function DriverDashboard() {
 
   // function to toggle widget visibility
   const toggleWidget = (id) => {
-    setWidgets((prev) =>
-      prev.map((w) => (w.id === id ? {...w, visible: !w.visible} : w))
-    );
+    setWidgets((prev) => {
+      const updatedWidgets = prev.map((w) => (w.id === id ? {...w, visible: !w.visible} : w));
+      
+      // call updateWidgetOrder
+      setTimeout(() => {
+        updateWidgetOrder(updatedWidgets.filter((w) => w.visible));
+      }, 0);
+      
+      return updatedWidgets;
+    });
   };
 
   // page
@@ -240,7 +307,7 @@ function getWidgetContent(id, userId) {
     case "progress":
       return <ProgressWidget userId={userId}/>;
     case "catalog":
-      return <LinkWidget title="Rewards Catalog" link="/itunes-test" />;
+      return <LinkWidget title="Rewards Catalog" link="/pages/driver/catalog" />;
     case "friends":
       return <Widget title="Friends" content="You have 5 friends" />;
     case "trend":
@@ -253,6 +320,8 @@ function getWidgetContent(id, userId) {
       return <SponsorsWidget />;
     case "apply":
       return <LinkWidget title="Applications" content="Want to apply to more sponsors?" link="/pages/driver/applyForm" />;
+      case "sponsorInfo":
+        return <LinkWidget title="Sponsor Information" content="Click here to view information about available sponsors!" link="/pages/driver/sponsorInfo"/>;
     default:
       return null;
   }

@@ -30,6 +30,7 @@ const initialWidgets = [
   { id: "userManagement", name: "User Management", visible: true},
   { id: "logs", name: "Logs", visible: true},
   { id: "helpDesk", name: "Help Desk", visible: true},
+  { id: "sponsors", name: "Sponsors", visible: true},
 ];
 
 export default function AdminDashboard() {
@@ -207,11 +208,13 @@ function SortableWidget({widget}) {
 function getWidgetContent(id) {
 switch (id) {
   case "userManagement":
-    return <LinkWidget title="User Management" link="dashboard/admin/userManagement" />;
+    return <LinkWidget title="User Management" link="/pages/admin/users" />;
   case "logs":
     return <LinkWidget title="Logs" link="admin/logs" />;
   case "helpDesk":
     return <LinkWidget title="Help Desk" link="admin/helpDesk" />;
+  case "sponsors":
+    return <SponsorsWidget />;
   default:
     return null;
 }
@@ -236,6 +239,63 @@ function LinkWidget ({ title, link }) {
       <Link href={link} className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
           Go to {title}
       </Link>
+    </div>
+  );
+}
+
+function SponsorsWidget() {
+  const [sponsors, setSponsors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchSponsors = async () => {
+      try {
+        const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors");
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch sponsors: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        const transformedData = data.map((sponsor) => ({
+          id: sponsor.Sponsor_Org_ID,
+          name: sponsor.Sponsor_Org_Name,
+          description: sponsor.Sponsor_Description,
+          email: sponsor.Email,
+          phone: sponsor.Phone_Number,
+        }));
+
+        setSponsors(transformedData);
+      } catch (err) {
+        setError(err.message);
+        setSponsors([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSponsors();
+  }, []);
+
+  return (
+    <div>
+      <h3 className="font-semibold">Sponsors</h3>
+      {loading && <p>Loading...</p>}
+      {error && <p className="text-red-500">{error}</p>}
+      {!loading && !error && sponsors.length === 0 && <p>No sponsors available.</p>}
+
+      {!loading && !error && sponsors.length > 0 && (
+        <ul className="list-disc pl-4">
+          {sponsors.map((sponsor) => (
+            <li key={sponsor.id}>
+              <strong>{sponsor.name}</strong> - {sponsor.description} <br />
+              <strong>Contact:</strong> {sponsor.email} | <strong>Phone:</strong> {sponsor.phone}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

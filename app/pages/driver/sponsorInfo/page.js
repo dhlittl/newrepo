@@ -1,4 +1,4 @@
-// Sponsor Info Page for Default Users
+// Sponsor Info Page for Driver Users
 
 "use client";
 import { useEffect, useState } from "react";

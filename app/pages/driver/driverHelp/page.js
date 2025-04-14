@@ -38,7 +38,7 @@ const HelpPage = () => {
                 <h2 className="text-2xl font-semibold mb-4">Frequently Asked Questions</h2>
                 <div className="space-y-4">
                     <div>
-                        <h3 className="font-medium">How do I earn points?</h3>
+                        <h3 className="text-xl font-semibold mb-4">How do I earn points?</h3>
                         <p>
                             You earn points by demonstating good and safe driving behavior. Your sponsor
                             will award points based off of the data collected about your driving. Be careful, because
@@ -46,14 +46,14 @@ const HelpPage = () => {
                         </p>
                     </div>
                     <div>
-                        <h3 className="font-medium">How can I redeem my points?</h3>
+                        <h3 className="text-xl font-semibold mb-4">How can I redeem my points?</h3>
                     <p>
                         You can redeem your points on items in your sponsor's catalog. Access the catalog from
                         the "Catalog" button on your Dashboard.
                     </p>
                     </div> 
                     <div>
-                        <h3 className="font-medium">What should I do if I need help?</h3>
+                        <h3 className="text-xl font-semibold mb-4">What should I do if I need help?</h3>
                         <p>
                             You can check this help page for guidance, or if you have a more specific problem
                             you can submit a ticket using the button above!

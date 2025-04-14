@@ -199,11 +199,11 @@ return (
   function getWidgetContent(id) {
     switch (id) {
       case "apply":
-        return <Widget title="Application" content="Click here to apply to a sponsor!" link="/pages/defaultUser/applyForm" />;
+        return <LinkWidget title="Application" content="Click here to apply to a sponsor!" link="/pages/defaultUser/applyForm" />;
       case "sponsorInfo":
-        return <Widget title="Sponsor Information" content="Click here to view information about available sponsors!" link="/pages/defaultUser/sponsorsPage"/>;
+        return <LinkWidget title="Sponsor Information" content="Click here to view information about available sponsors!" link="/pages/defaultUser/sponsorsPage"/>;
       case "help":
-        return <LinkWidget title="Help" link="/help" />;
+        return <LinkWidget title="Help" link="/pages/defaultUser/help" />;
       default:
         return null;
     }
@@ -220,12 +220,15 @@ function Widget({ title, content }) {
   );
 }
 
-// link widget for widgets that will lead to other pages in the future
-function LinkWidget ({ title, link }) {
+
+function LinkWidget ({ title, content, link }) {
   return (
-    <div>
+    <div className="p-4 border rounded shadow-lg bg-gray-100">
       <h3 className="font-semibold">{title}</h3>
-      <Link href={link} className="text-blue-500">Go to {title}</Link>
+      {content && <p className="mb-3">{content}</p>}
+      <Link href={link} className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+          Go to {title}
+      </Link>
     </div>
   );
 }

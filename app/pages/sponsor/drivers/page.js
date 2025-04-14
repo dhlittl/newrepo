@@ -247,16 +247,14 @@ export default function SponsorDrivers() {
 
     const data = await response.json();
     console.log(data);
-    //return data; // Returns the updated reason
   };
 
   // handle editing existing points
   const handleEditPoints = (e, index) => {
-    const updatedReasons = [...reasons];  // Make a copy of the current reasons array
-    updatedReasons[index].Points = e.target.value;  // Update the Points value at the specified index
-    setReasons(updatedReasons);  // Update the state to reflect the new points value
+    const updatedReasons = [...reasons];  // copy of current reasons array
+    updatedReasons[index].Points = e.target.value;  // update point val
+    setReasons(updatedReasons);  // update state
   
-    // Now update the database (only after updating the state)
     const reasonData = updatedReasons[index];
   
     // PUT request to update the points on the backend
@@ -286,51 +284,93 @@ export default function SponsorDrivers() {
     });
   };
   
-  
-
-  // handle adding new reason
-  const handleAddReason = async (reasonData) => {
+// handle adding new reason
+const handleAddReason = async () => {
+  try {
+    // Input validation
+    if (!newReason || !newPoints) {
+      alert("Please enter both a reason and points value");
+      return;
+    }
+    
+    console.log("Adding new reason:", newReason, newPoints);
+    
     const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sponsorOrgId: effectiveSponsorId,
-        reason: reasonData.Reason,
-        points: reasonData.Points,
+        sponsorOrgId: parseInt(effectiveSponsorId),
+        reason: newReason,
+        points: parseInt(newPoints),
       }),
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to add reason');
-    }
-
     const data = await response.json();
-    setReasons([...reasons, data]); 
-    //return data; // Returns the newly added reason
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to add reason');
+    }
+    
+    console.log("API Response:", data);
+    
+    if (data.Reason_ID) {
+      setReasons([...reasons, data]);
+    } else {
+      // fetch the updated list
+      const refreshResponse = await fetch(
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?sponsorOrgId=${effectiveSponsorId}`
+      );
+      const refreshData = await refreshResponse.json();
+      setReasons(refreshData);
+    }
+    
     // clear input fields after
     setNewReason("");
     setNewPoints("");
-  };
+  } catch (error) {
+    console.error("Error adding new reason:", error);
+    alert("Failed to add new reason: " + error.message);
+  }
+};
   
 
   // handle deleting reason
   const handleDeleteReason = async (reasonId) => {
-    const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?Reason_ID=${reasonId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to delete reason');
+    try {
+      console.log("Attempting to delete reason ID:", reasonId);
+      
+      if (!reasonId) {
+        console.error("Invalid reason ID:", reasonId);
+        alert("Cannot delete: Invalid reason ID");
+        return;
+      }
+      
+      // using path parameter format
+      const deleteUrl = `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey/${reasonId}`;
+      console.log("Delete URL:", deleteUrl);
+      
+      const response = await fetch(deleteUrl, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+  
+      const data = await response.json().catch(() => ({}));
+      
+      if (!response.ok) {
+        throw new Error(data.error || data.message || `Failed to delete reason (Status: ${response.status})`);
+      }
+      
+      // remove deleted reason from ui
+      setReasons(reasons.filter(reason => reason.Reason_ID !== reasonId));
+      
+    } catch (error) {
+      console.error("Error details:", error);
+      alert("Failed to delete reason: " + error.message);
     }
-
-    const data = await response.json();
-    setReasons(reasons.filter(reason => reason.Reason_ID !== reasonId));
-    //return data; // Returns confirmation of the deletion
   };
 
 
@@ -522,6 +562,7 @@ export default function SponsorDrivers() {
                 <button
                   onClick={handleAddReason}
                   className="bg-green-500 text-white py-2 px-4 rounded"
+                  disabled={!newReason || !newPoints}
                 >
                   Add Reason
                 </button>

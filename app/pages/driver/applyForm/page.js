@@ -2,8 +2,11 @@
 
 "use client";
 import {useEffect, useState} from "react";
+import { getCurrentUser } from 'aws-amplify/auth';
+//import { fetchAuthSession } from 'aws-amplify/auth';
 
 export default function ApplicationForm() {
+    const [userId, setUserId] = useState("");
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
@@ -41,14 +44,76 @@ export default function ApplicationForm() {
 
     const filteredPolicies = policies.filter(policy => policy.Sponsor_Org_ID == sponsorId);
 
+    // fetch current user (gets coginto_sub)
+    useEffect(() => {
+        async function fetchUser() {
+            try {
+                const user = await getCurrentUser();
+                const userIdValue = user.userId;
+                
+                if (userIdValue) {
+                    setUserId(userIdValue);
+                    console.log("Fetched user ID:", userIdValue);
+                } else {
+                    console.warn("User ID not found in user object.");
+                }
+            } catch (error) {
+                console.error("Error fetching current user:", error);
+            }
+        }
+
+        fetchUser();
+    }, []);
+
+    // get DB user_id based off cognito_sub
+    useEffect(() => {
+        async function fetchDatabaseUserId() {
+            try {
+                const user = await getCurrentUser();
+                const cognitoSub = user.userId;
+                console.log("Cognito Sub:", cognitoSub);
+                
+                const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/user/cognito/${cognitoSub}`);
+                const data = await response.json();
+                
+                if (response.ok && data.userId) {
+                    setUserId(data.userId);
+                    console.log("Database User ID:", data.userId);
+                } else {
+                    console.error("Error fetching database user ID:", data.error || "Unknown error");
+                }
+            } catch (error) {
+                console.error("Error in user ID mapping:", error);
+            }
+        }
+    
+        fetchDatabaseUserId();
+    }, []);
+
+
     // fetch available sponsor from backend db
     useEffect(() => {
         async function fetchSponsors() {
             try {
-                const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors"); // INSERT DB LINK HERE
+                const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors");
                 const data = await response.json();
 
-                const transformedData = data.map((sponsor) => ({
+                 // fetching all sponsor orgs associated with user_id
+                const userDriversResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/${userId}/sponsors`);
+                const userDriversData = await userDriversResponse.json();
+                console.log("User's current sponsor orgs:", userDriversData);
+
+
+                // get the sponsor IDs the user is already associated with
+                //const userSponsorIds = userDriversData.map(driver => driver.Sponsor_ID);
+                console.log("User's current sponsor IDs:", userDriversData);
+
+                // filter out sponsors user is already associated with
+                const filteredSponsors = data.filter(
+                    sponsor => !userDriversData.some(userSponsor => userSponsor.Sponsor_Org_ID === sponsor.Sponsor_Org_ID)
+                );
+
+                const transformedData = filteredSponsors.map((sponsor) => ({
                     id: sponsor.Sponsor_Org_ID,
                     name: sponsor.Sponsor_Org_Name
                 }));
@@ -60,7 +125,7 @@ export default function ApplicationForm() {
             } 
         }
         fetchSponsors();
-    }, []);
+    }, [userId]);
 
 
     // fetch policies once sponsor is selected from dropdown
@@ -85,17 +150,7 @@ export default function ApplicationForm() {
         fetchPolicies();
     }, [sponsorId]);
 
-
-    // handle the sponsor change and check for previous associated
-    /*const handleSponsorChange = (e) => {
-        console.log("Selected Sponsor ID:", e.target.value);
-        setSponsorId(e.target.value);
-
-        // store sponsor choice in dropdown locally
-        // holds in case user refreshes page or comes back to application later
-        localStorage.setItem("selectedSponsor", e.target.value); 
-    }*/
-    const handleSponsorChange = async (e) => {
+    /*const handleSponsorChange = async (e) => {
         const selectedSponsorId = e.target.value;
         setSponsorId(selectedSponsorId);
     
@@ -132,6 +187,10 @@ export default function ApplicationForm() {
         } catch (error) {
             console.error("Error checking user association:", error);
         }
+    };*/
+    const handleSponsorChange = (e) => {
+        const selectedSponsorId = e.target.value;
+        setSponsorId(selectedSponsorId);
     };
         
 
