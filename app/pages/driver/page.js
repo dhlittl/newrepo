@@ -47,10 +47,8 @@ export default function DriverDashboard() {
   const [cognitoSub, setCognitoSub] = useState(null);
   const [userId, setUserId] = useState(null);
   const [widgets, setWidgets] = useState (initialWidgets);
-  //const [userId, setUserId] = useState(1); // update to be dynamic later
-  //const userId = 1;
   const [loading, setLoading] = useState(true);
-  //const User_ID="1";
+
 
   // fetch current user (gets coginto_sub)
   useEffect(() => {
@@ -68,7 +66,7 @@ export default function DriverDashboard() {
     fetchUser();
   }, []);
 
-
+  // using cognito_sub to get user_id
   useEffect(() => {
     async function fetchDatabaseUserId() {
       try {

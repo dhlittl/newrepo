@@ -2,10 +2,10 @@
 
 // app/pages/sponsor/page.js
 
+// IMPORTS
 'use client';
-//import  React , { useState } from 'react';
 import React, { useState, useEffect } from 'react';
-
+import { getCurrentUser } from 'aws-amplify/auth';
 
 // importing from dnd-kit for widget implementation and styling
 import {
@@ -34,39 +34,113 @@ const initialWidgets = [
 ];
 
 
+// OVERALL SPONSOR DASHBOARD AND WIDGETS
 export default function SponsorDashboard() {
+    const [cognitoSub, setCognitoSub] = useState(null);
     const [widgets, setWidgets] = useState (initialWidgets);
     const [userId, setUserId] = useState("1"); // update to be dynamic later
     const [loading, setLoading] = useState(true);
 
+    // fetch current user (gets coginto_sub)
     useEffect(() => {
-      console.log("Using User_ID:", userId); 
-      // fetch initial widget order
-      async function fetchWidgetOrder() {
+      async function fetchUser() {
         try {
-          if (typeof window !== 'undefined') {
-            const User_ID = userId;
-  
-            const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/Dashboard/Preferences?User_ID=${User_ID}`);  // add API Gateway Link here
-            const data = await response.json();
-
-            console.log("API Response", data)
-  
-            if (response.ok && Array.isArray(data.widget_order)) {
-              const orderedWidgets = initialWidgets.map((widget) => ({
-                  ...widget,
-                  visible: data.widget_order.includes(widget.id)
-              }));
-              setWidgets(orderedWidgets);
-            } else {
-              console.error("Error fetching widget order:", data);
-            }
-          }
+          const user = await getCurrentUser();
+          setCognitoSub(user.userId);
+            
+          console.log("Fetched Cognito user ID:", user.userId);
         } catch (error) {
-          console.error("Failed to fetch widget order:", error);
+          console.error("Error fetching current user:", error);
         }
       }
   
+      fetchUser();
+    }, []);
+
+    // using cognito_sub to get user_id
+    useEffect(() => {
+      async function fetchDatabaseUserId() {
+        try {
+          const user = await getCurrentUser();
+          const cognitoSub = user.userId;
+          console.log("Cognito Sub:", cognitoSub);
+              
+          const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/user/cognito/${cognitoSub}`);
+          const data = await response.json();
+              
+          if (response.ok && data.userId) {
+            setUserId(data.userId);
+            console.log("Database User ID:", data.userId);
+            //fetchWidgetOrder(data.userId);
+          } else {
+            console.error("Error fetching database user ID:", data.error || "Unknown error");
+          }
+        } catch (error) {
+          console.error("Error in user ID mapping:", error);
+        }
+      }
+  
+      fetchDatabaseUserId();
+    }, []);
+
+    useEffect(() => {
+      if (!userId) {
+        console.warn('Invalid User_ID');
+        return;
+      }
+
+      console.log("Using User_ID:", userId); 
+
+      const fetchWidgetOrder = async () => {
+        try {
+            const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/Dashboard/Preferences?User_ID=${userId}`);  // add API Gateway Link here
+            const data = await response.json();
+
+            console.log('Fetched widget order', data);
+  
+            // check if data has a widget_order property that an array
+            if (data && data.widget_order && Array.isArray(data.widget_order)) {
+              const widgetOrder = data.widget_order;
+              console.log('Widget order array:', widgetOrder);
+
+              // mark all widgets as not visible
+              const updatedWidgets = initialWidgets.map(widget => ({
+                ...widget,
+                visible: false
+              }));
+            
+            // make the widgets in the order visible and reorder them
+            const reorderedWidgets = [];
+
+            // add widgets that are in the order list
+            widgetOrder.forEach(widgetId => {
+              const widget = initialWidgets.find(w => w.id === widgetId);
+              if (widget) {
+                reorderedWidgets.push({
+                  ...widget,
+                  visible: true
+                });
+              }
+            });
+
+            // add remaining widgets (not visible)
+            initialWidgets.forEach(widget => {
+              if (!widgetOrder.includes(widget.id)) {
+                reorderedWidgets.push({
+                  ...widget,
+                  visible:false
+                });
+              }
+            });
+
+            console.log('Reordered widgets:', reorderedWidgets);
+            setWidgets(reorderedWidgets);
+          }
+        } catch (error) {
+          console.error('Failed to fetch widget order:', error);
+        }
+      };
+
       fetchWidgetOrder();
     }, [userId]);
 
@@ -141,9 +215,16 @@ export default function SponsorDashboard() {
 
     // function to toggle widget visibility
     const toggleWidget = (id) => {
-      setWidgets((prev) =>
-        prev.map((w) => (w.id === id ? {...w, visible: !w.visible} : w))
-      );
+      setWidgets((prev) => {
+        const updatedWidgets = prev.map((w) => (w.id === id ? {...w, visible: !w.visible} : w));
+      
+      // call updateWidgetOrder
+      setTimeout(() => {
+        updateWidgetOrder(updatedWidgets.filter((w) => w.visible));
+      }, 0);
+      
+      return updatedWidgets;
+      });
     };
 
     // page
@@ -173,7 +254,7 @@ export default function SponsorDashboard() {
           <SortableContext items={widgets.filter((w) => w.visible).map((w) => w.id)} strategy={verticalListSortingStrategy}>
             <div className="flex flex-wrap gap-4 justify-start">
               {widgets.filter((w) => w.visible).map((widget) => (
-                <SortableWidget key={widget.id} widget={widget} />
+                <SortableWidget key={widget.id} widget={widget} userId={userId} />
               ))}
             </div>
           </SortableContext>
@@ -183,6 +264,7 @@ export default function SponsorDashboard() {
     );
   }
 
+// SORTING FUNCTION
 // making widgets sortable
 function SortableWidget({widget}) {
   const { attributes, listeners, setNodeRef, transform, transition} = useSortable({ id: widget.id });
@@ -200,7 +282,7 @@ function SortableWidget({widget}) {
 }
 
 
-  // widget components
+  // WIDGET COMPONENTS
   function getWidgetContent(id) {
     switch (id) {
       case "companyInfo":
