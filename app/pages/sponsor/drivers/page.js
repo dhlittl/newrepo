@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { fetchAuthSession } from "aws-amplify/auth";
+import { useRouter } from 'next/navigation';
 import "@/amplify-config";
 
 export default function SponsorDrivers() {
@@ -439,6 +440,7 @@ const handleAddReason = async () => {
                   <th className="py-2 px-4 border">Points</th>
                   <th className="py-2 px-4 border">Purchases</th>
                   <th className="py-2 px-4 border">Point Goal</th>
+                  <th className="py-2 px-4 border">See As Driver</th>
                 </tr>
               </thead>
               <tbody>
@@ -456,6 +458,18 @@ const handleAddReason = async () => {
                     <td className="py-2 px-4 border">{driver.Point_Balance}</td>
                     <td className="py-2 px-4 border">{driver.Num_Purchases}</td>
                     <td className="py-2 px-4 border">{driver.Point_Goal}</td>
+                    <td className="py-2 px-4 border">
+                      <button
+                        className="bg-blue-600 text-white py-2 px-4 rounded"
+                        onClick={() => {
+                          sessionStorage.setItem("assumedDriverId", driver.Driver_ID.toString())
+                          sessionStorage.setItem("assumedDriverName", driver.Driver_Name);
+                          window.location.href = "/pages/driver";
+                        }}
+                      >
+                        Assume Identity
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
