@@ -286,7 +286,7 @@ function SortableWidget({widget}) {
   function getWidgetContent(id) {
     switch (id) {
       case "companyInfo":
-        return <LinkWidget title="Company Info" link="/companyInfo" />;
+        return <LinkWidget title="Company Info" link="pages/sponsor/companyInfo" />;
       case "driverHistory":
         return <LinkWidget title="Driver History" link="/driverHistory" />;
       case "driverMetrics":
