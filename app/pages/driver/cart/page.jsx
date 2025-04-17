@@ -77,9 +77,22 @@ export default function CartPage() {
       }
       
       const data = await response.json();
-      setDriverInfo({
-        pointBalance: data.points || 0
-      });
+      
+      if (Array.isArray(data)) {
+        // Calculate total points by summing PointsAdded and subtracting PointsSubbed for each sponsor
+        const totalPoints = data.reduce((sum, sponsor) => {
+          return sum + sponsor.PointsAdded - sponsor.PointsSubbed; // Adding PointsAdded and subtracting PointsSubbed
+        }, 0);
+  
+        setDriverInfo({
+          pointBalance: totalPoints // Set the total points after calculation
+        });
+      } else {
+        console.error("Unexpected data format:", data);
+        setDriverInfo({
+          pointBalance: 0
+        });
+      }
     } catch (err) {
       console.error("Error fetching driver info:", err);
       // Set default points for testing

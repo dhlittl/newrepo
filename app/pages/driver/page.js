@@ -333,25 +333,28 @@ function getWidgetContent(id, userId) {
 }
 
 function PointsWidget({ userId }) {
-  const [points, setPoints] = useState(null);
+  const [pointsData, setPointsData] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
-    // Add a check to ensure userId is available
     if (!userId) {
-      // Use a debug level log instead of error for expected state
       console.debug("No userId available yet in PointsWidget, waiting...");
-      return; // Don't set loading to false yet
+      return;
     }
-    
+
     async function fetchPoints() {
       try {
-        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points?userId=${userId}`);
+        const response = await fetch(
+          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points?userId=${userId}`
+        );
         const data = await response.json();
-        if (response.ok) {
-          setPoints(data.points);
+
+        console.log("Points response:", data);
+
+        if (response.ok && Array.isArray(data)) {
+          setPointsData(data);
         } else {
-          console.error("Error fetching points:", data.message);
+          console.error("Error fetching points:", data?.message || "Unknown error");
         }
       } catch (error) {
         console.error("Failed to fetch points:", error);
@@ -359,14 +362,26 @@ function PointsWidget({ userId }) {
         setLoading(false);
       }
     }
-  
+
     fetchPoints();
   }, [userId]);
 
   return (
-    <div>
-      <h3 className="font-semibold">Current Points</h3>
-      {loading ? <p>Loading...</p> : <p>{points !== null ? `${points} pts` : "No points available"}</p>}
+    <div className="p-4 rounded-xl shadow-md bg-white">
+      <h3 className="font-semibold text-lg mb-2">Sponsor Points</h3>
+      {loading ? (
+        <p>Loading...</p>
+      ) : pointsData.length > 0 ? (
+        <ul className="mt-3 text-sm text-gray-600">
+          {pointsData.map((entry) => (
+            <li key={entry.Sponsor_Org_ID}>
+              {entry.Sponsor_Org_Name}: {entry.PointsAdded - entry.PointsSubbed} pts
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No points available</p>
+      )}
     </div>
   );
 }
@@ -472,14 +487,18 @@ function ProgressWidget({ userId }) {
   
     async function fetchProgressData() {
       try {
-        // fetch current points
         const pointsResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points?userId=${userId}`);
         const pointsData = await pointsResponse.json();
-        
-        if (pointsResponse.ok) {
-          setPoints(pointsData.points);
+
+        if (pointsResponse.ok && Array.isArray(pointsData)) {
+          // Calculate total points by iterating through the sponsors and summing the points
+          const totalPoints = pointsData.reduce((sum, sponsor) => {
+            return sum + sponsor.PointsAdded - sponsor.PointsSubbed; // Adding PointsAdded and subtracting PointsSubbed
+          }, 0);
+          
+          setPoints(totalPoints); // Set the total points from all sponsors
         } else {
-          console.error("Error fetching points:", pointsData.message);
+          console.error("Error fetching points:", pointsData.message || pointsData);
         }
     
         // fetch point goal
