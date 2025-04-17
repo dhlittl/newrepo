@@ -38,7 +38,7 @@ const initialWidgets = [
 export default function SponsorDashboard() {
     const [cognitoSub, setCognitoSub] = useState(null);
     const [widgets, setWidgets] = useState (initialWidgets);
-    const [userId, setUserId] = useState("1"); // update to be dynamic later
+    const [userId, setUserId] = useState(null);
     const [loading, setLoading] = useState(true);
 
     // fetch current user (gets coginto_sub)
@@ -286,7 +286,7 @@ function SortableWidget({widget}) {
   function getWidgetContent(id) {
     switch (id) {
       case "companyInfo":
-        return <LinkWidget title="Company Info" link="pages/sponsor/companyInfo" />;
+        return <LinkWidget title="Company Info" link="/pages/sponsor/companyInfo" />;
       case "driverHistory":
         return <LinkWidget title="Driver History" link="/driverHistory" />;
       case "driverMetrics":

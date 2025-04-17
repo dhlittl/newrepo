@@ -3,9 +3,7 @@
 // IMPORTS
 'use client';
 import  React , { useState, useEffect } from 'react';
-import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
-import { useRouter } from 'next/navigation'
-import { useEffectiveDriverId } from '@/hooks/useEffectiveDriverId';
+import { getCurrentUser } from 'aws-amplify/auth';
 
 // importing from dnd-kit for widget implementation and styling
 import {
@@ -24,6 +22,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { UserIcon } from '@heroicons/react/20/solid';
 import Link from "next/link";
 
 
@@ -45,37 +44,52 @@ const initialWidgets = [
 
 // OVERALL DRIVER DASHBOARD AND FUNCTIONS
 export default function DriverDashboard() {
-  const router = useRouter();
-  const [authorized, setAuthorized] = useState(false);
-  const { userId, isAssumed } = useEffectiveDriverId();
+  const [cognitoSub, setCognitoSub] = useState(null);
+  const [userId, setUserId] = useState(null);
   const [widgets, setWidgets] = useState (initialWidgets);
   const [loading, setLoading] = useState(true);
 
-  //const User_ID="1";
-
-
+  // fetch current user (gets coginto_sub)
   useEffect(() => {
-    async function checkGroup() {
+    async function fetchUser() {
       try {
-        const session = await fetchAuthSession();
-        console.log("Full Auth Session:", session);
-        const groups = session.tokens?.idToken?.payload["cognito:groups"] || [];
-        console.log("User groups:", groups);
-        if (groups.includes("driver") || groups.includes("sponsor") || groups.includes("admin")) {
-          setAuthorized(true);
-        } else {
-          console.warn("Not in driver group");
-          router.replace("/unauthorized");
-        }
-      } catch (err) {
-        console.error("Auth error:", err);
-        router.replace("/login");
-      } finally {
-        setLoading(false);
+        const user = await getCurrentUser();
+        setCognitoSub(user.userId);
+          
+        console.log("Fetched Cognito user ID:", user.userId);
+      } catch (error) {
+        console.error("Error fetching current user:", error);
       }
     }
-    checkGroup();
-  }, [router]);
+
+    fetchUser();
+  }, []);
+
+  // using cognito_sub to get user_id
+  useEffect(() => {
+    async function fetchDatabaseUserId() {
+      try {
+        const user = await getCurrentUser();
+        const cognitoSub = user.userId;
+        console.log("Cognito Sub:", cognitoSub);
+            
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/user/cognito/${cognitoSub}`);
+        const data = await response.json();
+            
+        if (response.ok && data.userId) {
+          setUserId(data.userId);
+          console.log("Database User ID:", data.userId);
+          //fetchWidgetOrder(data.userId);
+        } else {
+          console.error("Error fetching database user ID:", data.error || "Unknown error");
+        }
+      } catch (error) {
+        console.error("Error in user ID mapping:", error);
+      }
+    }
+
+    fetchDatabaseUserId();
+  }, []);
 
   useEffect(() => {
     if (!userId) {
@@ -225,62 +239,40 @@ export default function DriverDashboard() {
   // page
   return (
     <div className="w-full mx-auto p-4 flex">
-      {loading ? (
-        <div className="text-center p-4 text-lg font-medium">Checking access...</div>
-      ) : (
-        <>
-          {/* Side Panel */}
-          <div className="w-1/6 bg-gray-200 p-4 rounded-md shadow-md mr-4">
-            <h2 className="text-lg font-semibold mb-4">Select Widgets</h2>
-            {widgets.map((widget) => (
-              <div key={widget.id} className="flex items-center space-x-2 mb-2">
-                <input
-                  type="checkbox"
-                  checked={widget.visible}
-                  onChange={() => toggleWidget(widget.id)}
-                />
-                <label>{widget.name}</label>
-              </div>
-            ))}
+      {/* Side Panel */}
+      <div className="w-1/6 bg-gray-200 p-4 rounded-md shadow-md mr-4">
+        <h2 className="text-lg font-semibold mb-4">Select Widgets</h2>
+        {widgets.map((widget) => (
+          <div key={widget.id} className="flex items-center space-x-2 mb-2">
+            <input
+              type="checkbox"
+              checked={widget.visible}
+              onChange={() => toggleWidget(widget.id)}
+            />
+            <label>{widget.name}</label>
           </div>
+        ))}
+      </div>
   
-          {/* Main Dashboard Content */}
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold mb-4">Driver Dashboard</h1>
-
-            {isAssumed && (
-              <button
-                className="mb-4 text-sm text-gray-700 underline"
-                onClick={() => {
-                  sessionStorage.removeItem("assumedDriverId");
-                  sessionStorage.removeItem("assumedDriverName");
-                  router.push("/pages/sponsor/drivers");
-                }}
-              >
-                ← Return to Sponsor View
-              </button>
-            )}
-            {/* Draggable Widgets */}
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDrag}>
-              <SortableContext
-                items={widgets.filter((w) => w.visible).map((w) => w.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="flex flex-wrap gap-4 justify-start">
-                  {widgets
-                    .filter((w) => w.visible)
-                    .map((widget) => (
-                      <SortableWidget key={widget.id} widget={widget} userId={userId} />
-                    ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-          </div>
-        </>
-      )}
+      {/* Main Dashboard Content */}
+      <div className="flex-1">
+        <h1 className="text-2xl font-bold mb-4">Driver Dashboard</h1>
+        
+        {/* Draggable Widgets */}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDrag}>
+          <SortableContext items={widgets.filter((w) => w.visible).map((w) => w.id)} strategy={verticalListSortingStrategy}>
+            <div className="flex flex-wrap gap-4 justify-start">
+            {widgets.filter((w) => w.visible).map((widget) => (
+              <SortableWidget key={widget.id} widget={widget} userId={userId} />
+            ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      </div>
     </div>
-  );
+  );    
 }
+
 
 // SORTING FUNCTION
 // making widgets sortable
