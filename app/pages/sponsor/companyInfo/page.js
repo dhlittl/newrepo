@@ -12,12 +12,17 @@ export default function SponsorsInfo() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false); // Track edit mode
+  const [isEditingPointsKey, setIsEditingPointsKey] = useState(false); // Track points key edit mode
   const [formData, setFormData] = useState({
     Sponsor_Org_Name: '',
     Sponsor_Description: '',
     Sponsor_Email: '',
     Sponsor_Phone: ''
   });
+  
+  // For adding new points key entries
+  const [newReason, setNewReason] = useState("");
+  const [newPoints, setNewPoints] = useState("");
 
   // Get Cognito user ID
   useEffect(() => {
@@ -159,10 +164,10 @@ export default function SponsorsInfo() {
             Sponsor_Org_ID: sponsorInfo.Sponsor_Org_ID,
             Sponsor_Org_Name: formData.Sponsor_Org_Name,
             Sponsor_Description: formData.Sponsor_Description,
-            Sponsor_Email: formData.Sponsor_Email,     // This field name must match what Lambda expects
-            Sponsor_Phone: formData.Sponsor_Phone      // This field name must match what Lambda expects
+            Sponsor_Email: formData.Sponsor_Email,
+            Sponsor_Phone: formData.Sponsor_Phone
         };
-    
+
         console.log("Saving sponsor info with data:", updatedData);
         console.log("Sending this data to API:\n", JSON.stringify(updatedData, null, 2));
 
@@ -199,27 +204,192 @@ export default function SponsorsInfo() {
         console.error("Error saving sponsor info:", error);
         setError("Error saving sponsor info: " + error.message);
     }
-    };
+  };
   
   // function to manually refresh sponsor info after save
-    const refetchSponsorInfo = async () => {
-        try {
-        const response = await fetch(
-            `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors?SponsorOrgId=${sponsorOrgId}`
-        );
-        if (!response.ok) throw new Error("Failed to fetch sponsor details");
-    
-        const data = await response.json();
-        if (data && data.length > 0) {
-            setSponsorInfo(data[0]);
-        }
-        } catch (err) {
-        console.error("Error refetching sponsor info:", err);
-        setError("Error refetching sponsor info");
-        }
-    };
-    
+  const refetchSponsorInfo = async () => {
+    try {
+      const response = await fetch(
+          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors?SponsorOrgId=${sponsorOrgId}`
+      );
+      if (!response.ok) throw new Error("Failed to fetch sponsor details");
   
+      const data = await response.json();
+      if (data && data.length > 0) {
+          setSponsorInfo(data[0]);
+      }
+    } catch (err) {
+      console.error("Error refetching sponsor info:", err);
+      setError("Error refetching sponsor info");
+    }
+  };
+
+  // Function to refresh the points key table
+  const refetchPointsKey = async () => {
+    try {
+      const response = await fetch(
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?sponsorOrgId=${sponsorOrgId}`
+      );
+      
+      if (!response.ok) {
+        console.warn("Failed to refresh points key");
+        return;
+      }
+      
+      const data = await response.json();
+      setPointsKey(data || []);
+    } catch (error) {
+      console.error("Error refreshing points key:", error);
+    }
+  };
+    
+  // Handle editing points
+  const handleEditPoints = (e, index) => {
+    const updatedPointsKey = [...pointsKey];  // copy of current pointsKey array
+    updatedPointsKey[index].Points = e.target.value;  // update point value
+    setPointsKey(updatedPointsKey);  // update state
+  
+    const reasonData = updatedPointsKey[index];
+  
+    // PUT request to update the points on the backend
+    fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        reasonId: reasonData.Reason_ID,
+        reason: reasonData.Reason,
+        points: reasonData.Points,
+      }),
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Failed to update points');
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Points updated successfully:', data);
+    })
+    .catch(error => {
+      console.error('Error updating points:', error);
+    });
+  };
+
+  // Handle editing reason text
+  const handleEditReason = (e, index) => {
+    const updatedPointsKey = [...pointsKey];  // copy of current pointsKey array
+    updatedPointsKey[index].Reason = e.target.value;  // update reason text
+    setPointsKey(updatedPointsKey);  // update state
+  
+    const reasonData = updatedPointsKey[index];
+  
+    // PUT request to update the reason on the backend
+    fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        reasonId: reasonData.Reason_ID,
+        reason: reasonData.Reason,
+        points: reasonData.Points,
+      }),
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Failed to update reason');
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Reason updated successfully:', data);
+    })
+    .catch(error => {
+      console.error('Error updating reason:', error);
+    });
+  };
+
+  // Handle deleting reason
+  const handleDeleteReason = async (reasonId) => {
+    try {
+      console.log("Attempting to delete reason ID:", reasonId);
+      
+      if (!reasonId) {
+        console.error("Invalid reason ID:", reasonId);
+        alert("Cannot delete: Invalid reason ID");
+        return;
+      }
+      
+      // using path parameter format
+      const deleteUrl = `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey/${reasonId}`;
+      console.log("Delete URL:", deleteUrl);
+      
+      const response = await fetch(deleteUrl, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+  
+      const data = await response.json().catch(() => ({}));
+      
+      if (!response.ok) {
+        throw new Error(data.error || data.message || `Failed to delete reason (Status: ${response.status})`);
+      }
+      
+      // remove deleted reason from ui
+      setPointsKey(pointsKey.filter(reason => reason.Reason_ID !== reasonId));
+      
+    } catch (error) {
+      console.error("Error details:", error);
+      alert("Failed to delete reason: " + error.message);
+    }
+  };
+
+  // Handle adding new reason
+  const handleAddReason = async () => {
+    try {
+      // Input validation
+      if (!newReason || !newPoints) {
+        alert("Please enter both a reason and points value");
+        return;
+      }
+      
+      console.log("Adding new reason:", newReason, newPoints);
+      
+      const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sponsorOrgId: parseInt(sponsorOrgId),
+          reason: newReason,
+          points: parseInt(newPoints),
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to add reason');
+      }
+      
+      console.log("API Response:", data);
+      
+      // Refresh the points key data
+      await refetchPointsKey();
+      
+      // clear input fields after
+      setNewReason("");
+      setNewPoints("");
+    } catch (error) {
+      console.error("Error adding new reason:", error);
+      alert("Failed to add new reason: " + error.message);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 shadow-md rounded-lg">
@@ -291,23 +461,92 @@ export default function SponsorsInfo() {
           )}
 
           <div className="mt-6">
-            <h2 className="text-xl font-semibold mt-6">Points Key</h2>
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-xl font-semibold">Points Key</h2>
+              <button
+                onClick={() => setIsEditingPointsKey(!isEditingPointsKey)}
+                className="px-4 py-2 bg-blue-500 text-white rounded"
+              >
+                {isEditingPointsKey ? "Save Changes" : "Edit Points Key"}
+              </button>
+            </div>
+            
             <table className="table-auto border-collapse border border-gray-300 mt-2 w-full">
               <thead>
                 <tr className="bg-gray-100">
                   <th className="border border-gray-300 px-4 py-2 text-left">Reason</th>
                   <th className="border border-gray-300 px-4 py-2 text-left">Points</th>
+                  {isEditingPointsKey && <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {pointsKey.map((point, index) => (
                   <tr key={index} className="hover:bg-gray-50">
-                    <td className="border border-gray-300 px-4 py-2">{point.Reason}</td>
-                    <td className="border border-gray-300 px-4 py-2">{point.Points}</td>
+                    <td className="border border-gray-300 px-4 py-2">
+                      {isEditingPointsKey ? (
+                        <input
+                          type="text"
+                          value={point.Reason}
+                          onChange={(e) => handleEditReason(e, index)}
+                          className="p-2 border rounded w-full"
+                        />
+                      ) : (
+                        point.Reason
+                      )}
+                    </td>
+                    <td className="border border-gray-300 px-4 py-2">
+                      {isEditingPointsKey ? (
+                        <input
+                          type="number"
+                          value={point.Points}
+                          onChange={(e) => handleEditPoints(e, index)}
+                          className="p-2 border rounded w-full"
+                        />
+                      ) : (
+                        point.Points
+                      )}
+                    </td>
+                    {isEditingPointsKey && (
+                      <td className="border border-gray-300 px-4 py-2">
+                        <button
+                          onClick={() => handleDeleteReason(point.Reason_ID)}
+                          className="bg-red-500 text-white py-1 px-3 rounded"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
+            
+            {/* Add New Row (if in edit mode) */}
+            {isEditingPointsKey && (
+              <div className="mt-4 flex gap-4">
+                <input
+                  type="text"
+                  value={newReason}
+                  onChange={(e) => setNewReason(e.target.value)}
+                  className="p-2 border rounded w-full"
+                  placeholder="New Reason"
+                />
+                <input
+                  type="number"
+                  value={newPoints}
+                  onChange={(e) => setNewPoints(e.target.value)}
+                  className="p-2 border rounded w-full"
+                  placeholder="Points"
+                />
+                <button
+                  onClick={handleAddReason}
+                  className="bg-green-500 text-white py-2 px-4 rounded"
+                  disabled={!newReason || !newPoints}
+                >
+                  Add Reason
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
