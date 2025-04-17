@@ -306,11 +306,11 @@ function SortableWidget({widget, userId}) {
 function getWidgetContent(id, userId) {
   switch (id) {
     case "points":
-      return <PointsWidget />;
+      return <PointsWidget userId={userId} />;
     case "conversion":
       return <Widget title="Point-to-Dollar" content="1,500 pts = $1500" />;
     case "progress":
-      return <ProgressWidget userId={userId}/>;
+      return <ProgressWidget userId={userId} />;
     case "catalog":
       return <LinkWidget title="Rewards Catalog" link="/pages/driver/catalog" />;
     case "friends":
@@ -325,21 +325,28 @@ function getWidgetContent(id, userId) {
       return <SponsorsWidget />;
     case "apply":
       return <LinkWidget title="Applications" content="Want to apply to more sponsors?" link="/pages/driver/applyForm" />;
-      case "sponsorInfo":
-        return <LinkWidget title="Sponsor Information" content="Click here to view information about available sponsors!" link="/pages/driver/sponsorInfo"/>;
+    case "sponsorInfo":
+      return <LinkWidget title="Sponsor Information" content="Click here to view information about available sponsors!" link="/pages/driver/sponsorInfo"/>;
     default:
       return null;
   }
 }
 
-function PointsWidget() {
+function PointsWidget({ userId }) {
   const [points, setPoints] = useState(null);
   const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
+    // Add a check to ensure userId is available
+    if (!userId) {
+      // Use a debug level log instead of error for expected state
+      console.debug("No userId available yet in PointsWidget, waiting...");
+      return; // Don't set loading to false yet
+    }
+    
     async function fetchPoints() {
       try {
-        const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points");
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points?userId=${userId}`);
         const data = await response.json();
         if (response.ok) {
           setPoints(data.points);
@@ -352,9 +359,9 @@ function PointsWidget() {
         setLoading(false);
       }
     }
-
+  
     fetchPoints();
-  }, []);
+  }, [userId]);
 
   return (
     <div>
@@ -456,18 +463,17 @@ function ProgressWidget({ userId }) {
 
   useEffect(() => {
     // debug
-    console.log('userId:', userId);
-    if (userId == null|| userId === "undefined") {
-      console.error("Invalid User_ID");
-      setLoading(false); // stop loading if userId is invalid
-      return;
+    console.debug('userId:', userId);
+    if (!userId) {
+      console.debug("Waiting for User_ID to be available");
+      return; // Don't set loading to false yet
     }
-    console.log("Using User_ID:", userId); 
-
+  console.debug("Using User_ID:", userId); 
+  
     async function fetchProgressData() {
       try {
         // fetch current points
-        const pointsResponse = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points");
+        const pointsResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points?userId=${userId}`);
         const pointsData = await pointsResponse.json();
         
         if (pointsResponse.ok) {
@@ -475,9 +481,9 @@ function ProgressWidget({ userId }) {
         } else {
           console.error("Error fetching points:", pointsData.message);
         }
-
+    
         // fetch point goal
-        const goalResponse = await fetch(` https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/pointGoal?User_ID=${userId}`);
+        const goalResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/pointGoal?User_ID=${userId}`);
         const goalData = await goalResponse.json();
         
         if (goalResponse.ok) {

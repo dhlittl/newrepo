@@ -68,7 +68,9 @@ export default function CartPage() {
   // Fetch driver information (points balance)
   const fetchDriverInfo = async () => {
     try {
-      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Driver/Dashboard/Points`);
+      const response = await fetch(
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Driver/Dashboard/Points?userId=${userId}`
+      );
       
       if (!response.ok) {
         throw new Error(`Failed to fetch driver info: ${response.statusText}`);
@@ -85,7 +87,7 @@ export default function CartPage() {
         pointBalance: 5000
       });
     }
-  };
+  };  
   
   const updateItemQuantity = (productId, newQuantity) => {
     if (newQuantity < 1) return; // Don't allow quantities less than 1
