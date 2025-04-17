@@ -1,11 +1,15 @@
 "use client";
 import { useState, useEffect } from 'react';
 import React, { Suspense } from 'react';
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { useEffectiveDriverId } from '@/hooks/useEffectiveDriverId';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 function DriverCatalogPage() {
   const router = useRouter();
+  const { userId, isAssumed } = useEffectiveDriverId();
+  const [authorized, setAuthorized] = useState(false);
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -21,10 +25,29 @@ function DriverCatalogPage() {
   const [maxPoints, setMaxPoints] = useState('');
   
   // For testing purposes - in production, this would come from authentication
-  const [userId, setUserId] = useState(1); // Default test user
   const [sponsorId, setSponsorId] = useState(null);
+
+  useEffect(() => {
+    const checkGroup = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const groups = session.tokens?.idToken?.payload["cognito:groups"] || [];
+
+        if (groups.includes("driver") || groups.includes("sponsor") || groups.includes("admin")) {
+          setAuthorized(true);
+        } else {
+          router.replace("/unauthorized");
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
+        router.replace("/login");
+      }
+    };
+    checkGroup();
+  }, [router]);
   
   useEffect(() => {
+    if (!authorized || !userId) return;
     // Get sponsorId from URL params or default to the first available
     const urlSponsorId = searchParams.get('sponsorId');
     if (urlSponsorId) {
@@ -33,7 +56,7 @@ function DriverCatalogPage() {
       // If no sponsorId provided, we'll load the driver's sponsors and select the first one
       fetchDriverSponsors();
     }
-  }, [searchParams]);
+  }, [authorized, userId, searchParams]);
   
   // Fetch the driver's associated sponsors
   const fetchDriverSponsors = async () => {
@@ -284,6 +307,19 @@ function DriverCatalogPage() {
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
+        {/* Return button for sponsors */}
+        {isAssumed && (
+          <button
+            className="mb-4 text-sm text-gray-700 underline"
+            onClick={() => {
+              sessionStorage.removeItem("assumedDriverId");
+              sessionStorage.removeItem("assumedDriverName");
+              router.push("/pages/sponsor/drivers");
+            }}
+          >
+            ← Return to Sponsor View
+          </button>
+        )}
         <h1 className="text-2xl font-bold">Rewards Catalog</h1>
         
         {driverInfo && (

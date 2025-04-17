@@ -1,14 +1,54 @@
 // Driver Help Page
 
 "use client";
+import { useEffect, useState } from "react";
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { useEffectiveDriverId } from '@/hooks/useEffectiveDriverId';
+import { useRouter } from 'next/navigation';
 
 // commented out import because link isn't connected yet
 //import Link from "next/link";
 
 
 const HelpPage = () => {
+    const router = useRouter();
+    const { userId, isAssumed } = useEffectiveDriverId();
+    const [authorized, setAuthorized] = useState(false);
+
+    useEffect(() => {
+        const checkGroup = async () => {
+          try {
+            const session = await fetchAuthSession();
+            const groups = session.tokens?.idToken?.payload["cognito:groups"] || [];
+    
+            if (groups.includes("driver") || groups.includes("sponsor") || groups.includes("admin")) {
+              setAuthorized(true);
+            } else {
+              router.replace("/unauthorized");
+            }
+          } catch (err) {
+            console.error("Auth error:", err);
+            router.replace("/login");
+          }
+        };
+        checkGroup();
+      }, [router]);
+      
     return (
         <div className="p-6 max-w-4xl mx-auto">
+            {/* Return button for sponsors */}
+            {isAssumed && (
+                <button
+                className="mb-4 text-sm text-gray-700 underline"
+                onClick={() => {
+                    sessionStorage.removeItem("assumedDriverId");
+                    sessionStorage.removeItem("assumedDriverName");
+                    router.push("/pages/sponsor/drivers");
+                }}
+                >
+                ← Return to Sponsor View
+                </button>
+            )}
             <h1 className="text-3xl font-bold mb-6">Driver Help Page</h1>
 
             {/* How to Edit Driver Dashboard */}

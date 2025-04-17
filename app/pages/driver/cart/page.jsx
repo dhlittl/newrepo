@@ -1,19 +1,41 @@
 "use client";
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { useEffectiveDriverId } from '@/hooks/useEffectiveDriverId';
 import { useRouter } from 'next/navigation';
 
 export default function CartPage() {
   const router = useRouter();
+  const { userId, isAssumed } = useEffectiveDriverId();
+  const [authorized, setAuthorized] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const [driverInfo, setDriverInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [totalPoints, setTotalPoints] = useState(0);
   
   // For testing purposes - in production, this would come from authentication
-  const [userId, setUserId] = useState(1); // Default test user
+  useEffect(() => {
+    const checkGroup = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const groups = session.tokens?.idToken?.payload["cognito:groups"] || [];
+
+        if (groups.includes("driver") || groups.includes("sponsor") || groups.includes("admin")) {
+          setAuthorized(true);
+        } else {
+          router.replace("/unauthorized");
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
+        router.replace("/login");
+      }
+    };
+    checkGroup();
+  }, [router]);
   
   useEffect(() => {
+    if (!authorized || !userId) return;
     // Load cart items from localStorage
     const storedCart = localStorage.getItem('driverCart');
     if (storedCart) {
@@ -32,7 +54,7 @@ export default function CartPage() {
     fetchDriverInfo();
     
     setLoading(false);
-  }, []);
+  }, [authorized, userId]);
   
   // Calculate total points whenever cart items change
   useEffect(() => {
@@ -173,6 +195,19 @@ export default function CartPage() {
     return (
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-6">Your Cart</h1>
+        {/* Return button for sponsors */}
+        {isAssumed && (
+          <button
+            className="mb-4 text-sm text-gray-700 underline"
+            onClick={() => {
+              sessionStorage.removeItem("assumedDriverId");
+              sessionStorage.removeItem("assumedDriverName");
+              router.push("/pages/sponsor/drivers");
+            }}
+          >
+            ← Return to Sponsor View
+          </button>
+        )}
         <div className="bg-gray-100 p-8 rounded-lg text-center">
           <p className="text-lg mb-4">Your cart is empty</p>
           <Link href="/pages/driver/catalog" className="bg-blue-500 text-white px-4 py-2 rounded-md">
@@ -186,6 +221,19 @@ export default function CartPage() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Your Cart</h1>
+      {/* Return button for sponsors */}
+      {isAssumed && (
+        <button
+          className="mb-4 text-sm text-gray-700 underline"
+          onClick={() => {
+            sessionStorage.removeItem("assumedDriverId");
+            sessionStorage.removeItem("assumedDriverName");
+            router.push("/pages/sponsor/drivers");
+          }}
+        >
+          ← Return to Sponsor View
+        </button>
+      )}
       
       {driverInfo && (
         <div className="bg-blue-100 p-3 rounded-lg mb-6 flex justify-between items-center">

@@ -1,18 +1,44 @@
 "use client";
 import { useState, useEffect } from 'react';
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { useEffectiveDriverId } from '@/hooks/useEffectiveDriverId';
 import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 function ReceiptPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
   const [receiptData, setReceiptData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const { userId, isAssumed } = useEffectiveDriverId();
+  const [authorized, setAuthorized] = useState(false);
+
+  useEffect(() => {
+    const checkGroup = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const groups = session.tokens?.idToken?.payload["cognito:groups"] || [];
+
+        if (groups.includes("driver") || groups.includes("sponsor") || groups.includes("admin")) {
+          setAuthorized(true);
+        } else {
+          router.replace("/unauthorized");
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
+        router.replace("/login");
+      }
+    };
+    checkGroup();
+  }, [router]);
   
   useEffect(() => {
     // In a real app, we'd fetch the receipt data from the server using the orderId
     // For this demo, we'll load it from localStorage where we stored it during checkout
+    if (!authorized || !userId) return;
     try {
       const storedReceipt = localStorage.getItem('latestReceipt');
       if (storedReceipt) {
@@ -23,7 +49,7 @@ function ReceiptPage() {
     } finally {
       setLoading(false);
     }
-  }, [orderId]);
+  }, [authorized, userId, orderId]);
   
   const handlePrint = () => {
     window.print();
@@ -36,6 +62,19 @@ function ReceiptPage() {
   if (!receiptData) {
     return (
       <div className="container mx-auto p-4">
+        {/* Return button for sponsors */}
+        {isAssumed && (
+          <button
+            className="mb-4 text-sm text-gray-700 underline"
+            onClick={() => {
+              sessionStorage.removeItem("assumedDriverId");
+              sessionStorage.removeItem("assumedDriverName");
+              router.push("/pages/sponsor/drivers");
+            }}
+          >
+            ← Return to Sponsor View
+          </button>
+        )}
         <h1 className="text-2xl font-bold mb-6">Receipt</h1>
         <div className="bg-gray-100 p-8 rounded-lg text-center">
           <p className="text-lg mb-4">Receipt information not found</p>
@@ -61,6 +100,19 @@ function ReceiptPage() {
     <div className="container mx-auto p-4 max-w-3xl">
       {/* Print controls - won't be printed */}
       <div className="print:hidden mb-6 flex justify-between">
+        {/* Return button for sponsors */}
+        {isAssumed && (
+          <button
+            className="mb-4 text-sm text-gray-700 underline"
+            onClick={() => {
+              sessionStorage.removeItem("assumedDriverId");
+              sessionStorage.removeItem("assumedDriverName");
+              router.push("/pages/sponsor/drivers");
+            }}
+          >
+            ← Return to Sponsor View
+          </button>
+        )}
         <h1 className="text-2xl font-bold">Order Receipt</h1>
         <div>
           <button

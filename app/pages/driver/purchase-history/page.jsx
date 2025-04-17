@@ -1,15 +1,38 @@
 "use client";
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { useEffectiveDriverId } from '@/hooks/useEffectiveDriverId';
 import { useRouter } from 'next/navigation';
 
 export default function PurchaseHistoryPage() {
   const router = useRouter();
+  const { userId, isAssumed } = useEffectiveDriverId();
+  const [authorized, setAuthorized] = useState(false);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState(1); // For testing
+
+  useEffect(() => {
+    const checkGroup = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const groups = session.tokens?.idToken?.payload["cognito:groups"] || [];
+
+        if (groups.includes("driver") || groups.includes("sponsor") || groups.includes("admin")) {
+          setAuthorized(true);
+        } else {
+          router.replace("/unauthorized");
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
+        router.replace("/login");
+      }
+    };
+    checkGroup();
+  }, [router]);
   
   useEffect(() => {
+    if (!authorized || !userId) return;
     const fetchOrderHistory = async () => {
       try {
         setLoading(true);
@@ -54,7 +77,7 @@ export default function PurchaseHistoryPage() {
     };
     
     fetchOrderHistory();
-  }, [userId]);
+  }, [authorized, userId]);
   
   const viewReceipt = (order) => {
     // Store the order in localStorage so the receipt page can access it
@@ -70,6 +93,19 @@ export default function PurchaseHistoryPage() {
   if (orders.length === 0) {
     return (
       <div className="container mx-auto p-4">
+        {/* Return button for sponsors */}
+        {isAssumed && (
+          <button
+          className="mb-4 text-sm text-gray-700 underline"
+          onClick={() => {
+              sessionStorage.removeItem("assumedDriverId");
+              sessionStorage.removeItem("assumedDriverName");
+              router.push("/pages/sponsor/drivers");
+          }}
+          >
+          ← Return to Sponsor View
+          </button>
+        )}
         <h1 className="text-2xl font-bold mb-6">Purchase History</h1>
         <div className="bg-gray-100 p-8 rounded-lg text-center">
           <p className="text-lg mb-4">You haven't made any purchases yet</p>
@@ -83,6 +119,19 @@ export default function PurchaseHistoryPage() {
   
   return (
     <div className="container mx-auto p-4">
+      {/* Return button for sponsors */}
+      {isAssumed && (
+          <button
+          className="mb-4 text-sm text-gray-700 underline"
+          onClick={() => {
+              sessionStorage.removeItem("assumedDriverId");
+              sessionStorage.removeItem("assumedDriverName");
+              router.push("/pages/sponsor/drivers");
+          }}
+          >
+          ← Return to Sponsor View
+          </button>
+      )}
       <h1 className="text-2xl font-bold mb-6">Purchase History</h1>
       
       <div className="mb-6">

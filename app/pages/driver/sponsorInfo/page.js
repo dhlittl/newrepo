@@ -2,13 +2,39 @@
 
 "use client";
 import { useEffect, useState } from "react";
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { useEffectiveDriverId } from "@/hooks/useEffectiveDriverId";
+import { useRouter } from 'next/navigation';
 
 export default function SponsorsPage() {
+  const router = useRouter();
   const [sponsors, setSponsors] = useState([]);
+  const { userId, isAssumed } = useEffectiveDriverId();
+  const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+    useEffect(() => {
+      const checkGroup = async () => {
+        try {
+          const session = await fetchAuthSession();
+          const groups = session.tokens?.idToken?.payload["cognito:groups"] || [];
+  
+          if (groups.includes("driver") || groups.includes("sponsor") || groups.includes("admin")) {
+            setAuthorized(true);
+          } else {
+            router.replace("/unauthorized");
+          }
+        } catch (err) {
+          console.error("Auth error:", err);
+          router.replace("/login");
+        }
+      };
+      checkGroup();
+    }, [router]);
+
   useEffect(() => {
+    if (!authorized || !userId) return;
     const fetchSponsorsAndPoints = async () => {
       try {
         // Fetch the sponsors list
@@ -58,10 +84,23 @@ export default function SponsorsPage() {
     };
 
     fetchSponsorsAndPoints();
-  }, []);
+  }, [authorized, userId]);
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 shadow-md rounded-lg">
+      {/* Return button for sponsors */}
+      {isAssumed && (
+        <button
+          className="mb-4 text-sm text-gray-700 underline"
+          onClick={() => {
+            sessionStorage.removeItem("assumedDriverId");
+            sessionStorage.removeItem("assumedDriverName");
+            router.push("/pages/sponsor/drivers");
+          }}
+        >
+          ← Return to Sponsor View
+        </button>
+      )}
       <h2 className="text-2xl font-semibold mb-6 text-black">Our Sponsors</h2>
 
       {loading && <p className="text-gray-500">Loading sponsors...</p>}

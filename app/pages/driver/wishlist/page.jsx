@@ -1,13 +1,39 @@
 "use client";
 import { useState, useEffect } from 'react';
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { useEffectiveDriverId } from '@/hooks/useEffectiveDriverId';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function WishlistPage() {
   const [wishlistItems, setWishlistItems] = useState([]);
   const [driverInfo, setDriverInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const { userId, isAssumed } = useEffectiveDriverId();
+  const [authorized, setAuthorized] = useState(false);
+
+  useEffect(() => {
+    const checkGroup = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const groups = session.tokens?.idToken?.payload["cognito:groups"] || [];
+
+        if (groups.includes("driver") || groups.includes("sponsor") || groups.includes("admin")) {
+          setAuthorized(true);
+        } else {
+          router.replace("/unauthorized");
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
+        router.replace("/login");
+      }
+    };
+    checkGroup();
+  }, [router]);
   
   useEffect(() => {
+    if (!authorized || !userId) return;
     // Load wishlist items from localStorage
     const storedWishlist = localStorage.getItem('driverWishlist');
     if (storedWishlist) {
@@ -26,7 +52,7 @@ export default function WishlistPage() {
     fetchDriverInfo();
     
     setLoading(false);
-  }, []);
+  }, [authorized, userId]);
   
   // Fetch driver information (points balance)
   const fetchDriverInfo = async () => {
@@ -123,6 +149,19 @@ export default function WishlistPage() {
   if (wishlistItems.length === 0) {
     return (
       <div className="container mx-auto p-4">
+        {/* Return button for sponsors */}
+        {isAssumed && (
+          <button
+            className="mb-4 text-sm text-gray-700 underline"
+            onClick={() => {
+              sessionStorage.removeItem("assumedDriverId");
+              sessionStorage.removeItem("assumedDriverName");
+              router.push("/pages/sponsor/drivers");
+            }}
+          >
+            ← Return to Sponsor View
+          </button>
+        )}
         <h1 className="text-2xl font-bold mb-6">Your Wishlist</h1>
         <div className="bg-gray-100 p-8 rounded-lg text-center">
           <p className="text-lg mb-4">Your wishlist is empty</p>
@@ -137,6 +176,19 @@ export default function WishlistPage() {
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
+        {/* Return button for sponsors */}
+        {isAssumed && (
+          <button
+            className="mb-4 text-sm text-gray-700 underline"
+            onClick={() => {
+              sessionStorage.removeItem("assumedDriverId");
+              sessionStorage.removeItem("assumedDriverName");
+              router.push("/pages/sponsor/drivers");
+            }}
+          >
+            ← Return to Sponsor View
+          </button>
+        )}
         <h1 className="text-2xl font-bold">Your Wishlist</h1>
         
         {driverInfo && (
