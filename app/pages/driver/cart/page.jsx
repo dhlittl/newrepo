@@ -14,7 +14,6 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
   const [totalPoints, setTotalPoints] = useState(0);
   
-  // For testing purposes - in production, this would come from authentication
   useEffect(() => {
     const checkGroup = async () => {
       try {
@@ -68,9 +67,10 @@ export default function CartPage() {
   // Fetch driver information (points balance)
   const fetchDriverInfo = async () => {
     try {
-      const response = await fetch(
-        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Driver/Dashboard/Points?userId=${userId}`
-      );
+      // Use the userId in the request to ensure we get the right driver's points
+      // Adding a query parameter to force a fresh fetch and avoid caching issues
+      const timestamp = new Date().getTime();
+      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Driver/Dashboard/Points?userId=${userId}&t=${timestamp}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch driver info: ${response.statusText}`);
@@ -87,7 +87,7 @@ export default function CartPage() {
         pointBalance: 5000
       });
     }
-  };  
+  };
   
   const updateItemQuantity = (productId, newQuantity) => {
     if (newQuantity < 1) return; // Don't allow quantities less than 1
@@ -114,17 +114,150 @@ export default function CartPage() {
     localStorage.removeItem('driverCart');
   };
   
-  // Modified handleCheckout function for page.jsx (cart page)
+  // Send alert email 
+  const sendAlertEmail = async (subject, body) => {
+    try {
+      // Get user email
+      console.log("Fetching email for user ID:", userId);
+      
+      const emailResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Team24-GetUserEmail?userId=${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!emailResponse.ok) {
+        console.error("Failed to retrieve user email, status:", emailResponse.status);
+        throw new Error("Failed to retrieve user email");
+      }
+      
+      const emailData = await emailResponse.json();
+      const userEmail = emailData.email;
+      
+      if (!userEmail) {
+        console.error("No email found for user ID:", userId);
+        throw new Error("No email found for user");
+      }
+      
+      console.log("Sending alert email to:", userEmail);
+      
+      // Send email via our email Lambda
+      const sendEmailResponse = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          recipientEmail: userEmail,
+          emailSubject: subject,
+          emailBody: body
+        })
+      });
+      
+      if (!sendEmailResponse.ok) {
+        const sendEmailError = await sendEmailResponse.json();
+        console.error("Failed to send alert email:", sendEmailError);
+      } else {
+        console.log("Alert email sent successfully");
+      }
+    } catch (emailError) {
+      console.error("Error in email process:", emailError);
+    }
+  };
+
+  // Modified handleCheckout function with email alerts
   const handleCheckout = async () => {
     // Check if user has enough points
     if (!driverInfo || totalPoints > driverInfo.pointBalance) {
+      // Create and send insufficient points alert email
+      const pointsNeeded = totalPoints - driverInfo.pointBalance;
+      const emailSubject = `Order Alert: Insufficient Points`;
+      
+      let emailBody = `
+        <html>
+          <body>
+            <h2>Order Alert: Insufficient Points</h2>
+            <p>Your order could not be processed because you do not have enough points.</p>
+            <p>Your current balance: <strong>${driverInfo?.pointBalance || 0} points</strong></p>
+            <p>Order total: <strong>${totalPoints} points</strong></p>
+            <p>Points needed: <strong>${pointsNeeded} points</strong></p>
+            <h3>Order Details:</h3>
+            <table border="1" cellpadding="5">
+              <tr>
+                <th>Item</th>
+                <th>Price (Points)</th>
+                <th>Quantity</th>
+                <th>Subtotal</th>
+              </tr>
+      `;
+      
+      // Add each item to the email
+      cartItems.forEach(item => {
+        emailBody += `
+          <tr>
+            <td>${item.Product_Name}</td>
+            <td>${item.pointPrice}</td>
+            <td>${item.quantity}</td>
+            <td>${item.pointPrice * item.quantity}</td>
+          </tr>
+        `;
+      });
+      
+      emailBody += `
+            </table>
+            <p>Contact your sponsor to earn more points or adjust your order.</p>
+          </body>
+        </html>
+      `;
+      
+      // Send the alert email
+      await sendAlertEmail(emailSubject, emailBody);
+      
       alert("You don't have enough points for this purchase!");
       return;
     }
     
     // Check if any items are out of stock or quantity issues
-    const stockIssue = cartItems.some(item => item.quantity > item.Quantity);
-    if (stockIssue) {
+    const stockIssues = cartItems.filter(item => item.quantity > item.Quantity);
+    if (stockIssues.length > 0) {
+      // Create and send stock issues alert email
+      const emailSubject = `Order Alert: Item(s) Out of Stock`;
+      
+      let emailBody = `
+        <html>
+          <body>
+            <h2>Order Alert: Stock Issues</h2>
+            <p>Your order could not be processed because one or more items have availability issues:</p>
+            <table border="1" cellpadding="5">
+              <tr>
+                <th>Item</th>
+                <th>Requested Quantity</th>
+                <th>Available Quantity</th>
+              </tr>
+      `;
+      
+      // Add problematic items to the email
+      stockIssues.forEach(item => {
+        emailBody += `
+          <tr>
+            <td>${item.Product_Name}</td>
+            <td>${item.quantity}</td>
+            <td>${item.Quantity}</td>
+          </tr>
+        `;
+      });
+      
+      emailBody += `
+            </table>
+            <p>Please adjust your cart and try again.</p>
+          </body>
+        </html>
+      `;
+      
+      // Send the alert email
+      await sendAlertEmail(emailSubject, emailBody);
+      
       alert("Some items in your cart have availability issues. Please review your cart.");
       return;
     }
@@ -252,18 +385,18 @@ export default function CartPage() {
             emailSubject: emailSubject,
             emailBody: emailBody
           })
-      });
+        });
       
-      if (!sendEmailResponse.ok) {
-        const sendEmailError = await sendEmailResponse.json();
-        console.error("Failed to send confirmation email:", sendEmailError);
-      } else {
-        console.log("Confirmation email sent successfully");
-      }
-    } catch (emailError) {
-      console.error("Error in email process:", emailError);
-      // Email error shouldn't block the checkout process
-    }      
+        if (!sendEmailResponse.ok) {
+          const sendEmailError = await sendEmailResponse.json();
+          console.error("Failed to send confirmation email:", sendEmailError);
+        } else {
+          console.log("Confirmation email sent successfully");
+        }
+      } catch (emailError) {
+        console.error("Error in email process:", emailError);
+        // Email error shouldn't block the checkout process
+      }      
       
       // Clear the cart after successful checkout
       clearCart();
@@ -272,6 +405,47 @@ export default function CartPage() {
       router.push(`/pages/driver/receipt?orderId=${orderId}`);
       
     } catch (err) {
+      // Create and send processing error alert email
+      const emailSubject = `Order Alert: Processing Error`;
+      
+      emailBody = `
+        <html>
+          <body>
+            <h2>Order Alert: Processing Error</h2>
+            <p>There was an error processing your order:</p>
+            <p><strong>${err.message}</strong></p>
+            <p>Our technical team has been notified. Please try again later or contact support.</p>
+            <h3>Order Details:</h3>
+            <table border="1" cellpadding="5">
+              <tr>
+                <th>Item</th>
+                <th>Price (Points)</th>
+                <th>Quantity</th>
+                <th>Subtotal</th>
+              </tr>
+      `;
+      
+      // Add each item to the email
+      cartItems.forEach(item => {
+        emailBody += `
+          <tr>
+            <td>${item.Product_Name}</td>
+            <td>${item.pointPrice}</td>
+            <td>${item.quantity}</td>
+            <td>${item.pointPrice * item.quantity}</td>
+          </tr>
+        `;
+      });
+      
+      emailBody += `
+            </table>
+          </body>
+        </html>
+      `;
+      
+      // Send the alert email
+      await sendAlertEmail(emailSubject, emailBody);
+      
       console.error("Error during checkout:", err);
       alert(`There was an error processing your order: ${err.message}`);
       
@@ -456,12 +630,7 @@ export default function CartPage() {
         
         <button
           onClick={handleCheckout}
-          disabled={totalPoints > (driverInfo?.pointBalance || 0)}
-          className={`px-6 py-2 rounded-md ${
-            totalPoints > (driverInfo?.pointBalance || 0)
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-green-500 hover:bg-green-600'
-          } text-white font-semibold`}
+          className="px-6 py-2 rounded-md bg-green-500 hover:bg-green-600 text-white font-semibold"
         >
           Checkout
         </button>
