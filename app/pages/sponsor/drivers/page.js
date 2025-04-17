@@ -134,13 +134,13 @@ export default function SponsorDrivers() {
     setIsModalOpen(true);
   };
 
-  // Updated handeBulkUpdate
+  // Updated handleBulkUpdate function
   const handleBulkUpdate = async () => {
     if (!pointsChange || isNaN(pointsChange)) {
       alert("Please enter a valid number for points.");
       return;
     }
-  
+
     const sponsorUserId = parseInt(effectiveSponsorId);
     const pointsChangeValue = parseInt(pointsChange);
     
@@ -164,13 +164,13 @@ export default function SponsorDrivers() {
           },
           body: JSON.stringify({
             Driver_ID: driverId,
-            Sponsor_Org_ID: sponsorUserId, // This was missing
+            Sponsor_Org_ID: sponsorUserId,
             Sponsor_User_ID: sponsorUserId,
             Point_Balance: pointsChangeValue,
             Reason: reason
           })
         });
-  
+
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(`Failed to update Driver ${driverId}: ${errData.error || response.statusText}`);
@@ -195,6 +195,24 @@ export default function SponsorDrivers() {
             continue;
           }
           
+          // Check notification preferences before sending email
+          const preferencesResponse = await fetch(
+            `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Team24-DriverNotificationPreferences?userId=${driverInfo.User_ID}`
+          );
+          
+          if (!preferencesResponse.ok) {
+            console.error(`Failed to get notification preferences for driver ${driverId}`);
+            continue;
+          }
+          
+          const preferencesData = await preferencesResponse.json();
+          const pointsNotificationsEnabled = preferencesData.preferences?.Points_Update_Notifications === 1;
+          
+          if (!pointsNotificationsEnabled) {
+            console.log(`Points notifications are disabled for driver ${driverId}, skipping email`);
+            continue;
+          }
+          
           // Prepare email content
           const pointChangeText = pointsChangeValue > 0 
             ? `increased by ${pointsChangeValue}` 
@@ -212,6 +230,7 @@ export default function SponsorDrivers() {
                 <p><strong>New Balance:</strong> ${newPointBalance} points</p>
                 <hr>
                 <p>This is an automated message from the Good Driver Incentive Program.</p>
+                <p>You can manage your notification preferences in your account settings</a>.</p>
               </body>
             </html>
           `;
@@ -235,20 +254,20 @@ export default function SponsorDrivers() {
           // Continue with other drivers even if email fails for one
         }
       }
-  
+
       alert("Points updated successfully!");
       setIsModalOpen(false);
       setSelectedDriverIds([]);
       setPointsChange("");
       setReason("");
-  
+
       // Refresh the driver list
       const refreshDrivers = await fetch(
         `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers?sponsorOrgId=${effectiveSponsorId}`
       );
       const refreshedData = await refreshDrivers.json();
       setDrivers(refreshedData);
-  
+
     } catch (err) {
       console.error("Error updating points:", err);
       alert("Error updating points: " + err.message);

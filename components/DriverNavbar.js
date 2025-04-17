@@ -34,6 +34,7 @@ export default function DriverNavbar() {
     <nav className="navbar">
         <ul>
           <li><a href="/pages/driver">Dashboard</a></li>
+          <li><a href="/pages/driver/notifications">Notification Preferences</a></li>
           <li><a href="/pages/driver/driverHelp">Help</a></li>
           <li><a>
             <SignOutButton />
