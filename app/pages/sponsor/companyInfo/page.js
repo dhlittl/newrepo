@@ -20,11 +20,11 @@ export default function SponsorsInfo() {
     Sponsor_Phone: ''
   });
   
-  // For adding new points key entries
+  // for adding new points key entries
   const [newReason, setNewReason] = useState("");
   const [newPoints, setNewPoints] = useState("");
 
-  // Get Cognito user ID
+  // get cognito user id
   useEffect(() => {
     async function fetchUser() {
       try {
@@ -39,7 +39,7 @@ export default function SponsorsInfo() {
     fetchUser();
   }, []);
 
-  // Get database user ID using Cognito ID
+  // get db user_id using cognito sub
   useEffect(() => {
     async function fetchDatabaseUserId() {
       try {
@@ -61,7 +61,7 @@ export default function SponsorsInfo() {
     fetchDatabaseUserId();
   }, [cognitoSub]);
 
-  // Get Sponsor Org ID using User ID
+  // get sponsor_org id using user_id
   useEffect(() => {
     async function fetchSponsorOrgId() {
       try {
@@ -87,7 +87,7 @@ export default function SponsorsInfo() {
     fetchSponsorOrgId();
   }, [userId]);
 
-  // Get Sponsor Info
+  // get sponsor info
   useEffect(() => {
     const fetchSponsorInfo = async () => {
       try {
@@ -122,7 +122,7 @@ export default function SponsorsInfo() {
     fetchSponsorInfo();
   }, [sponsorOrgId]);
 
-  // Get Points Key for this sponsor
+  // get points key for sponsor org
   useEffect(() => {
     const fetchPointsKey = async () => {
       try {
@@ -148,7 +148,7 @@ export default function SponsorsInfo() {
     fetchPointsKey();
   }, [sponsorOrgId]);
 
-  // Handle form field changes
+  // handle change on sponsor info
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -157,7 +157,7 @@ export default function SponsorsInfo() {
     }));
   };
 
-  // Save changes to the sponsor info
+  // save any changes made to sponsor info
   const handleSave = async () => {
     try {
         const updatedData = {
@@ -171,7 +171,6 @@ export default function SponsorsInfo() {
         console.log("Saving sponsor info with data:", updatedData);
         console.log("Sending this data to API:\n", JSON.stringify(updatedData, null, 2));
 
-        // Check that Sponsor_Org_ID is correctly set
         if (!updatedData.Sponsor_Org_ID) {
             throw new Error("Sponsor_Org_ID is missing");
         }
@@ -189,7 +188,6 @@ export default function SponsorsInfo() {
 
         console.log("Response status:", response.status);
         
-        // Ensure the response is in JSON format and check response.ok
         const result = await response.json();
         console.log("Response from API:", result);
 
@@ -224,7 +222,7 @@ export default function SponsorsInfo() {
     }
   };
 
-  // Function to refresh the points key table
+  // function to refresh the points key table after change
   const refetchPointsKey = async () => {
     try {
       const response = await fetch(
@@ -243,11 +241,11 @@ export default function SponsorsInfo() {
     }
   };
     
-  // Handle editing points
+  // handle point edit
   const handleEditPoints = (e, index) => {
-    const updatedPointsKey = [...pointsKey];  // copy of current pointsKey array
-    updatedPointsKey[index].Points = e.target.value;  // update point value
-    setPointsKey(updatedPointsKey);  // update state
+    const updatedPointsKey = [...pointsKey]; 
+    updatedPointsKey[index].Points = e.target.value;
+    setPointsKey(updatedPointsKey);
   
     const reasonData = updatedPointsKey[index];
   
@@ -277,11 +275,11 @@ export default function SponsorsInfo() {
     });
   };
 
-  // Handle editing reason text
+  // handle edit reason
   const handleEditReason = (e, index) => {
-    const updatedPointsKey = [...pointsKey];  // copy of current pointsKey array
-    updatedPointsKey[index].Reason = e.target.value;  // update reason text
-    setPointsKey(updatedPointsKey);  // update state
+    const updatedPointsKey = [...pointsKey];
+    updatedPointsKey[index].Reason = e.target.value;
+    setPointsKey(updatedPointsKey);
   
     const reasonData = updatedPointsKey[index];
   
@@ -311,7 +309,7 @@ export default function SponsorsInfo() {
     });
   };
 
-  // Handle deleting reason
+  // handle deleting reason
   const handleDeleteReason = async (reasonId) => {
     try {
       console.log("Attempting to delete reason ID:", reasonId);
@@ -348,10 +346,9 @@ export default function SponsorsInfo() {
     }
   };
 
-  // Handle adding new reason
+  // handle adding new reason
   const handleAddReason = async () => {
     try {
-      // Input validation
       if (!newReason || !newPoints) {
         alert("Please enter both a reason and points value");
         return;
@@ -379,7 +376,7 @@ export default function SponsorsInfo() {
       
       console.log("API Response:", data);
       
-      // Refresh the points key data
+      // refresh the points key data
       await refetchPointsKey();
       
       // clear input fields after
