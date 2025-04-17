@@ -1,11 +1,17 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { useEffectiveDriverId } from '@/hooks/useEffectiveDriverId';
+import { useRouter } from 'next/navigation';
 
 export default function ApplicationViewing() {
   const [applications, setApplications] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sponsorId, setSponsorId] = useState(1);
+  const router = useRouter();
+  const { userId, isAssumed } = useEffectiveDriverId();
+  const [authorized, setAuthorized] = useState(false);
 
   const fetchPendingApplications = async () => {
     try {
@@ -38,8 +44,43 @@ export default function ApplicationViewing() {
   };
 
   useEffect(() => {
+    const checkGroup = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const groups = session.tokens?.idToken?.payload["cognito:groups"] || [];
+
+        if (groups.includes("driver") || groups.includes("sponsor") || groups.includes("admin")) {
+          setAuthorized(true);
+        } else {
+          router.replace("/unauthorized");
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
+        router.replace("/login");
+      }
+    };
+    checkGroup();
+  }, [router]);
+
+  useEffect(() => {
+    if (!authorized || !userId) return;
     fetchPendingApplications();
-  }, [sponsorId]);
+  }, [authorized, userId, sponsorId]);
+
+  const sendAlertEmail = async (recipientEmail, subject, htmlBody) => {
+    await fetch(
+      "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/email",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientEmail,
+          emailSubject: subject,
+          emailBody: htmlBody,
+        }),
+      }
+    );
+  };
 
   const reviewApplication = async (applicationId, status) => {
     try {
@@ -92,8 +133,29 @@ export default function ApplicationViewing() {
         }
 
         console.log(`Lambda invoked for user_id ${application.user_id}`);
-        fetchPendingApplications();
       }
+
+      const app = applications.find((a) => a.id === applicationId);
+        if (!app) throw new Error("Application not found");
+
+        // build email
+        const subject = `Your application has been ${status.toLowerCase()}`;
+        const body = `
+          <html><body>
+            <p>Hi ${app.fname},</p>
+            <p>Your application to Sponsor <strong>#${sponsorId}</strong> was <strong>${status}</strong>.</p>
+            ${
+              status === "Approved"
+                ? "<p>Congratulations! You can now access driver features.</p>"
+                : "<p>We're sorry, but your application was not approved at this time.</p>"
+            }
+            <p>Thanks,<br/>The Rewards Team</p>
+          </body></html>
+        `;
+
+        // fire SES
+        await sendAlertEmail(app.email, subject, body);
+      fetchPendingApplications();
 
     } catch (err) {
       console.error(`Error updating application: ${err.message}`);
