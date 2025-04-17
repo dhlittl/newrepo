@@ -7,7 +7,7 @@ import ITunesSearch from './ITunesSearch';
 import ManageCatalogItem from './components/ManageCatalogItem';
 import AddManualItem from './components/AddManualItem';
 
-export default function SponsorCatalog({ sponsorId }) {
+export default function SponsorCatalog({ sponsorId, userId, sponsorUserInfo }) {
   const [catalogItems, setCatalogItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,29 +19,66 @@ export default function SponsorCatalog({ sponsorId }) {
   const [sortOption, setSortOption] = useState('default'); // 'default', 'price-asc', 'price-desc', etc.
   const [sponsorInfo, setSponsorInfo] = useState(null);
 
-  // Fetch sponsor information to get points ratio
+  // Reset state when sponsorId changes
   useEffect(() => {
-    const fetchSponsorInfo = async () => {
-      if (!sponsorId) return;
-      
-      try {
-        // This would be a real API call in production
-        // For now, we'll use a timeout to simulate an API call and use the default value
-        setTimeout(() => {
-          // Check project guidelines for the value, otherwise use default
-          // From the guidelines: "the default value is $0.01 for each point"
-          // This is equivalent to 100 points per dollar
+    if (sponsorId) {
+      setSelectedItems([]);
+      setActiveTab('catalog');
+      setRefreshTrigger(prev => prev + 1);
+      console.log(`Loading catalog for sponsor ID: ${sponsorId}`);
+    }
+  }, [sponsorId]);
+
+  // Set up sponsor info from the props
+  useEffect(() => {
+    if (sponsorId) {
+      // Fetch organization name from the Team24-SponsorAPI Lambda
+      const fetchOrgInfo = async () => {
+        try {
+          const orgResponse = await fetch(
+            `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors?sponsorOrgId=${sponsorId}`
+          );
+          
+          if (!orgResponse.ok) {
+            console.log('Unable to fetch sponsor organization details, using default values');
+            setSponsorInfo({
+              pointsRatio: 100, // Default: 100 points = $1
+              sponsorName: 'Your Organization',
+            });
+            return;
+          }
+          
+          const orgData = await orgResponse.json();
+          console.log('Sponsor organization data:', orgData);
+          
+          // Check if we got an array of sponsors or a single sponsor
+          if (Array.isArray(orgData) && orgData.length > 0) {
+            setSponsorInfo({
+              pointsRatio: 100, // Default to 100 points per dollar
+              sponsorName: orgData[0].Sponsor_Org_Name || 'Your Organization',
+            });
+          } else if (orgData.Sponsor_Org_Name) {
+            setSponsorInfo({
+              pointsRatio: 100,
+              sponsorName: orgData.Sponsor_Org_Name,
+            });
+          } else {
+            setSponsorInfo({
+              pointsRatio: 100,
+              sponsorName: 'Your Organization',
+            });
+          }
+        } catch (err) {
+          console.error('Error fetching organization info:', err);
           setSponsorInfo({
-            pointsRatio: 100, // 100 points = $1
-            sponsorName: 'Test Sponsor',
+            pointsRatio: 100, // Default fallback
+            sponsorName: 'Your Organization',
           });
-        }, 500);
-      } catch (err) {
-        console.error('Error fetching sponsor info:', err);
-      }
-    };
-    
-    fetchSponsorInfo();
+        }
+      };
+      
+      fetchOrgInfo();
+    }
   }, [sponsorId]);
 
   // Fetch catalog items for the sponsor
@@ -51,7 +88,6 @@ export default function SponsorCatalog({ sponsorId }) {
       
       setLoading(true);
       try {
-        // TEMPORARY DEBUG CODE - Log the endpoint we're calling
         console.log(`Fetching catalog items from: https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/sponsors/catalog?sponsorId=${sponsorId}`);
         
         const response = await fetch(
@@ -86,7 +122,7 @@ export default function SponsorCatalog({ sponsorId }) {
         console.error('Error fetching catalog items:', err);
         setError(err.message);
         
-        // TEMPORARY TESTING CODE - Handle connection errors gracefully
+        // Handle connection errors gracefully
         if (err.message.includes('Failed to fetch') || err.message.includes('Network error')) {
           setError('Could not connect to the catalog API. This is expected during testing if the Lambda function is not fully configured.');
           
@@ -120,7 +156,6 @@ export default function SponsorCatalog({ sponsorId }) {
   // Handle adding an item from iTunes to the catalog
   const handleAddFromITunes = async (item) => {
     try {
-      // TEMPORARY DEBUG CODE
       console.log('Adding item to catalog:', item);
       console.log('API endpoint:', 'https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/sponsors/catalog');
       console.log('Request payload:', {
@@ -163,7 +198,7 @@ export default function SponsorCatalog({ sponsorId }) {
     } catch (err) {
       console.error('Error adding item to catalog:', err);
       
-      // TEMPORARY TESTING CODE - Handle connection errors gracefully
+      // Handle connection errors gracefully
       if (err.message.includes('Failed to fetch') || err.message.includes('Network error')) {
         // For testing, we'll simulate success
         
@@ -193,7 +228,6 @@ export default function SponsorCatalog({ sponsorId }) {
     }
     
     try {
-      // TEMPORARY DEBUG CODE
       console.log(`Removing product ID: ${productId}`);
       console.log(`API endpoint: https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/sponsors/catalog?productId=${productId}`);
       
@@ -210,8 +244,6 @@ export default function SponsorCatalog({ sponsorId }) {
         throw new Error(`Error removing item: ${response.statusText}`);
       }
       
-      // TEMPORARY TESTING CODE - Show success even if endpoint isn't working
-      // This allows UI testing without a working backend
       alert('Item removed from catalog successfully!');
       
       // In testing, we can directly remove the item from the local state
@@ -223,7 +255,7 @@ export default function SponsorCatalog({ sponsorId }) {
     } catch (err) {
       console.error('Error removing item from catalog:', err);
       
-      // TEMPORARY TESTING CODE - Handle connection errors gracefully
+      // Handle connection errors gracefully
       if (err.message.includes('Failed to fetch') || err.message.includes('Network error')) {
         alert('Could not connect to the catalog API. This is expected during testing if the Lambda function is not fully configured.');
         
@@ -413,8 +445,6 @@ export default function SponsorCatalog({ sponsorId }) {
     }
   };
 
-  // No longer needed
-
   // Filter the catalog items based on selected option
   const filteredItems = catalogItems.filter(item => {
     if (filterOption === 'all') return true;
@@ -447,6 +477,13 @@ export default function SponsorCatalog({ sponsorId }) {
 
   return (
     <div className="container mx-auto">
+      {/* Display sponsor name if available */}
+      {sponsorInfo && sponsorInfo.sponsorName !== 'Your Organization' && (
+        <div className="mb-4 text-lg font-semibold text-gray-700">
+          {sponsorInfo.sponsorName}'s Product Catalog
+        </div>
+      )}
+      
       <div className="mb-6">
         <div className="flex border-b">
           <button 
