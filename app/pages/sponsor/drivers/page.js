@@ -1,3 +1,5 @@
+// /pages/sponsor/drivers
+
 "use client";
 import { useState, useEffect } from 'react';
 import { fetchAuthSession } from "aws-amplify/auth";
@@ -132,17 +134,29 @@ export default function SponsorDrivers() {
     setIsModalOpen(true);
   };
 
-  // Handle bulk update (UI only)
+  // Updated handeBulkUpdate
   const handleBulkUpdate = async () => {
     if (!pointsChange || isNaN(pointsChange)) {
       alert("Please enter a valid number for points.");
       return;
     }
-
-    const sponsorUserId = effectiveSponsorId;
-
+  
+    const sponsorUserId = parseInt(effectiveSponsorId);
+    const pointsChangeValue = parseInt(pointsChange);
+    
     try {
+      // Get the sponsor name for the email
+      const sponsorName = sponsors.find(s => s.Sponsor_Org_ID == effectiveSponsorId)?.Sponsor_Org_Name || "your sponsor";
+      
       for (const driverId of selectedDriverIds) {
+        // Find the driver's data to get their full information
+        const driverInfo = drivers.find(d => d.Driver_ID === driverId);
+        if (!driverInfo) {
+          console.error(`Could not find data for driver ${driverId}`);
+          continue;
+        }
+        
+        // First, update the driver's points
         const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points", {
           method: "POST",
           headers: {
@@ -150,30 +164,91 @@ export default function SponsorDrivers() {
           },
           body: JSON.stringify({
             Driver_ID: driverId,
+            Sponsor_Org_ID: sponsorUserId, // This was missing
             Sponsor_User_ID: sponsorUserId,
-            Point_Balance: parseInt(pointsChange),
+            Point_Balance: pointsChangeValue,
             Reason: reason
           })
         });
-
+  
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(`Failed to update Driver ${driverId}: ${errData.error || response.statusText}`);
         }
+        
+        // Get the new point balance after update
+        const newPointBalance = driverInfo.Point_Balance + pointsChangeValue;
+        
+        try {
+          // Get the driver's email using the GetUserEmail Lambda
+          const emailResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Team24-GetUserEmail?userId=${driverInfo.User_ID}`);
+          if (!emailResponse.ok) {
+            console.error(`Failed to get email for driver ${driverId}`);
+            continue;
+          }
+          
+          const emailData = await emailResponse.json();
+          const driverEmail = emailData.email;
+          
+          if (!driverEmail) {
+            console.error(`No email found for driver ${driverId}`);
+            continue;
+          }
+          
+          // Prepare email content
+          const pointChangeText = pointsChangeValue > 0 
+            ? `increased by ${pointsChangeValue}` 
+            : `decreased by ${Math.abs(pointsChangeValue)}`;
+          
+          const emailSubject = `Point Balance Update`;
+          
+          const emailBody = `
+            <html>
+              <body>
+                <h2>Your Point Balance Has Been Updated</h2>
+                <p>Hello ${driverInfo.Driver_Name},</p>
+                <p>Your point balance has been ${pointChangeText} by ${sponsorName}.</p>
+                <p><strong>Reason:</strong> ${reason || "No reason provided"}</p>
+                <p><strong>New Balance:</strong> ${newPointBalance} points</p>
+                <hr>
+                <p>This is an automated message from the Good Driver Incentive Program.</p>
+              </body>
+            </html>
+          `;
+          
+          // Send the email notification
+          await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              recipientEmail: driverEmail,
+              emailSubject: emailSubject,
+              emailBody: emailBody
+            })
+          });
+          
+          console.log(`Notification email sent to driver ${driverId} (${driverEmail})`);
+        } catch (emailErr) {
+          console.error(`Error sending notification to driver ${driverId}:`, emailErr);
+          // Continue with other drivers even if email fails for one
+        }
       }
-
+  
       alert("Points updated successfully!");
       setIsModalOpen(false);
       setSelectedDriverIds([]);
       setPointsChange("");
       setReason("");
-
+  
+      // Refresh the driver list
       const refreshDrivers = await fetch(
         `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers?sponsorOrgId=${effectiveSponsorId}`
       );
       const refreshedData = await refreshDrivers.json();
       setDrivers(refreshedData);
-
+  
     } catch (err) {
       console.error("Error updating points:", err);
       alert("Error updating points: " + err.message);
