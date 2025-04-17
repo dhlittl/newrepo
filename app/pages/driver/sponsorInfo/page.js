@@ -1,5 +1,3 @@
-// Sponsor Info Page for Driver Users
-
 "use client";
 import { useEffect, useState } from "react";
 import { fetchAuthSession } from 'aws-amplify/auth';
@@ -14,69 +12,64 @@ export default function SponsorsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-    useEffect(() => {
-      const checkGroup = async () => {
-        try {
-          const session = await fetchAuthSession();
-          const groups = session.tokens?.idToken?.payload["cognito:groups"] || [];
-  
-          if (groups.includes("driver") || groups.includes("sponsor") || groups.includes("admin")) {
-            setAuthorized(true);
-          } else {
-            router.replace("/unauthorized");
-          }
-        } catch (err) {
-          console.error("Auth error:", err);
-          router.replace("/login");
+  useEffect(() => {
+    const checkGroup = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const groups = session.tokens?.idToken?.payload["cognito:groups"] || [];
+
+        if (groups.includes("driver") || groups.includes("sponsor") || groups.includes("admin")) {
+          setAuthorized(true);
+        } else {
+          router.replace("/unauthorized");
         }
-      };
-      checkGroup();
-    }, [router]);
+      } catch (err) {
+        console.error("Auth error:", err);
+        router.replace("/login");
+      }
+    };
+    checkGroup();
+  }, [router]);
 
   useEffect(() => {
     if (!authorized || !userId) return;
+
     const fetchSponsorsAndPoints = async () => {
       try {
-        // Fetch the sponsors list
+        // Fetch sponsor list
         const sponsorRes = await fetch(
           "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors"
         );
         if (!sponsorRes.ok) throw new Error("Failed to fetch sponsors");
         const sponsorData = await sponsorRes.json();
 
-        // Transform sponsor data
-        const transformedSponsors = sponsorData.map((sponsor) => ({
-          id: sponsor.Sponsor_Org_ID,
-          name: sponsor.Sponsor_Org_Name,
-          description: sponsor.Sponsor_Description,
-          email: sponsor.Email,
-          phone: sponsor.Phone_Number,
-          points: [], // Placeholder for Points_Key data
-        }));
-
-        // Fetch Points_Key data for each sponsor
-        const sponsorsWithPoints = await Promise.all(
-          transformedSponsors.map(async (sponsor) => {
-            try {
-              const pointsRes = await fetch(
-                `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?sponsorOrgId=${sponsor.id}`
-              );
-              if (!pointsRes.ok) {
-                console.warn(`Failed to fetch points for sponsor ${sponsor.id}`);
-                return sponsor;
-              }
-
-              const pointsData = await pointsRes.json();
-              return { ...sponsor, points: pointsData || [] };
-            } catch (err) {
-              console.error("Error fetching sponsor points:", err);
-              return { ...sponsor, points: [] };
-            }
-          })
+        // Fetch sponsor points for the user
+        const pointsRes = await fetch(
+          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points?userId=${userId}`
         );
+        if (!pointsRes.ok) throw new Error("Failed to fetch sponsor points");
+        const pointsData = await pointsRes.json();
+
+        // Combine sponsor info with total points
+        const sponsorsWithPoints = sponsorData.map((sponsor) => {
+          const match = pointsData.find(p => p.Sponsor_Org_ID === sponsor.Sponsor_Org_ID);
+          const totalPoints = match
+            ? match.PointsAdded - match.PointsSubbed
+            : 0;
+
+          return {
+            id: sponsor.Sponsor_Org_ID,
+            name: sponsor.Sponsor_Org_Name,
+            description: sponsor.Sponsor_Description,
+            email: sponsor.Email,
+            phone: sponsor.Phone_Number,
+            totalPoints,
+          };
+        });
 
         setSponsors(sponsorsWithPoints);
       } catch (err) {
+        console.error(err);
         setError(err.message || "Unknown error");
       } finally {
         setLoading(false);
@@ -88,7 +81,6 @@ export default function SponsorsPage() {
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 shadow-md rounded-lg">
-      {/* Return button for sponsors */}
       {isAssumed && (
         <button
           className="mb-4 text-sm text-gray-700 underline"
@@ -124,34 +116,9 @@ export default function SponsorsPage() {
               <p className="text-gray-700">
                 <strong>Phone:</strong> {sponsor.phone}
               </p>
-
-              <div className="mt-4">
-              <p className="text-gray-700">
-                <strong>Points System:</strong>
+              <p className="mt-4 text-gray-700">
+                <strong>Total Points:</strong> {sponsor.totalPoints} pts
               </p>
-                {!sponsor.points || sponsor.points.length === 0 ? (
-                  <p className="text-gray-500">No point records available.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm text-left text-gray-700 border">
-                      <thead className="bg-gray-100 text-gray-900 font-semibold">
-                        <tr>
-                          <th className="px-4 py-2 border">Reason</th>
-                          <th className="px-4 py-2 border">Points</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sponsor.points.map((entry, idx) => (
-                          <tr key={idx} className="bg-white border-b hover:bg-gray-50">
-                            <td className="px-4 py-2 border">{entry.Reason}</td>
-                            <td className="px-4 py-2 border">{entry.Points}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
             </div>
           ))}
         </div>
