@@ -112,6 +112,7 @@ export default function CartPage() {
     localStorage.removeItem('driverCart');
   };
   
+  // Modified handleCheckout function for page.jsx (cart page)
   const handleCheckout = async () => {
     // Check if user has enough points
     if (!driverInfo || totalPoints > driverInfo.pointBalance) {
@@ -129,8 +130,8 @@ export default function CartPage() {
     try {
       // Prepare order data - using proper field names for Lambda
       const orderData = {
-        driverId: userId, // Changed from userId to driverId to match Lambda expectations
-        userId: userId,   // Keep userId for backward compatibility
+        driverId: userId, 
+        userId: userId,   
         items: cartItems.map(item => ({
           productId: item.Product_ID,
           quantity: item.quantity,
@@ -142,7 +143,7 @@ export default function CartPage() {
       
       console.log("Sending order data:", JSON.stringify(orderData));
       
-      // Make the API call to the endpoint
+      // Make the API call to place the order
       const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Driver/orders', {
         method: 'POST',
         headers: {
@@ -151,7 +152,7 @@ export default function CartPage() {
         body: JSON.stringify(orderData)
       });
       
-      // Parse the actual API response
+      // Parse the API response
       const responseData = await response.json();
       console.log("Order API response:", responseData);
       
@@ -162,9 +163,6 @@ export default function CartPage() {
       // Use the actual orderId from the response, or fallback to random if not available
       const orderId = responseData.orderId || Math.floor(Math.random() * 1000000);
       
-      // Clear the cart after successful checkout
-      clearCart();
-      
       // Store receipt data in localStorage for the receipt page
       const receiptData = {
         orderId: orderId,
@@ -174,6 +172,100 @@ export default function CartPage() {
       };
       localStorage.setItem('latestReceipt', JSON.stringify(receiptData));
       
+      // Send confirmation email
+      try {
+        // We have userId from useEffectiveDriverId hook
+        // Fetch the user's email using the new Lambda endpoint
+        console.log("Fetching email for user ID:", userId);
+        
+        const emailResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Team24-GetUserEmail?userId=${userId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!emailResponse.ok) {
+          console.error("Failed to retrieve user email, status:", emailResponse.status);
+          throw new Error("Failed to retrieve user email");
+        }
+        
+        const emailData = await emailResponse.json();
+        const userEmail = emailData.email;
+        
+        if (!userEmail) {
+          console.error("No email found for user ID:", userId);
+          throw new Error("No email found for user");
+        }
+        
+        console.log("Sending confirmation email to:", userEmail);
+        
+        // Create email content with order details
+        const emailSubject = `Your Order Confirmation #${orderId}`;
+        
+        let emailBody = `
+          <html>
+            <body>
+              <h2>Thank you for your order!</h2>
+              <p>Order #${orderId} has been successfully placed.</p>
+              <p>Date: ${new Date().toLocaleString()}</p>
+              <p>Total Points: ${totalPoints}</p>
+              
+              <h3>Order Details:</h3>
+              <table border="1" cellpadding="5">
+                <tr>
+                  <th>Item</th>
+                  <th>Price (Points)</th>
+                  <th>Quantity</th>
+                  <th>Subtotal</th>
+                </tr>
+        `;
+        
+        cartItems.forEach(item => {
+          emailBody += `
+            <tr>
+              <td>${item.Product_Name}</td>
+              <td>${item.pointPrice}</td>
+              <td>${item.quantity}</td>
+              <td>${item.pointPrice * item.quantity}</td>
+            </tr>
+          `;
+        });
+        
+        emailBody += `
+              </table>
+              <p>Thank you for participating in the Good Driver Program!</p>
+            </body>
+          </html>
+        `;
+        
+        // Send email via our email Lambda
+        const sendEmailResponse = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            recipientEmail: userEmail,
+            emailSubject: emailSubject,
+            emailBody: emailBody
+          })
+      });
+      
+      if (!sendEmailResponse.ok) {
+        const sendEmailError = await sendEmailResponse.json();
+        console.error("Failed to send confirmation email:", sendEmailError);
+      } else {
+        console.log("Confirmation email sent successfully");
+      }
+    } catch (emailError) {
+      console.error("Error in email process:", emailError);
+      // Email error shouldn't block the checkout process
+    }      
+      
+      // Clear the cart after successful checkout
+      clearCart();
+      
       // Redirect to receipt page
       router.push(`/pages/driver/receipt?orderId=${orderId}`);
       
@@ -181,12 +273,11 @@ export default function CartPage() {
       console.error("Error during checkout:", err);
       alert(`There was an error processing your order: ${err.message}`);
       
-      // Don't proceed with checkout on error to avoid misleading the user
-      // Instead, let them try again or contact support
+      // Don't proceed with checkout on error
       return;
     }
   };
-  
+
   if (loading) {
     return <div className="text-center p-8">Loading cart...</div>;
   }
