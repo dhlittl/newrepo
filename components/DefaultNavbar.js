@@ -10,7 +10,7 @@ export default function DefaultNavbar() {
           <li><a href="/pages/defaultUser">Dashboard</a></li>
           <li><a href="/pages/defaultUser/applications">My Applications</a></li>
           <li><a href="/pages/defaultUser/sponsorsPage">Sponsors</a></li>
-          <li><a href="/pages/help">Help</a></li>
+          <li><a href="/pages/defaultUser/help">Help</a></li>
           <li><a href="/pages/aboutPage">About</a></li>
           <li><a>
             <SignOutButton />
