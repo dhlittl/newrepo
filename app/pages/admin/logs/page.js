@@ -51,10 +51,10 @@ export default function Logs() {
           className="p-2 border rounded"
         >
           <option value="">All Categories</option>
-          <option value="Login">Login</option>
-          <option value="Logout">Logout</option>
-          <option value="Update">Update</option>
-          <option value="Delete">Delete</option>
+          <option value="Driver Applications">Driver Applications</option>
+          <option value="Login Attempts">Login Attempts</option>
+          <option value="Password Changes">Password Changes</option>
+          <option value="Point Changes">Point Changes</option>
         </select>
   
         <button
@@ -72,15 +72,29 @@ export default function Logs() {
         </button>
       </div>
   
-      {/* Log Entries */}
-      <ul className="space-y-2">
-        {sortedLogs.map((log) => (
-          <li key={log.Audit_ID} className="p-2 border-b">
-            <span className="font-semibold">{new Date(log.Timestamp).toLocaleString()}</span>{" "}
-            – <span className="font-medium">{log.Event_Type}</span>: {log.Action_Description}
-          </li>
-        ))}
-      </ul>
+      {/* Log Table */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full border border-gray-300">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="py-2 px-4 border-b text-left">Timestamp</th>
+              <th className="py-2 px-4 border-b text-left">Event Type</th>
+              <th className="py-2 px-4 border-b text-left">User ID</th>
+              <th className="py-2 px-4 border-b text-left">Action Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedLogs.map((log) => (
+              <tr key={log.Audit_ID} className="hover:bg-gray-50">
+                <td className="py-2 px-4 border-b">{new Date(log.Timestamp).toLocaleString()}</td>
+                <td className="py-2 px-4 border-b">{log.Event_Type}</td>
+                <td className="py-2 px-4 border-b">{log.User_ID}</td>
+                <td className="py-2 px-4 border-b">{log.Action_Description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
