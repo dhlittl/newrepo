@@ -1,10 +1,15 @@
 // Default User Application Form
 
 "use client";
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { useEffectiveDriverId } from '@/hooks/useEffectiveDriverId';
+import { useRouter } from 'next/navigation';
 import {useEffect, useState} from "react";
 
 export default function ApplicationForm() {
-    const [userId, setUserId] = useState("");
+    const router = useRouter();
+    const { userId, isAssumed } = useEffectiveDriverId();
+    const [authorized, setAuthorized] = useState(false);
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
@@ -42,8 +47,28 @@ export default function ApplicationForm() {
 
     const filteredPolicies = policies.filter(policy => policy.Sponsor_Org_ID == sponsorId);
 
+    useEffect(() => {
+        const checkGroup = async () => {
+          try {
+            const session = await fetchAuthSession();
+            const groups = session.tokens?.idToken?.payload["cognito:groups"] || [];
+    
+            if (groups.includes("defaultUser")) {
+              setAuthorized(true);
+            } else {
+              router.replace("/unauthorized");
+            }
+          } catch (err) {
+            console.error("Auth error:", err);
+            router.replace("/login");
+          }
+        };
+        checkGroup();
+      }, [router]);
+
     // fetch available sponsor from backend db
     useEffect(() => {
+        if (!authorized || !userId) return;
         async function fetchSponsors() {
             try {
                 const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors"); // INSERT DB LINK HERE
@@ -61,7 +86,7 @@ export default function ApplicationForm() {
             } 
         }
         fetchSponsors();
-    }, []);
+    }, [authorized, userId]);
 
 
     // fetch policies once sponsor is selected from dropdown
@@ -291,8 +316,8 @@ export default function ApplicationForm() {
                 <label className="block text-sm font-medium text-black">User ID</label>
                 <input
                     type="text"
-                    value={userId}
-                    onChange={(e) => setUserId(e.target.value)}
+                    value={userId ?? ""}
+                    readOnly
                     className="mt-1 p-2 w-full border rounded-md text-black"
                 />
                 {errors.userId && <p className="text-red-500 text-sm">{errors.userId}</p>}
