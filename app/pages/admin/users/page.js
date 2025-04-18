@@ -1,6 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import UserTable from "@/components/UserTable";
+import EditUserModal from "@/components/EditUserModal";
+
 
 export default function ShowUsers() {
   const [users, setUsers] = useState([]);
@@ -153,9 +156,29 @@ export default function ShowUsers() {
     }
   };
 
+  const handleEditSave = async (e) => {
+    e.preventDefault();
+    const res = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Admin/allUsers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ User_ID: editingUser.User_ID, ...formData }),
+    });
+
+    if (res.ok) {
+      alert("User updated successfully!");
+      setIsModalOpen(false);
+      const updatedUsers = users.map(u =>
+        u.User_ID === editingUser.User_ID ? { ...u, ...formData } : u
+      );
+      setUsers(updatedUsers);
+    } else {
+      alert("Failed to update user.");
+    }
+  };
+
   const filteredUsers = filterUserType === "all"
     ? users
-    : users.filter((user) => user.User_Type === filterUserType);
+    : users.filter(user => user.User_Type === filterUserType);
 
   const sortedUsers = filteredUsers.sort((a, b) => {
     let aKey = a[sortConfig.key];
@@ -199,182 +222,36 @@ export default function ShowUsers() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse border">
-          <thead>
-            <tr className="bg-gray-200">
-              <th onClick={() => requestSort("User_ID")} className="border p-2 cursor-pointer">User_ID {renderSortIndicator("User_ID")}</th>
-              <th onClick={() => requestSort("FName")} className="border p-2 cursor-pointer">FName {renderSortIndicator("FName")}</th>
-              <th onClick={() => requestSort("LName")} className="border p-2 cursor-pointer">LName {renderSortIndicator("LName")}</th>
-              <th className="border p-2">Start_Date</th>
-              <th className="border p-2">End_Date</th>
-              <th className="border p-2">User_Type</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedUsers.map((user) => (
-              <React.Fragment key={user.User_ID}>
-                <tr onClick={() => toggleRowExpansion(user)} className="cursor-pointer hover:bg-gray-100">
-                  <td className="border p-2">{user.User_ID}</td>
-                  <td className="border p-2">{user.FName}</td>
-                  <td className="border p-2">{user.LName}</td>
-                  <td className="border p-2">{user.Start_Date}</td>
-                  <td className="border p-2">{user.End_Date}</td>
-                  <td className="border p-2">{user.User_Type}</td>
-                </tr>
+      <UserTable
+        users={sortedUsers}
+        sortConfig={sortConfig}
+        requestSort={requestSort}
+        renderSortIndicator={renderSortIndicator}
+        expandedRows={expandedRows}
+        toggleRowExpansion={toggleRowExpansion}
+        expandedDetails={expandedDetails}
+        onApprove={(user, app) => reviewApplication(user, app, "Approved")}
+        onDeny={(user, app) => reviewApplication(user, app, "Denied")}
+        onEdit={(user) => {
+          setFormData({
+            Username: user.Username,
+            FName: user.FName,
+            LName: user.LName,
+            Email: user.Email,
+            Phone_Number: user.Phone_Number,
+          });
+          setEditingUser(user);
+          setIsModalOpen(true);
+        }}
+      />
 
-                {expandedRows.includes(user.User_ID) && (
-                  <tr className="bg-white">
-                    <td colSpan={6} className="border p-4">
-                      <div className="flex flex-col md:flex-row gap-6">
-                        <div className="md:w-1/2 space-y-2">
-                          <h3 className="text-lg font-semibold mb-1 border-b pb-1">General Info</h3>
-                          <p><span className="font-medium">Username:</span> {user.Username || "N/A"}</p>
-                          <p><span className="font-medium">Email:</span> {user.Email || "N/A"}</p>
-                          <p><span className="font-medium">Phone:</span> {user.Phone_Number || "N/A"}</p>
-                        </div>
-
-                        <div className="md:w-1/2 space-y-2">
-                          <h3 className="text-lg font-semibold mb-1 border-b pb-1">{user.User_Type} Info</h3>
-
-                          {user.User_Type === "Default" && (() => {
-                            const apps = (expandedDetails[user.User_ID] || []).filter(a => a.Application_ID);
-                            if (apps.length === 0) return <p className="italic text-gray-500">No applications</p>;
-                            return apps.map((app, idx) => (
-                              <div key={idx} className="border rounded-lg p-4 mb-4 shadow-sm">
-                                <div className="flex justify-between items-center mb-2">
-                                  <h4 className="font-semibold">Application #{app.Application_ID}</h4>
-                                  <span className={`px-2 py-1 text-sm rounded-full ${
-                                    app.App_Status === "Pending" ? "bg-amber-100 text-amber-800" :
-                                    app.App_Status === "Approved" ? "bg-green-100 text-green-800" :
-                                    "bg-red-100 text-red-800"
-                                  }`}>
-                                    {app.App_Status}
-                                  </span>
-                                </div>
-                                <p><span className="font-medium">Sponsor:</span> {app.Sponsor_Name || app.Sponsor_Org_ID}</p>
-                                <p><span className="font-medium">Submitted:</span> {app.Submitted_At}</p>
-                                {app.Processed_At && (
-                                  <p><span className="font-medium">Processed:</span> {app.Processed_At}</p>
-                                )}
-                                {app.App_Status === "Pending" && (
-                                  <div className="flex gap-2 mt-3">
-                                    <button
-                                      className="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
-                                      onClick={() => reviewApplication(user, app, "Approved")}
-                                    >
-                                      Approve
-                                    </button>
-                                    <button
-                                      className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-                                      onClick={() => reviewApplication(user, app, "Denied")}
-                                    >
-                                      Deny
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            ));
-                          })()}
-
-                          {user.User_Type === "Driver" &&
-                            (expandedDetails[user.User_ID] || []).map((entry, idx) => (
-                              <div key={idx} className="border rounded-lg p-4 mb-4 shadow-sm">
-                                <p><span className="font-medium">Sponsor:</span> {entry.Sponsor_Name || entry.Sponsor_Org_ID}</p>
-                                <p><span className="font-medium">Points:</span> {entry.Point_Balance}</p>
-                                <p><span className="font-medium">Purchases:</span> {entry.Num_Purchases}</p>
-                              </div>
-                          ))}
-
-                          {user.User_Type === "Sponsor" &&
-                            (expandedDetails[user.User_ID] || []).map((entry, idx) => (
-                              <div key={idx} className="border rounded-lg p-4 mb-4 shadow-sm">
-                                <p><span className="font-medium">Organization:</span> {entry.Sponsor_Name || entry.Sponsor_Org_ID}</p>
-                                <p><span className="font-medium">Point Changes:</span> {entry.Num_Point_Changes}</p>
-                              </div>
-                          ))}
-
-                          {user.User_Type === "Admin" &&
-                            (expandedDetails[user.User_ID] || []).map((entry, idx) => (
-                              <div key={idx} className="border rounded-lg p-4 mb-4 shadow-sm">
-                                <p><span className="font-medium">Admin ID:</span> {entry.Admin_ID}</p>
-                              </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Edit Button */}
-                      <div className="mt-4">
-                        <button
-                          className="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 transition"
-                          onClick={() => {
-                            setFormData({
-                              Username: user.Username,
-                              FName: user.FName,
-                              LName: user.LName,
-                              Email: user.Email,
-                              Phone_Number: user.Phone_Number
-                            });
-                            setEditingUser(user);
-                            setIsModalOpen(true);
-                          }}
-                        >
-                          Update User Info
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Edit User Info</h2>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              const res = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Admin/allUsers`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ User_ID: editingUser.User_ID, ...formData }),
-              });
-              if (res.ok) {
-                alert("User updated successfully!");
-                setIsModalOpen(false);
-                const updatedUsers = users.map(u =>
-                  u.User_ID === editingUser.User_ID ? { ...u, ...formData } : u
-                );
-                setUsers(updatedUsers);
-              } else {
-                alert("Failed to update user.");
-              }
-            }}>
-              {Object.entries(formData).map(([key, val]) => (
-                <div key={key} className="mb-3">
-                  <label className="block mb-1 font-medium capitalize">{key.replace("_", " ")}</label>
-                  <input
-                    type="text"
-                    name={key}
-                    value={val}
-                    onChange={(e) => setFormData(prev => ({ ...prev, [key]: e.target.value }))}
-                    className="w-full border rounded px-3 py-2"
-                    required
-                  />
-                </div>
-              ))}
-              <div className="flex justify-end space-x-2 mt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">Cancel</button>
-                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <EditUserModal
+        isOpen={isModalOpen}
+        formData={formData}
+        setFormData={setFormData}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleEditSave}
+      />
     </main>
   );
 }
