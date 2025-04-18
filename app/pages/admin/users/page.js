@@ -195,7 +195,47 @@ export default function ShowUsers() {
                               )}
                             </div>
                           ))}
+                          {/* ——— DRIVER USERS ——— */}
+                          {user.User_Type === "Driver" &&
+                            (expandedDetails[user.User_ID] || []).map((entry, idx) => (
+                              <div key={idx} className="border rounded-lg p-4 mb-4 shadow-sm">
+                                <p className="mb-1">
+                                  <span className="font-medium">Sponsor:</span>{" "}
+                                  {entry.Sponsor_Name || entry.Sponsor_Org_Name || entry.Sponsor_Org_ID}
+                                </p>
+                                <p className="mb-1">
+                                  <span className="font-medium">Points:</span> {entry.Point_Balance}
+                                </p>
+                                <p className="mb-1">
+                                  <span className="font-medium">Purchases:</span> {entry.Num_Purchases}
+                                </p>
+                              </div>
+                          ))}
 
+                          {/* ——— SPONSOR USERS ——— */}
+                          {user.User_Type === "Sponsor" &&
+                            (expandedDetails[user.User_ID] || []).map((entry, idx) => (
+                              <div key={idx} className="border rounded-lg p-4 mb-4 shadow-sm">
+                                <p className="mb-1">
+                                  <span className="font-medium">Organization:</span>{" "}
+                                  {entry.Sponsor_Name || entry.Sponsor_Org_Name || entry.Sponsor_Org_ID}
+                                </p>
+                                <p className="mb-1">
+                                  <span className="font-medium">Point Changes:</span>{" "}
+                                  {entry.Num_Point_Changes}
+                                </p>
+                              </div>
+                          ))}
+
+                          {/* ——— ADMIN USERS ——— */}
+                          {user.User_Type === "Admin" &&
+                            (expandedDetails[user.User_ID] || []).map((entry, idx) => (
+                              <div key={idx} className="border rounded-lg p-4 mb-4 shadow-sm">
+                                <p>
+                                  <span className="font-medium">Admin ID:</span> {entry.Admin_ID}
+                                </p>
+                              </div>
+                          ))}
                         </div>
                       </div>
                     </td>
