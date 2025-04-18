@@ -8,9 +8,9 @@ export default function DefaultNavbar() {
       <nav className="navbar">
         <ul>
           <li><a href="/pages/defaultUser">Dashboard</a></li>
-          <li><a href="/pages/defaultUser/applyForm">Application Form</a></li>
+          <li><a href="/pages/defaultUser/applications">My Applications</a></li>
           <li><a href="/pages/defaultUser/sponsorsPage">Sponsors</a></li>
-          <li><a href="/pages/help">Help</a></li>
+          <li><a href="/pages/defaultUser/help">Help</a></li>
           <li><a href="/pages/aboutPage">About</a></li>
           <li><a>
             <SignOutButton />
