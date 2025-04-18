@@ -574,7 +574,19 @@ const handleAddReason = async () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[75vh] overflow-y-auto">
+          {/* Modal Box */}
+          <div className="relative bg-white rounded-lg p-6 max-w-2xl w-full max-h-[75vh] overflow-y-auto">
+
+          {/* Close Button (inside modal) */}
+          <button
+            onClick={() => setIsModalOpen(false)}
+            className="absolute top-4 right-4 text-gray-500 hover:text-black text-2xl font-bold"
+            aria-label="Close modal"
+          >
+            &times;
+          </button>
+
+
             <h3 className="text-lg font-semibold mb-4">
               Update Points for Selected Drivers
             </h3>
