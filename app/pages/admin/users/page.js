@@ -79,7 +79,6 @@ export default function ShowUsers() {
     } else {
       if (!expandedDetails[user.User_ID]) {
         const details = await fetchUserDetails(user);
-        console.log("🔍 Fetched details for user", user.User_ID, details);
         setExpandedDetails((prev) => ({ ...prev, [user.User_ID]: details }));
       }
       setExpandedRows([...expandedRows, user.User_ID]);
@@ -161,14 +160,20 @@ export default function ShowUsers() {
                         <div className="md:w-1/2 space-y-2">
                           <h3 className="text-lg font-semibold mb-1 border-b pb-1">{user.User_Type} Info</h3>
 
-                        {/* ——— DEFAULT USERS ——— */}
-                        {user.User_Type === "Default" &&
-                          (expandedDetails[user.User_ID] || []).map((app, idx) => (
+                          {/* ——— DEFAULT USERS ——— */}
+                          {user.User_Type === "Default" && (() => {
+                          const apps = (expandedDetails[user.User_ID] || []).filter(
+                            (app) => app.Application_ID !== null && app.Application_ID !== undefined
+                          );
+
+                          if (apps.length === 0) {
+                            return <p className="italic text-gray-500">No applications</p>;
+                          }
+
+                          return apps.map((app, idx) => (
                             <div key={idx} className="border rounded-lg p-4 mb-4 shadow-sm">
                               <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-semibold">
-                                  Application #{app.Application_ID}
-                                </h4>
+                                <h4 className="font-semibold">Application #{app.Application_ID}</h4>
                                 <span
                                   className={
                                     app.App_Status === "Pending"
@@ -181,9 +186,9 @@ export default function ShowUsers() {
                                   {app.App_Status}
                                 </span>
                               </div>
-
                               <p className="mb-1">
-                                <span className="font-medium">Sponsor:</span> {app.Sponsor_Name ?? "N/A"}
+                                <span className="font-medium">Sponsor:</span>{" "}
+                                {app.Sponsor_Name || "N/A"}
                               </p>
                               <p className="mb-1">
                                 <span className="font-medium">Submitted:</span> {app.Submitted_At}
@@ -194,7 +199,8 @@ export default function ShowUsers() {
                                 </p>
                               )}
                             </div>
-                          ))}
+                          ));
+                        })()}
                           {/* ——— DRIVER USERS ——— */}
                           {user.User_Type === "Driver" &&
                             (expandedDetails[user.User_ID] || []).map((entry, idx) => (
@@ -210,7 +216,7 @@ export default function ShowUsers() {
                                   <span className="font-medium">Purchases:</span> {entry.Num_Purchases}
                                 </p>
                               </div>
-                          ))}
+                            ))}
 
                           {/* ——— SPONSOR USERS ——— */}
                           {user.User_Type === "Sponsor" &&
@@ -225,7 +231,7 @@ export default function ShowUsers() {
                                   {entry.Num_Point_Changes}
                                 </p>
                               </div>
-                          ))}
+                            ))}
 
                           {/* ——— ADMIN USERS ——— */}
                           {user.User_Type === "Admin" &&
@@ -235,7 +241,7 @@ export default function ShowUsers() {
                                   <span className="font-medium">Admin ID:</span> {entry.Admin_ID}
                                 </p>
                               </div>
-                          ))}
+                            ))}
                         </div>
                       </div>
                     </td>
