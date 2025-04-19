@@ -38,6 +38,7 @@ export default function DriverNavbar() {
           <li><a href="/pages/driver/applications">My Applications</a></li>
           <li><a href="/pages/driver/notifications">Notification Preferences</a></li>
           <li><a href="/pages/driver/driverHelp">Help</a></li>
+          <li><a href="/pages/driver/aboutPage">About</a></li>
           <li><a>
             <SignOutButton />
           </a></li>
