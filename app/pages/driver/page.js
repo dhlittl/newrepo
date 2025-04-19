@@ -32,7 +32,6 @@ import Link from "next/link";
 const initialWidgets = [
   { id: "points", name: "Current Points", visible: true},
   { id: "conversion", name: "Point-to-Dollar Conversion", visible: true},
-  { id: "progress", name: "Progress to Point Goal", visible: true},
   { id: "catalog", name: "Catalog", visible: true},
   { id: "friends", name: "Friends", visible: true},
   { id: "trend", name: "Point Trend Graph", visible: true},
@@ -306,8 +305,6 @@ function getWidgetContent(id, userId) {
       return <PointsWidget userId={userId} />;
     case "conversion":
       return <Widget title="Point-to-Dollar" content="1,500 pts = $1500" />;
-    case "progress":
-      return <ProgressWidget userId={userId} />;
     case "catalog":
       return <LinkWidget title="Rewards Catalog" link="/pages/driver/sponsors" />;
     case "friends":
@@ -489,171 +486,6 @@ function LinkWidget ({ title, link }) {
     </div>
   );
 }
-
-function ProgressWidget({ userId }) {
-  const [points, setPoints] = useState(null);
-  const [pointGoal, setPointGoal] = useState(null);
-  const [progress, setProgress] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [newGoal, setNewGoal] = useState('');
-  const [selectedSponsorId, setSelectedSponsorId] = useState(null);
-  const [sponsors, setSponsors] = useState([]);
-
-  useEffect(() => {
-    if (!userId) {
-      console.debug("Waiting for User_ID to be available");
-      return; 
-    }
-    console.debug("Using User_ID:", userId); 
-  
-    async function fetchProgressData() {
-      try {
-        const pointsResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points?userId=${userId}`);
-        const pointsData = await pointsResponse.json();
-
-        if (pointsResponse.ok && Array.isArray(pointsData)) {
-          setSponsors(pointsData);
-          
-          // Set the first sponsor as selected by default if there is one
-          if (pointsData.length > 0 && !selectedSponsorId) {
-            setSelectedSponsorId(pointsData[0].Sponsor_Org_ID);
-            setPoints(pointsData[0].Point_Balance);
-          } else if (selectedSponsorId) {
-            // Update points for the selected sponsor
-            const selectedSponsor = pointsData.find(s => s.Sponsor_Org_ID === selectedSponsorId);
-            if (selectedSponsor) {
-              setPoints(selectedSponsor.Point_Balance);
-            }
-          }
-        } else {
-          console.error("Error fetching points:", pointsData.message || pointsData);
-        }
-    
-        // fetch point goal
-        const goalResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/pointGoal?User_ID=${userId}`);
-        const goalData = await goalResponse.json();
-        
-        if (goalResponse.ok) {
-          console.log("Fetched Point Goal:", goalData.Point_Goal);
-          setPointGoal(goalData.point_goal);
-          setNewGoal(goalData.point_goal); 
-        } else {
-          console.error("Error fetching point goal:", goalData.message);
-        }
-      } catch (error) {
-        console.error("Failed to fetch progress data:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchProgressData();
-  }, [userId, selectedSponsorId]);
-
-  useEffect(() => {
-    if (pointGoal !== null && points !== null) {
-      setProgress((points / pointGoal) * 100);
-    }
-  }, [points, pointGoal]);
-
-  const handleSponsorChange = (e) => {
-    setSelectedSponsorId(parseInt(e.target.value));
-  };
-
-  const handleEditClick = () => {
-    setIsEditing(true);
-  };
-
-  const handleCancelClick = () => {
-    setIsEditing(false);
-    setNewGoal(pointGoal); 
-  };
-
-  const handleSaveClick = async () => {
-    console.log("Attempting to update point goal:", newGoal);
-
-    if (!newGoal || isNaN(newGoal) || newGoal <= 0) {
-      console.error("Invalid goal value:", newGoal);
-      return;
-    }
-    try {
-      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/pointGoal`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ User_ID: userId, Point_Goal: parseInt(newGoal, 10) }),
-      });
-
-      // debugging
-      const result = await response.json().catch(() => null);
-
-      console.log("Full Response:", response);
-      console.log("Response Status:", response.status);
-      console.log("Response Body:", result);
-
-      if (response.ok) {
-        console.log("Point goal updated successfully!");
-        setPointGoal(parseInt(newGoal, 10)); 
-        setIsEditing(false);
-      } else {
-        console.error("Error updating point goal");
-      }
-    } catch (error) {
-      console.error("Failed to update point goal:", error);
-    }
-  };
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  return (
-    <div>
-      <h3 className="font-semibold">Progress to Goal</h3>
-      
-      {sponsors.length > 0 && (
-        <div className="mb-2">
-          <label htmlFor="sponsor-select" className="block text-sm font-medium text-gray-700">Select Sponsor:</label>
-          <select 
-            id="sponsor-select"
-            value={selectedSponsorId || ''}
-            onChange={handleSponsorChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          >
-            {sponsors.map((sponsor) => (
-              <option key={sponsor.Sponsor_Org_ID} value={sponsor.Sponsor_Org_ID}>
-                {sponsor.Sponsor_Org_Name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-      
-      <p>Goal: {pointGoal} points</p>
-
-      <div className="bg-gray-300 h-4 rounded-md overflow-hidden mt-2">
-        <div className="bg-blue-500 h-full" style={{ width: `${progress}%` }}></div>
-      </div>
-      <p>{`${progress.toFixed(1)}% Complete`}</p>
-
-      {isEditing ? (
-        <div>
-          <input
-            type="number"
-            value={newGoal}
-            onChange={(e) => setNewGoal(e.target.value)}
-            className="border p-1 rounded-md"
-          />
-          <button onClick={handleSaveClick} className="ml-2 bg-green-500 text-white px-2 py-1 rounded">Save</button>
-          <button onClick={handleCancelClick} className="ml-2 bg-gray-500 text-white px-2 py-1 rounded">Cancel</button>
-        </div>
-      ) : (
-        <button onClick={handleEditClick} className="mt-2 bg-blue-500 text-white px-2 py-1 rounded">Edit Goal</button>
-      )}
-    </div>
-  );
-}
-
 
 // point trend graph widget functionality 
 // hard coding for example and bc not tied to db yet
