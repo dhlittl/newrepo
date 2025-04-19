@@ -10,9 +10,11 @@ export default function CartPage() {
   const { userId, isAssumed } = useEffectiveDriverId();
   const [authorized, setAuthorized] = useState(false);
   const [cartItems, setCartItems] = useState([]);
-  const [driverInfo, setDriverInfo] = useState(null);
+  const [sponsorPointBalances, setSponsorPointBalances] = useState({});
   const [loading, setLoading] = useState(true);
   const [totalPoints, setTotalPoints] = useState(0);
+  const [groupedCartItems, setGroupedCartItems] = useState({});
+  const [totalPointsBySponsors, setTotalPointsBySponsors] = useState({});
   
   useEffect(() => {
     const checkGroup = async () => {
@@ -55,8 +57,31 @@ export default function CartPage() {
     setLoading(false);
   }, [authorized, userId]);
   
-  // Calculate total points whenever cart items change
+  // Group cart items by sponsor
   useEffect(() => {
+    const grouped = {};
+    const totalsBySponsors = {};
+    
+    cartItems.forEach(item => {
+      const sponsorId = item.Sponsor_Org_ID;
+      
+      if (!grouped[sponsorId]) {
+        grouped[sponsorId] = {
+          sponsorId,
+          sponsorName: item.Sponsor_Org_Name || `Sponsor ${sponsorId}`,
+          items: []
+        };
+        totalsBySponsors[sponsorId] = 0;
+      }
+      
+      grouped[sponsorId].items.push(item);
+      totalsBySponsors[sponsorId] += item.pointPrice * item.quantity;
+    });
+    
+    setGroupedCartItems(grouped);
+    setTotalPointsBySponsors(totalsBySponsors);
+    
+    // Calculate overall total points
     const total = cartItems.reduce((sum, item) => {
       return sum + (item.pointPrice * item.quantity);
     }, 0);
@@ -64,7 +89,6 @@ export default function CartPage() {
     setTotalPoints(total);
   }, [cartItems]);
   
-  // In cart.jsx, update the fetchDriverInfo function:
   const fetchDriverInfo = async () => {
     try {
       // Get all points for this driver
@@ -76,27 +100,24 @@ export default function CartPage() {
       
       const data = await response.json();
       
-      // Extract point balances for all sponsors
-      const totalPoints = data.reduce((sum, sponsor) => sum + sponsor.Point_Balance, 0);
-      
-      setDriverInfo({
-        pointBalance: totalPoints,
-        pointsBySponsors: data
+      // Create a map of sponsor ID to point balance
+      const pointBalances = {};
+      data.forEach(sponsor => {
+        pointBalances[sponsor.Sponsor_Org_ID] = sponsor.Point_Balance;
       });
+      
+      setSponsorPointBalances(pointBalances);
     } catch (err) {
       console.error("Error fetching driver info:", err);
-      setDriverInfo({
-        pointBalance: 0,
-        pointsBySponsors: []
-      });
+      setSponsorPointBalances({});
     }
   };
 
-  const updateItemQuantity = (productId, newQuantity) => {
+  const updateItemQuantity = (productId, sponsorId, newQuantity) => {
     if (newQuantity < 1) return; // Don't allow quantities less than 1
     
     const updatedCart = cartItems.map(item => {
-      if (item.Product_ID === productId) {
+      if (item.Product_ID === productId && item.Sponsor_Org_ID === sponsorId) {
         return { ...item, quantity: newQuantity };
       }
       return item;
@@ -106,8 +127,10 @@ export default function CartPage() {
     localStorage.setItem('driverCart', JSON.stringify(updatedCart));
   };
   
-  const removeFromCart = (productId) => {
-    const updatedCart = cartItems.filter(item => item.Product_ID !== productId);
+  const removeFromCart = (productId, sponsorId) => {
+    const updatedCart = cartItems.filter(item => 
+      !(item.Product_ID === productId && item.Sponsor_Org_ID === sponsorId)
+    );
     setCartItems(updatedCart);
     localStorage.setItem('driverCart', JSON.stringify(updatedCart));
   };
@@ -123,7 +146,7 @@ export default function CartPage() {
       // Get user email
       console.log("Fetching email for user ID:", userId);
       
-      const emailResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Team24-GetUserEmail?userId=${userId}`, {
+      const emailResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Team24-GetUserEmail?userId=${userId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -146,7 +169,7 @@ export default function CartPage() {
       console.log("Sending alert email to:", userEmail);
       
       // Send email via our email Lambda
-      const sendEmailResponse = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/email', {
+      const sendEmailResponse = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -169,40 +192,51 @@ export default function CartPage() {
     }
   };
 
-  // Modified handleCheckout function with email alerts
+  // Modified handleCheckout function with email alerts and multiple sponsors support
   const handleCheckout = async () => {
-    // Check if user has enough points
-    if (!driverInfo || totalPoints > driverInfo.pointBalance) {
+    // Check if user has enough points for each sponsor
+    const insufficientSponsorIds = [];
+    
+    Object.entries(totalPointsBySponsors).forEach(([sponsorId, totalPoints]) => {
+      const sponsorBalance = sponsorPointBalances[sponsorId] || 0;
+      if (totalPoints > sponsorBalance) {
+        insufficientSponsorIds.push({
+          sponsorId,
+          sponsorName: groupedCartItems[sponsorId].sponsorName,
+          needed: totalPoints - sponsorBalance,
+          balance: sponsorBalance,
+          total: totalPoints
+        });
+      }
+    });
+    
+    if (insufficientSponsorIds.length > 0) {
       // Create and send insufficient points alert email
-      const pointsNeeded = totalPoints - driverInfo.pointBalance;
       const emailSubject = `Order Alert: Insufficient Points`;
       
       let emailBody = `
         <html>
           <body>
             <h2>Order Alert: Insufficient Points</h2>
-            <p>Your order could not be processed because you do not have enough points.</p>
-            <p>Your current balance: <strong>${driverInfo?.pointBalance || 0} points</strong></p>
-            <p>Order total: <strong>${totalPoints} points</strong></p>
-            <p>Points needed: <strong>${pointsNeeded} points</strong></p>
-            <h3>Order Details:</h3>
+            <p>Your order could not be processed because you do not have enough points with the following sponsors:</p>
+            
             <table border="1" cellpadding="5">
               <tr>
-                <th>Item</th>
-                <th>Price (Points)</th>
-                <th>Quantity</th>
-                <th>Subtotal</th>
+                <th>Sponsor</th>
+                <th>Your Balance</th>
+                <th>Order Total</th>
+                <th>Points Needed</th>
               </tr>
       `;
       
-      // Add each item to the email
-      cartItems.forEach(item => {
+      // Add each insufficient sponsor to the email
+      insufficientSponsorIds.forEach(sponsor => {
         emailBody += `
           <tr>
-            <td>${item.Product_Name}</td>
-            <td>${item.pointPrice}</td>
-            <td>${item.quantity}</td>
-            <td>${item.pointPrice * item.quantity}</td>
+            <td>${sponsor.sponsorName}</td>
+            <td>${sponsor.balance.toLocaleString()}</td>
+            <td>${sponsor.total.toLocaleString()}</td>
+            <td>${sponsor.needed.toLocaleString()}</td>
           </tr>
         `;
       });
@@ -217,7 +251,7 @@ export default function CartPage() {
       // Send the alert email
       await sendAlertEmail(emailSubject, emailBody);
       
-      alert("You don't have enough points for this purchase!");
+      alert("You don't have enough points for some items in your cart. Please review your cart.");
       return;
     }
     
@@ -234,6 +268,7 @@ export default function CartPage() {
             <p>Your order could not be processed because one or more items have availability issues:</p>
             <table border="1" cellpadding="5">
               <tr>
+                <th>Sponsor</th>
                 <th>Item</th>
                 <th>Requested Quantity</th>
                 <th>Available Quantity</th>
@@ -244,6 +279,7 @@ export default function CartPage() {
       stockIssues.forEach(item => {
         emailBody += `
           <tr>
+            <td>${item.Sponsor_Org_Name}</td>
             <td>${item.Product_Name}</td>
             <td>${item.quantity}</td>
             <td>${item.Quantity}</td>
@@ -265,90 +301,66 @@ export default function CartPage() {
       return;
     }
     
-    try {
-      // Prepare order data - using proper field names for Lambda
-      const orderData = {
-        driverId: userId, 
-        userId: userId,   
-        items: cartItems.map(item => ({
-          productId: item.Product_ID,
-          quantity: item.quantity,
-          pointPrice: item.pointPrice
-        })),
-        totalPoints: totalPoints,
-        orderDate: new Date().toISOString()
-      };
+    // Process orders for each sponsor separately
+    let allSuccessful = true;
+    const orderIds = [];
+    
+    for (const [sponsorId, sponsorData] of Object.entries(groupedCartItems)) {
+      const sponsorItems = sponsorData.items;
+      const sponsorTotalPoints = totalPointsBySponsors[sponsorId];
       
-      console.log("Sending order data:", JSON.stringify(orderData));
-      
-      // Make the API call to place the order
-      const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Driver/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(orderData)
-      });
-      
-      // Parse the API response
-      const responseData = await response.json();
-      console.log("Order API response:", responseData);
-      
-      if (!response.ok) {
-        throw new Error(responseData.error || "Failed to place order");
-      }
-      
-      // Use the actual orderId from the response, or fallback to random if not available
-      const orderId = responseData.orderId || Math.floor(Math.random() * 1000000);
-      
-      // Store receipt data in localStorage for the receipt page
-      const receiptData = {
-        orderId: orderId,
-        orderDate: new Date().toISOString(),
-        items: cartItems,
-        totalPoints: totalPoints
-      };
-      localStorage.setItem('latestReceipt', JSON.stringify(receiptData));
-      
-      // Send confirmation email
       try {
-        // We have userId from useEffectiveDriverId hook
-        // Fetch the user's email using the new Lambda endpoint
-        console.log("Fetching email for user ID:", userId);
+        // Prepare order data for this sponsor
+        const orderData = {
+          driverId: userId,
+          userId: userId,
+          sponsorOrgId: parseInt(sponsorId),
+          items: sponsorItems.map(item => ({
+            productId: item.Product_ID,
+            quantity: item.quantity,
+            pointPrice: item.pointPrice
+          })),
+          totalPoints: sponsorTotalPoints,
+          orderDate: new Date().toISOString()
+        };
         
-        const emailResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Team24-GetUserEmail?userId=${userId}`, {
-          method: 'GET',
+        console.log(`Sending order data for sponsor ${sponsorId}:`, JSON.stringify(orderData));
+        
+        // Make the API call to place the order
+        const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/orders', {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify(orderData)
         });
         
-        if (!emailResponse.ok) {
-          console.error("Failed to retrieve user email, status:", emailResponse.status);
-          throw new Error("Failed to retrieve user email");
+        // Parse the API response
+        const responseData = await response.json();
+        console.log(`Order API response for sponsor ${sponsorId}:`, responseData);
+        
+        if (!response.ok) {
+          throw new Error(responseData.error || "Failed to place order");
         }
         
-        const emailData = await emailResponse.json();
-        const userEmail = emailData.email;
+        // Use the actual orderId from the response, or fallback to random if not available
+        const orderId = responseData.orderId || Math.floor(Math.random() * 1000000);
+        orderIds.push(orderId);
         
-        if (!userEmail) {
-          console.error("No email found for user ID:", userId);
-          throw new Error("No email found for user");
-        }
+      } catch (err) {
+        console.error(`Error during checkout for sponsor ${sponsorId}:`, err);
+        allSuccessful = false;
         
-        console.log("Sending confirmation email to:", userEmail);
+        // Create and send processing error alert email for this sponsor
+        const emailSubject = `Order Alert: Processing Error for ${sponsorData.sponsorName}`;
         
-        // Create email content with order details
-        const emailSubject = `Your Order Confirmation #${orderId}`;
-        
-        let emailBody = `
+        const emailBody = `
           <html>
             <body>
-              <h2>Thank you for your order!</h2>
-              <p>Order #${orderId} has been successfully placed.</p>
-              <p>Date: ${new Date().toLocaleString()}</p>
-              <p>Total Points: ${totalPoints}</p>
-              
+              <h2>Order Alert: Processing Error</h2>
+              <p>There was an error processing your order with ${sponsorData.sponsorName}:</p>
+              <p><strong>${err.message}</strong></p>
+              <p>Our technical team has been notified. Please try again later or contact support.</p>
               <h3>Order Details:</h3>
               <table border="1" cellpadding="5">
                 <tr>
@@ -357,9 +369,10 @@ export default function CartPage() {
                   <th>Quantity</th>
                   <th>Subtotal</th>
                 </tr>
-        `;
+          `;
         
-        cartItems.forEach(item => {
+        // Add each item to the email
+        sponsorItems.forEach(item => {
           emailBody += `
             <tr>
               <td>${item.Product_Name}</td>
@@ -372,88 +385,37 @@ export default function CartPage() {
         
         emailBody += `
               </table>
-              <p>Thank you for participating in the Good Driver Program!</p>
             </body>
           </html>
         `;
         
-        // Send email via our email Lambda
-        const sendEmailResponse = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            recipientEmail: userEmail,
-            emailSubject: emailSubject,
-            emailBody: emailBody
-          })
-        });
-      
-        if (!sendEmailResponse.ok) {
-          const sendEmailError = await sendEmailResponse.json();
-          console.error("Failed to send confirmation email:", sendEmailError);
-        } else {
-          console.log("Confirmation email sent successfully");
-        }
-      } catch (emailError) {
-        console.error("Error in email process:", emailError);
-        // Email error shouldn't block the checkout process
-      }      
-      
-      // Clear the cart after successful checkout
+        // Send the alert email
+        await sendAlertEmail(emailSubject, emailBody);
+      }
+    }
+    
+    if (allSuccessful) {
+      // If all orders were placed successfully, clear the cart
       clearCart();
       
-      // Redirect to receipt page
-      router.push(`/pages/driver/receipt?orderId=${orderId}`);
+      // Store receipt data for all orders
+      const receiptData = {
+        orderIds: orderIds,
+        orderDate: new Date().toISOString(),
+        items: cartItems,
+        totalPoints: totalPoints,
+        sponsors: Object.values(groupedCartItems).map(sponsor => ({
+          sponsorId: sponsor.sponsorId,
+          sponsorName: sponsor.sponsorName,
+          totalPoints: totalPointsBySponsors[sponsor.sponsorId]
+        }))
+      };
+      localStorage.setItem('latestReceipt', JSON.stringify(receiptData));
       
-    } catch (err) {
-      // Create and send processing error alert email
-      const emailSubject = `Order Alert: Processing Error`;
-      
-      emailBody = `
-        <html>
-          <body>
-            <h2>Order Alert: Processing Error</h2>
-            <p>There was an error processing your order:</p>
-            <p><strong>${err.message}</strong></p>
-            <p>Our technical team has been notified. Please try again later or contact support.</p>
-            <h3>Order Details:</h3>
-            <table border="1" cellpadding="5">
-              <tr>
-                <th>Item</th>
-                <th>Price (Points)</th>
-                <th>Quantity</th>
-                <th>Subtotal</th>
-              </tr>
-      `;
-      
-      // Add each item to the email
-      cartItems.forEach(item => {
-        emailBody += `
-          <tr>
-            <td>${item.Product_Name}</td>
-            <td>${item.pointPrice}</td>
-            <td>${item.quantity}</td>
-            <td>${item.pointPrice * item.quantity}</td>
-          </tr>
-        `;
-      });
-      
-      emailBody += `
-            </table>
-          </body>
-        </html>
-      `;
-      
-      // Send the alert email
-      await sendAlertEmail(emailSubject, emailBody);
-      
-      console.error("Error during checkout:", err);
-      alert(`There was an error processing your order: ${err.message}`);
-      
-      // Don't proceed with checkout on error
-      return;
+      // Redirect to receipt page with the first order ID (we'll show all orders there)
+      router.push(`/pages/driver/receipt?orderId=${orderIds[0]}`);
+    } else {
+      alert("There was an error processing some of your orders. Please check your email for details.");
     }
   };
 
@@ -480,8 +442,8 @@ export default function CartPage() {
         )}
         <div className="bg-gray-100 p-8 rounded-lg text-center">
           <p className="text-lg mb-4">Your cart is empty</p>
-          <Link href="/pages/driver/catalog" className="bg-blue-500 text-white px-4 py-2 rounded-md">
-            Browse Catalog
+          <Link href="/pages/driver/sponsors" className="bg-blue-500 text-white px-4 py-2 rounded-md">
+            Browse Catalogs
           </Link>
         </div>
       </div>
@@ -505,138 +467,160 @@ export default function CartPage() {
         </button>
       )}
       
-      {driverInfo && (
-        <div className="bg-blue-100 p-3 rounded-lg mb-6 flex justify-between items-center">
-          <div>
-            <span className="font-semibold">Your Points Balance: </span>
-            <span className="text-lg font-bold text-blue-700">{driverInfo.pointBalance.toLocaleString()} points</span>
-          </div>
-          
-          <div>
-            <span className="font-semibold">Cart Total: </span>
-            <span className={`text-lg font-bold ${totalPoints > driverInfo.pointBalance ? 'text-red-600' : 'text-green-600'}`}>
-              {totalPoints.toLocaleString()} points
-            </span>
-            
-            {totalPoints > driverInfo.pointBalance && (
-              <p className="text-red-600 text-xs mt-1">
-                You need {(totalPoints - driverInfo.pointBalance).toLocaleString()} more points to complete this purchase
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-      
-      <div className="mb-6 rounded-lg overflow-hidden border border-gray-200">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Product
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Price
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Quantity
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Total
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {cartItems.map((item) => (
-              <tr key={item.Product_ID}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10">
-                      {item.Image_URL ? (
-                        <img className="h-10 w-10 object-cover" src={item.Image_URL} alt={item.Product_Name} />
-                      ) : (
-                        <div className="h-10 w-10 bg-gray-200 flex items-center justify-center text-gray-500 text-xs">
-                          No Image
-                        </div>
-                      )}
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {item.Product_Name}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{item.pointPrice.toLocaleString()} points</div>
-                  <div className="text-xs text-gray-500">(${parseFloat(item.Price).toFixed(2)} value)</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <button 
-                      className="px-2 py-1 border rounded-md"
-                      onClick={() => updateItemQuantity(item.Product_ID, item.quantity - 1)}
-                    >
-                      -
-                    </button>
-                    <span className="mx-2">{item.quantity}</span>
-                    <button 
-                      className="px-2 py-1 border rounded-md"
-                      onClick={() => updateItemQuantity(item.Product_ID, item.quantity + 1)}
-                    >
-                      +
-                    </button>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {(item.pointPrice * item.quantity).toLocaleString()} points
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={() => removeFromCart(item.Product_ID)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Remove
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="bg-gray-50">
-              <td colSpan="3" className="px-6 py-4 text-right font-semibold">
-                Total:
-              </td>
-              <td className="px-6 py-4 font-bold text-lg">
-                {totalPoints.toLocaleString()} points
-              </td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
+      <div className="bg-blue-100 p-3 rounded-lg mb-6">
+        <p className="font-semibold">Total Cart Value: <span className="text-lg font-bold text-blue-700">{totalPoints.toLocaleString()} points</span></p>
       </div>
       
-      <div className="flex justify-between">
-        <div>
+      {/* Cart items grouped by sponsor */}
+      {Object.values(groupedCartItems).map(sponsorGroup => (
+        <div key={sponsorGroup.sponsorId} className="mb-8">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl font-semibold">
+              {sponsorGroup.sponsorName}
+            </h2>
+            
+            <div className="flex items-center space-x-4">
+              <p className="text-sm">
+                Sponsor Total: <span className="font-bold">{totalPointsBySponsors[sponsorGroup.sponsorId].toLocaleString()} points</span>
+              </p>
+              
+              <p className="text-sm">
+                Your Balance: 
+                <span className={`font-bold ${
+                  (sponsorPointBalances[sponsorGroup.sponsorId] || 0) >= totalPointsBySponsors[sponsorGroup.sponsorId] 
+                    ? 'text-green-600' 
+                    : 'text-red-600'
+                }`}>
+                  {(sponsorPointBalances[sponsorGroup.sponsorId] || 0).toLocaleString()} points
+                </span>
+              </p>
+              
+              {(sponsorPointBalances[sponsorGroup.sponsorId] || 0) < totalPointsBySponsors[sponsorGroup.sponsorId] && (
+                <p className="text-sm text-red-600">
+                  Need {(totalPointsBySponsors[sponsorGroup.sponsorId] - (sponsorPointBalances[sponsorGroup.sponsorId] || 0)).toLocaleString()} more points
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <div className="mb-6 rounded-lg overflow-hidden border border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Product
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Price
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Quantity
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sponsorGroup.items.map((item) => (
+                  <tr key={`${sponsorGroup.sponsorId}-${item.Product_ID}`}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          {item.Image_URL ? (
+                            <img className="h-10 w-10 object-cover" src={item.Image_URL} alt={item.Product_Name} />
+                          ) : (
+                            <div className="h-10 w-10 bg-gray-200 flex items-center justify-center text-gray-500 text-xs">
+                              No Image
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {item.Product_Name}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{item.pointPrice.toLocaleString()} points</div>
+                      <div className="text-xs text-gray-500">(${parseFloat(item.Price).toFixed(2)} value)</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <button 
+                          className="px-2 py-1 border rounded-md"
+                          onClick={() => updateItemQuantity(item.Product_ID, item.Sponsor_Org_ID, item.quantity - 1)}
+                        >
+                          -
+                        </button>
+                        <span className="mx-2">{item.quantity}</span>
+                        <button 
+                          className="px-2 py-1 border rounded-md"
+                          onClick={() => updateItemQuantity(item.Product_ID, item.Sponsor_Org_ID, item.quantity + 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {(item.pointPrice * item.quantity).toLocaleString()} points
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => removeFromCart(item.Product_ID, item.Sponsor_Org_ID)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-gray-50">
+                  <td colSpan="3" className="px-6 py-4 text-right font-semibold">
+                    Sponsor Total:
+                  </td>
+                  <td className="px-6 py-4 font-bold">
+                    {totalPointsBySponsors[sponsorGroup.sponsorId].toLocaleString()} points
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      ))}
+      
+      {/* Overall cart total and checkout buttons */}
+      <div className="bg-gray-100 p-4 rounded-lg mb-6 flex justify-between items-center">
+        <div className="text-lg font-semibold">
+          Cart Total: <span className="font-bold text-blue-700">{totalPoints.toLocaleString()} points</span>
+        </div>
+        
+        <div className="flex space-x-4">
           <button
             onClick={clearCart}
-            className="bg-gray-500 text-white px-4 py-2 rounded-md mr-2"
+            className="bg-gray-500 text-white px-4 py-2 rounded-md"
           >
             Clear Cart
           </button>
-          <Link href="/pages/driver/catalog" className="bg-blue-500 text-white px-4 py-2 rounded-md">
+          
+          <Link href="/pages/driver/sponsors" className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center">
             Continue Shopping
           </Link>
+          
+          <button
+            onClick={handleCheckout}
+            className="px-6 py-2 rounded-md bg-green-500 hover:bg-green-600 text-white font-semibold"
+          >
+            Checkout
+          </button>
         </div>
-        
-        <button
-          onClick={handleCheckout}
-          className="px-6 py-2 rounded-md bg-green-500 hover:bg-green-600 text-white font-semibold"
-        >
-          Checkout
-        </button>
       </div>
     </div>
   );

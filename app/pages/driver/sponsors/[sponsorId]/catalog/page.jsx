@@ -3,14 +3,15 @@ import { useState, useEffect } from 'react';
 import React, { Suspense } from 'react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { useEffectiveDriverId } from '@/hooks/useEffectiveDriverId';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 
 function DriverCatalogPage() {
   const router = useRouter();
+  const params = useParams();
+  const sponsorId = params.sponsorId;
   const { userId, isAssumed } = useEffectiveDriverId();
   const [authorized, setAuthorized] = useState(false);
-  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [catalog, setCatalog] = useState([]);
@@ -23,9 +24,6 @@ function DriverCatalogPage() {
   const [filterOption, setFilterOption] = useState('all');
   const [minPoints, setMinPoints] = useState('');
   const [maxPoints, setMaxPoints] = useState('');
-  
-  // For testing purposes - in production, this would come from authentication
-  const [sponsorId, setSponsorId] = useState(null);
 
   useEffect(() => {
     const checkGroup = async () => {
@@ -47,53 +45,12 @@ function DriverCatalogPage() {
   }, [router]);
   
   useEffect(() => {
-    if (!authorized || !userId) return;
-    // Get sponsorId from URL params or default to the first available
-    const urlSponsorId = searchParams.get('sponsorId');
-    if (urlSponsorId) {
-      setSponsorId(urlSponsorId);
-    } else {
-      // If no sponsorId provided, we'll load the driver's sponsors and select the first one
-      fetchDriverSponsors();
-    }
-  }, [authorized, userId, searchParams]);
+    if (!authorized || !userId || !sponsorId) return;
+    fetchCatalog();
+    fetchDriverInfo();
+    fetchSponsorInfo();
+  }, [authorized, userId, sponsorId]);
   
-  // Fetch the driver's associated sponsors
-  const fetchDriverSponsors = async () => {
-    try {
-      // This would be replaced with a real API call to get the driver's sponsors
-      // For now, let's simulate with a dummy API call
-      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/drivers/${userId}/sponsors`);
-      
-      if (!response.ok) {
-        // For testing, let's default to a sponsor ID
-        console.log("Defaulting to test sponsor ID 1");
-        setSponsorId(1);
-        return;
-      }
-      
-      const data = await response.json();
-      if (data.sponsors && data.sponsors.length > 0) {
-        setSponsorId(data.sponsors[0].sponsorId);
-      } else {
-        setError("No sponsors found for this driver.");
-      }
-    } catch (err) {
-      console.error("Error fetching driver sponsors:", err);
-      // For testing purposes, default to sponsor ID 1
-      setSponsorId(1);
-    }
-  };
-  
-  // Fetch catalog items when sponsorId changes
-  useEffect(() => {
-    if (sponsorId) {
-      fetchCatalog();
-      fetchDriverInfo();
-    }
-  }, [sponsorId]);
-  
-  // In useEffect where fetchDriverInfo is called:
   const fetchDriverInfo = async () => {
     try {
       const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points?userId=${userId}`);
@@ -106,31 +63,41 @@ function DriverCatalogPage() {
       
       if (Array.isArray(data)) {
         // Find the sponsor matching the current sponsorId
-        const sponsor = data.find(s => s.Sponsor_Org_ID === parseInt(sponsorId)) || data[0];
+        const sponsor = data.find(s => s.Sponsor_Org_ID === parseInt(sponsorId));
         
-        setDriverInfo({
-          pointBalance: sponsor.Point_Balance || 0
-        });
+        if (sponsor) {
+          setDriverInfo({
+            pointBalance: sponsor.Point_Balance || 0,
+            sponsorName: sponsor.Sponsor_Org_Name
+          });
+        } else {
+          setError("You don't have a relationship with this sponsor.");
+          setDriverInfo({
+            pointBalance: 0,
+            sponsorName: "Unknown Sponsor"
+          });
+        }
       } else {
         console.error("Unexpected data format:", data);
         setDriverInfo({
-          pointBalance: 0
+          pointBalance: 0,
+          sponsorName: "Unknown Sponsor"
         });
       }
     } catch (err) {
       console.error("Error fetching driver info:", err);
       setDriverInfo({
-        pointBalance: 0
+        pointBalance: 0,
+        sponsorName: "Unknown Sponsor"
       });
     }
   };
 
-  // Fetch catalog items
   const fetchCatalog = async () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/sponsors/catalog?sponsorId=${sponsorId}`
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/catalog?sponsorId=${sponsorId}`
       );
       
       if (!response.ok) {
@@ -140,69 +107,47 @@ function DriverCatalogPage() {
       const data = await response.json();
       
       // Transform the data to include point prices
-      const pointsRatio = 100; // Assuming 100 points per dollar as mentioned in SponsorCatalog.jsx
+      const pointsRatio = 100; // Assuming 100 points per dollar as default
       const processedCatalog = data.products.map(item => ({
         ...item,
-        pointPrice: Math.ceil(parseFloat(item.Price) * pointsRatio)
+        pointPrice: Math.ceil(parseFloat(item.Price) * pointsRatio),
+        Sponsor_Org_ID: parseInt(sponsorId) // Add this for checkout
       }));
       
       setCatalog(processedCatalog);
-      
-      // Also fetch sponsor info to get the actual points ratio
-      fetchSponsorInfo();
     } catch (err) {
       console.error("Error fetching catalog:", err);
       setError(err.message);
-      
-      // For testing, create dummy catalog data
-      const dummyData = Array.from({ length: 9 }, (_, index) => ({
-        Product_ID: index + 1,
-        Product_Name: `Test Product ${index + 1}`,
-        Product_Description: 'This is a test product description',
-        Price: ((index + 1) * 9.99).toFixed(2),
-        pointPrice: ((index + 1) * 9.99 * 100), // 100 points per dollar
-        Quantity: index + 5,
-        Image_URL: index % 3 === 0 ? 'https://placehold.co/200x200/png' : '',
-        Created_At: new Date().toISOString(),
-        Featured: index === 0 || index === 4
-      }));
-      
-      setCatalog(dummyData);
+      setCatalog([]);
     } finally {
       setLoading(false);
     }
   };
   
-  // Fetch sponsor info to get points ratio
   const fetchSponsorInfo = async () => {
     try {
-      // Use the correct API endpoint from your API Gateway
-      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/sponsors/catalog?sponsorId=${sponsorId}`);
+      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors?sponsorOrgId=${sponsorId}`);
       
       if (!response.ok) {
         console.error("Failed to fetch sponsor info, status:", response.status);
-        // Default to 100 points per dollar (0.01 per point)
         setSponsorInfo({
-          name: "Test Sponsor",
+          name: "Unknown Sponsor",
           pointsRatio: 100
         });
         return;
       }
       
       const data = await response.json();
-      console.log("Sponsor info response:", data);
-      
-      // Assuming the sponsor info is in the response
-      const sponsorData = data.sponsor || {};
+      const sponsorData = Array.isArray(data) && data.length > 0 ? data[0] : {};
       
       setSponsorInfo({
-        name: sponsorData.Sponsor_Org_Name || "Test Sponsor",
+        name: sponsorData.Sponsor_Org_Name || "Unknown Sponsor",
         pointsRatio: sponsorData.Points_Ratio || 100
       });
     } catch (err) {
       console.error("Error fetching sponsor info:", err);
       setSponsorInfo({
-        name: "Test Sponsor",
+        name: "Unknown Sponsor",
         pointsRatio: 100
       });
     }
@@ -258,13 +203,16 @@ function DriverCatalogPage() {
     setFilteredCatalog(filtered);
   }, [catalog, sortOption, filterOption, minPoints, maxPoints, driverInfo]);
   
-  // Add to cart functionality
+  // Add to cart functionality - updated to include sponsor info
   const addToCart = (product) => {
     // Get existing cart or initialize empty array
     const existingCart = JSON.parse(localStorage.getItem('driverCart') || '[]');
     
     // Check if product already exists in cart
-    const existingProductIndex = existingCart.findIndex(item => item.Product_ID === product.Product_ID);
+    const existingProductIndex = existingCart.findIndex(item => 
+      item.Product_ID === product.Product_ID && 
+      item.Sponsor_Org_ID === product.Sponsor_Org_ID
+    );
     
     if (existingProductIndex >= 0) {
       // Update quantity if product exists
@@ -273,7 +221,9 @@ function DriverCatalogPage() {
       // Add new product with quantity 1
       existingCart.push({
         ...product,
-        quantity: 1
+        quantity: 1,
+        Sponsor_Org_ID: parseInt(sponsorId),
+        Sponsor_Org_Name: sponsorInfo?.name || driverInfo?.sponsorName || "Unknown Sponsor"
       });
     }
     
@@ -284,17 +234,24 @@ function DriverCatalogPage() {
     alert(`${product.Product_Name} added to cart!`);
   };
   
-  // Add to wishlist functionality
+  // Add to wishlist functionality - updated to include sponsor info
   const addToWishlist = (product) => {
     // Get existing wishlist or initialize empty array
     const existingWishlist = JSON.parse(localStorage.getItem('driverWishlist') || '[]');
     
     // Check if product already exists in wishlist
-    const productExists = existingWishlist.some(item => item.Product_ID === product.Product_ID);
+    const productExists = existingWishlist.some(item => 
+      item.Product_ID === product.Product_ID && 
+      item.Sponsor_Org_ID === product.Sponsor_Org_ID
+    );
     
     if (!productExists) {
       // Add product to wishlist
-      existingWishlist.push(product);
+      existingWishlist.push({
+        ...product,
+        Sponsor_Org_ID: parseInt(sponsorId),
+        Sponsor_Org_Name: sponsorInfo?.name || driverInfo?.sponsorName || "Unknown Sponsor"
+      });
       
       // Save updated wishlist
       localStorage.setItem('driverWishlist', JSON.stringify(existingWishlist));
@@ -317,20 +274,33 @@ function DriverCatalogPage() {
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
-        {/* Return button for sponsors */}
-        {isAssumed && (
-          <button
-            className="mb-4 text-sm text-gray-700 underline"
-            onClick={() => {
-              sessionStorage.removeItem("assumedDriverId");
-              sessionStorage.removeItem("assumedDriverName");
-              router.push("/pages/sponsor/drivers");
-            }}
+        {/* Navigation links */}
+        <div>
+          <Link 
+            href="/pages/driver/sponsors"
+            className="text-sm text-gray-700 hover:text-blue-500 underline"
           >
-            ← Return to Sponsor View
-          </button>
-        )}
-        <h1 className="text-2xl font-bold">Rewards Catalog</h1>
+            ← Back to Sponsor Selection
+          </Link>
+          
+          {/* Return button for sponsors */}
+          {isAssumed && (
+            <button
+              className="ml-4 text-sm text-gray-700 underline"
+              onClick={() => {
+                sessionStorage.removeItem("assumedDriverId");
+                sessionStorage.removeItem("assumedDriverName");
+                router.push("/pages/sponsor/drivers");
+              }}
+            >
+              ← Return to Sponsor View
+            </button>
+          )}
+        </div>
+        
+        <h1 className="text-2xl font-bold">
+          {sponsorInfo?.name || driverInfo?.sponsorName || "Sponsor"} Rewards Catalog
+        </h1>
         
         {driverInfo && (
           <div className="bg-blue-100 p-3 rounded-lg">
@@ -496,7 +466,6 @@ function DriverCatalogPage() {
       )}
     </div>
   );
-
 }
 
 export default function PageWrapper() {
