@@ -25,7 +25,7 @@ async function createUserFlow(formData, setSuccess, setFormData, setSubmitErr) {
         lastName: formData.lastName,
         email: formData.email,
         phone: formattedPhone,
-        group: formData.accountType,
+        group: formData.accountType === "Driver" ? "DefaultUser" : formData.accountType,
         password: formData.password,
       }),
     }
@@ -48,7 +48,7 @@ async function createUserFlow(formData, setSuccess, setFormData, setSubmitErr) {
         lastName: formData.lastName,
         email: formData.email,
         phone: formattedPhone,
-        accountType: formData.accountType,
+        accountType: formData.accountType === "Driver" ? "DefaultUser" : formData.accountType,
         sponsorOrgId:
           formData.accountType === "Sponsor" || formData.accountType === "Driver"
             ? formData.sponsorOrgId || null
