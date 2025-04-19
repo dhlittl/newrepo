@@ -309,7 +309,7 @@ function getWidgetContent(id, userId) {
     case "progress":
       return <ProgressWidget userId={userId} />;
     case "catalog":
-      return <LinkWidget title="Rewards Catalog" link="/pages/driver/catalog" />;
+      return <LinkWidget title="Rewards Catalog" link="/pages/driver/sponsors" />;
     case "friends":
       return <Widget title="Friends" content="You have 5 friends" />;
     case "trend":

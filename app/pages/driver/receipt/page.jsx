@@ -78,8 +78,8 @@ function ReceiptPage() {
         <h1 className="text-2xl font-bold mb-6">Receipt</h1>
         <div className="bg-gray-100 p-8 rounded-lg text-center">
           <p className="text-lg mb-4">Receipt information not found</p>
-          <Link href="/catalog" className="bg-blue-500 text-white px-4 py-2 rounded-md">
-            Return to Catalog
+          <Link href="/pages/driver/sponsors" className="bg-blue-500 text-white px-4 py-2 rounded-md">
+            Return to Sponsor Selection
           </Link>
         </div>
       </div>
@@ -94,6 +94,25 @@ function ReceiptPage() {
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
+  });
+  
+  // Group items by sponsor
+  const groupedItems = {};
+  
+  receiptData.items.forEach(item => {
+    const sponsorId = item.Sponsor_Org_ID;
+    
+    if (!groupedItems[sponsorId]) {
+      groupedItems[sponsorId] = {
+        sponsorId,
+        sponsorName: item.Sponsor_Org_Name || `Sponsor ${sponsorId}`,
+        items: [],
+        totalPoints: 0
+      };
+    }
+    
+    groupedItems[sponsorId].items.push(item);
+    groupedItems[sponsorId].totalPoints += item.pointPrice * item.quantity;
   });
   
   return (
@@ -121,7 +140,7 @@ function ReceiptPage() {
           >
             Print Receipt
           </button>
-          <Link href="/pages/driver/catalog" className="bg-green-500 text-white px-4 py-2 rounded-md">
+          <Link href="/pages/driver/sponsors" className="bg-green-500 text-white px-4 py-2 rounded-md">
             Continue Shopping
           </Link>
         </div>
@@ -139,7 +158,7 @@ function ReceiptPage() {
         <div className="mb-6 flex flex-col md:flex-row justify-between">
           <div>
             <h2 className="font-semibold text-gray-700">Order Information</h2>
-            <p><span className="font-medium">Order ID:</span> #{receiptData.orderId}</p>
+            <p><span className="font-medium">Order ID{receiptData.orderIds?.length > 1 ? 's' : ''}:</span> {receiptData.orderIds?.map(id => `#${id}`).join(', ') || `#${receiptData.orderId}`}</p>
             <p><span className="font-medium">Date:</span> {formattedDate}</p>
           </div>
           
@@ -150,57 +169,68 @@ function ReceiptPage() {
           </div>
         </div>
         
-        {/* Order items */}
-        <div className="mb-6">
-          <h2 className="font-semibold text-gray-700 mb-3">Order Items</h2>
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Item
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Price (points)
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Quantity
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Subtotal
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {receiptData.items.map((item) => (
-                <tr key={item.Product_ID}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {item.Product_Name}
-                    </div>
+        {/* Order items by sponsor */}
+        {Object.values(groupedItems).map(sponsor => (
+          <div key={sponsor.sponsorId} className="mb-6">
+            <h2 className="font-semibold text-gray-700 mb-2">{sponsor.sponsorName} Items</h2>
+            <table className="min-w-full divide-y divide-gray-200 mb-4">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Item
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Price (points)
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Quantity
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Subtotal
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sponsor.items.map((item) => (
+                  <tr key={`${sponsor.sponsorId}-${item.Product_ID}`}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {item.Product_Name}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{item.pointPrice.toLocaleString()}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{item.quantity}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{(item.pointPrice * item.quantity).toLocaleString()}</div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-gray-50">
+                  <td colSpan="3" className="px-6 py-4 text-right font-semibold">
+                    Sponsor Total:
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{item.pointPrice.toLocaleString()}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{item.quantity}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{(item.pointPrice * item.quantity).toLocaleString()}</div>
+                  <td className="px-6 py-4 font-bold">
+                    {sponsor.totalPoints.toLocaleString()} points
                   </td>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="bg-gray-50">
-                <td colSpan="3" className="px-6 py-4 text-right font-semibold">
-                  Total:
-                </td>
-                <td className="px-6 py-4 font-bold">
-                  {receiptData.totalPoints.toLocaleString()} points
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+              </tfoot>
+            </table>
+          </div>
+        ))}
+        
+        {/* Overall total */}
+        <div className="border-t pt-4 mb-6">
+          <div className="flex justify-end">
+            <div className="text-lg font-bold">
+              Total: {receiptData.totalPoints.toLocaleString()} points
+            </div>
+          </div>
         </div>
         
         {/* Receipt footer */}
@@ -215,10 +245,9 @@ function ReceiptPage() {
 }
 
 export default function PageWrapper() {
-    return (
-      <Suspense fallback={<div>Loading...</div>}>
-        <ReceiptPage />
-      </Suspense>
-    );
-  }
-  
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ReceiptPage />
+    </Suspense>
+  );
+}
