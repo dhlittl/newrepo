@@ -100,24 +100,14 @@ export default function ApplicationForm() {
 
   /* ───────── 3. sponsors list (filtered) ───────── */
   useEffect(() => {
-    if (!userId) return;
-    async function fetchSponsors() {
+    async function fetchAllSponsors() {
       try {
-        const [allRes, mineRes] = await Promise.all([
-          fetch(
-            "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors"
-          ),
-          fetch(
-            `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/${userId}/sponsors`
-          ),
-        ]);
-        const all = await allRes.json();
-        const mine = await mineRes.json();
-        const available = all.filter(
-          (s) => !mine.some((m) => m.Sponsor_Org_ID === s.Sponsor_Org_ID)
+        const res = await fetch(
+          "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors"
         );
+        const all = await res.json();
         setSponsors(
-          available.map((s) => ({
+          all.map((s) => ({
             id: s.Sponsor_Org_ID,
             name: s.Sponsor_Org_Name,
           }))
@@ -126,8 +116,9 @@ export default function ApplicationForm() {
         console.error("Sponsor fetch error:", e);
       }
     }
-    fetchSponsors();
-  }, [userId]);
+    fetchAllSponsors();
+  }, []);
+
 
   /* ───────── 4. policies for selected sponsor ───────── */
   useEffect(() => {
@@ -267,11 +258,6 @@ export default function ApplicationForm() {
               </option>
             ))}
           </select>
-          {!sponsors.length && (
-            <p className="text-black text-sm mt-1">
-              You have applied to all available sponsors.
-            </p>
-          )}
           {errors.sponsorId && (
             <p className="text-red-500 text-sm">{errors.sponsorId}</p>
           )}
