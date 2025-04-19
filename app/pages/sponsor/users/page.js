@@ -317,7 +317,7 @@ export default function SponsorsList() {
             
             {/* Add Sponsor Button */}
             <div className="mb-4">
-                <Link href="/pages/sponsor/CreateSponsorAccount">
+                <Link href="/pages/sponsor/createSponsorAccount">
                     <button className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition">
                         Add New Sponsor
                     </button>
