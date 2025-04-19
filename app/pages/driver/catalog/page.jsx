@@ -93,10 +93,10 @@ function DriverCatalogPage() {
     }
   }, [sponsorId]);
   
-  // Fetch driver information (points balance)
+  // In useEffect where fetchDriverInfo is called:
   const fetchDriverInfo = async () => {
     try {
-      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Driver/Dashboard/Points?userId=${userId}`);
+      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points?userId=${userId}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch driver info: ${response.statusText}`);
@@ -105,13 +105,11 @@ function DriverCatalogPage() {
       const data = await response.json();
       
       if (Array.isArray(data)) {
-        // Calculate total points by summing PointsAdded and subtracting PointsSubbed for each sponsor
-        const totalPoints = data.reduce((sum, sponsor) => {
-          return sum + sponsor.PointsAdded - sponsor.PointsSubbed; // Adding PointsAdded and subtracting PointsSubbed
-        }, 0);
-  
+        // Find the sponsor matching the current sponsorId
+        const sponsor = data.find(s => s.Sponsor_Org_ID === parseInt(sponsorId)) || data[0];
+        
         setDriverInfo({
-          pointBalance: totalPoints // Set the total points after calculation
+          pointBalance: sponsor.Point_Balance || 0
         });
       } else {
         console.error("Unexpected data format:", data);
@@ -121,13 +119,12 @@ function DriverCatalogPage() {
       }
     } catch (err) {
       console.error("Error fetching driver info:", err);
-      // Set default points for testing
       setDriverInfo({
-        pointBalance: 5000
+        pointBalance: 0
       });
     }
   };
-  
+
   // Fetch catalog items
   const fetchCatalog = async () => {
     setLoading(true);

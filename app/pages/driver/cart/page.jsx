@@ -64,13 +64,11 @@ export default function CartPage() {
     setTotalPoints(total);
   }, [cartItems]);
   
-  // Fetch driver information (points balance)
+  // In cart.jsx, update the fetchDriverInfo function:
   const fetchDriverInfo = async () => {
     try {
-      // Use the userId in the request to ensure we get the right driver's points
-      // Adding a query parameter to force a fresh fetch and avoid caching issues
-      const timestamp = new Date().getTime();
-      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/AboutPage/Driver/Dashboard/Points?userId=${userId}&t=${timestamp}`);
+      // Get all points for this driver
+      const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Dashboard/Points?userId=${userId}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch driver info: ${response.statusText}`);
@@ -78,30 +76,22 @@ export default function CartPage() {
       
       const data = await response.json();
       
-      if (Array.isArray(data)) {
-        // Calculate total points by summing PointsAdded and subtracting PointsSubbed for each sponsor
-        const totalPoints = data.reduce((sum, sponsor) => {
-          return sum + sponsor.PointsAdded - sponsor.PointsSubbed; // Adding PointsAdded and subtracting PointsSubbed
-        }, 0);
-  
-        setDriverInfo({
-          pointBalance: totalPoints // Set the total points after calculation
-        });
-      } else {
-        console.error("Unexpected data format:", data);
-        setDriverInfo({
-          pointBalance: 0
-        });
-      }
+      // Extract point balances for all sponsors
+      const totalPoints = data.reduce((sum, sponsor) => sum + sponsor.Point_Balance, 0);
+      
+      setDriverInfo({
+        pointBalance: totalPoints,
+        pointsBySponsors: data
+      });
     } catch (err) {
       console.error("Error fetching driver info:", err);
-      // Set default points for testing
       setDriverInfo({
-        pointBalance: 5000
+        pointBalance: 0,
+        pointsBySponsors: []
       });
     }
   };
-  
+
   const updateItemQuantity = (productId, newQuantity) => {
     if (newQuantity < 1) return; // Don't allow quantities less than 1
     

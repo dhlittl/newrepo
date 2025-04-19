@@ -48,11 +48,8 @@ export default function DriverDashboard() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
   const { userId, isAssumed } = useEffectiveDriverId();
-  const [widgets, setWidgets] = useState (initialWidgets);
+  const [widgets, setWidgets] = useState(initialWidgets);
   const [loading, setLoading] = useState(true);
-
-  //const User_ID="1";
-
 
   useEffect(() => {
     async function checkGroup() {
@@ -335,6 +332,7 @@ function getWidgetContent(id, userId) {
 function PointsWidget({ userId }) {
   const [pointsData, setPointsData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [totalPoints, setTotalPoints] = useState(0);
 
   useEffect(() => {
     if (!userId) {
@@ -353,6 +351,13 @@ function PointsWidget({ userId }) {
 
         if (response.ok && Array.isArray(data)) {
           setPointsData(data);
+          
+          // Calculate total points across all sponsors
+          const total = data.reduce((sum, sponsorPoints) => {
+            return sum + (sponsorPoints.Point_Balance || 0);
+          }, 0);
+          
+          setTotalPoints(total);
         } else {
           console.error("Error fetching points:", data?.message || "Unknown error");
         }
@@ -369,22 +374,37 @@ function PointsWidget({ userId }) {
   return (
     <div className="p-4 rounded-xl shadow-md bg-white">
       <h3 className="font-semibold text-lg mb-2">Sponsor Points</h3>
+      
+      {/* Total Points Summary */}
+      <div className="bg-blue-100 p-3 rounded-lg mb-4">
+        <span className="font-semibold">Total Points: </span>
+        <span className="text-lg font-bold text-blue-700">{totalPoints.toLocaleString()} points</span>
+      </div>
+      
       {loading ? (
         <p>Loading...</p>
       ) : pointsData.length > 0 ? (
-        <ul className="mt-3 text-sm text-gray-600">
-          {pointsData.map((entry) => (
-            <li key={entry.Sponsor_Org_ID}>
-              {entry.Sponsor_Org_Name}: {entry.PointsAdded - entry.PointsSubbed} pts
-            </li>
-          ))}
-        </ul>
+        <div className="mt-3">
+          <h4 className="font-medium text-sm text-gray-700 mb-2">Points by Sponsor:</h4>
+          <ul className="space-y-2">
+            {pointsData.map((entry) => (
+              <li 
+                key={entry.Sponsor_Org_ID}
+                className="p-2 bg-gray-50 rounded flex justify-between items-center"
+              >
+                <span className="font-medium">{entry.Sponsor_Org_Name}</span>
+                <span className="text-blue-600 font-bold">{entry.Point_Balance.toLocaleString()} pts</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : (
         <p>No points available</p>
       )}
-        <Link href={"/pages/driver/pointInfo"} className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
-            See Point Details
-        </Link>
+      
+      <Link href={"/pages/driver/pointInfo"} className="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+        See Point Details
+      </Link>
     </div>
   );
 }
@@ -477,16 +497,15 @@ function ProgressWidget({ userId }) {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [newGoal, setNewGoal] = useState('');
-
+  const [selectedSponsorId, setSelectedSponsorId] = useState(null);
+  const [sponsors, setSponsors] = useState([]);
 
   useEffect(() => {
-    // debug
-    console.debug('userId:', userId);
     if (!userId) {
       console.debug("Waiting for User_ID to be available");
-      return; // Don't set loading to false yet
+      return; 
     }
-  console.debug("Using User_ID:", userId); 
+    console.debug("Using User_ID:", userId); 
   
     async function fetchProgressData() {
       try {
@@ -494,12 +513,19 @@ function ProgressWidget({ userId }) {
         const pointsData = await pointsResponse.json();
 
         if (pointsResponse.ok && Array.isArray(pointsData)) {
-          // Calculate total points by iterating through the sponsors and summing the points
-          const totalPoints = pointsData.reduce((sum, sponsor) => {
-            return sum + sponsor.PointsAdded - sponsor.PointsSubbed; // Adding PointsAdded and subtracting PointsSubbed
-          }, 0);
+          setSponsors(pointsData);
           
-          setPoints(totalPoints); // Set the total points from all sponsors
+          // Set the first sponsor as selected by default if there is one
+          if (pointsData.length > 0 && !selectedSponsorId) {
+            setSelectedSponsorId(pointsData[0].Sponsor_Org_ID);
+            setPoints(pointsData[0].Point_Balance);
+          } else if (selectedSponsorId) {
+            // Update points for the selected sponsor
+            const selectedSponsor = pointsData.find(s => s.Sponsor_Org_ID === selectedSponsorId);
+            if (selectedSponsor) {
+              setPoints(selectedSponsor.Point_Balance);
+            }
+          }
         } else {
           console.error("Error fetching points:", pointsData.message || pointsData);
         }
@@ -523,13 +549,17 @@ function ProgressWidget({ userId }) {
     }
 
     fetchProgressData();
-  }, [userId]);
+  }, [userId, selectedSponsorId]);
 
   useEffect(() => {
     if (pointGoal !== null && points !== null) {
       setProgress((points / pointGoal) * 100);
     }
   }, [points, pointGoal]);
+
+  const handleSponsorChange = (e) => {
+    setSelectedSponsorId(parseInt(e.target.value));
+  };
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -580,6 +610,25 @@ function ProgressWidget({ userId }) {
   return (
     <div>
       <h3 className="font-semibold">Progress to Goal</h3>
+      
+      {sponsors.length > 0 && (
+        <div className="mb-2">
+          <label htmlFor="sponsor-select" className="block text-sm font-medium text-gray-700">Select Sponsor:</label>
+          <select 
+            id="sponsor-select"
+            value={selectedSponsorId || ''}
+            onChange={handleSponsorChange}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          >
+            {sponsors.map((sponsor) => (
+              <option key={sponsor.Sponsor_Org_ID} value={sponsor.Sponsor_Org_ID}>
+                {sponsor.Sponsor_Org_Name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      
       <p>Goal: {pointGoal} points</p>
 
       <div className="bg-gray-300 h-4 rounded-md overflow-hidden mt-2">

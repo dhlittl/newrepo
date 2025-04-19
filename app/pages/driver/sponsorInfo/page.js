@@ -1,3 +1,5 @@
+// /pages/driver/sponsorInfo
+
 "use client";
 import { useEffect, useState } from "react";
 import { fetchAuthSession } from 'aws-amplify/auth';
