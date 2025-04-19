@@ -28,6 +28,7 @@ export default function ApplicationViewing() {
       const transformedData = data.map((app) => ({
         id: app.Application_ID,
         user_id: app.User_ID,
+        username: app.Username,
         fname: app.FName,
         lname: app.LName,
         email: app.Email,
@@ -108,31 +109,27 @@ export default function ApplicationViewing() {
       if (status === "Approved") {
         const application = applications.find(app => app.id === applicationId);
 
-        console.log("Calling POST to promote user:", {
-          url: "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
-          body: { user_id: application.user_id }
+        console.log("Calling assign-driver-group endpoint:", {
+          url: "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/assignDriverGroup",
+          body: { username: application.username }
         });
-        
-        const lambdaResponse = await fetch(
-          "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
+      
+        const groupResponse = await fetch(
+          "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/assignDriverGroup",
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              user_id: application.user_id, // <-- Send user ID instead of email
-            }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: application.username })
           }
         );
-
-        if (!lambdaResponse.ok) {
-          const errorText = await lambdaResponse.text();  // Read full response body
-          console.error("Failed POST response:", lambdaResponse.status, errorText);
-          throw new Error(`Failed to invoke Lambda function: ${lambdaResponse.statusText}`);
+      
+        if (!groupResponse.ok) {
+          const errorText = await groupResponse.text();
+          console.error("Failed to add to Driver group:", groupResponse.status, errorText);
+          throw new Error("Could not add user to Driver group");
         }
-
-        console.log(`Lambda invoked for user_id ${application.user_id}`);
+      
+        console.log(`Successfully added ${application.username} to Driver group`);
       }
 
       const app = applications.find((a) => a.id === applicationId);
