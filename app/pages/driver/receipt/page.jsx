@@ -12,6 +12,7 @@ function ReceiptPage() {
   const orderId = searchParams.get('orderId');
   const [receiptData, setReceiptData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
   const router = useRouter();
   const { userId, isAssumed } = useEffectiveDriverId();
   const [authorized, setAuthorized] = useState(false);
@@ -53,6 +54,72 @@ function ReceiptPage() {
   
   const handlePrint = () => {
     window.print();
+  };
+  
+  const cancelOrder = async () => {
+    if (!window.confirm('Are you sure you want to cancel this order?')) {
+      return;
+    }
+    
+    try {
+      setCancelling(true);
+      
+      // Call the API to cancel the order
+      const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/orders/status', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          purchaseId: orderId,
+          status: 'Cancelled',
+          userId: userId,
+          isSponsor: false
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to cancel order');
+      }
+      
+      // Update local receipt data
+      setReceiptData(prev => ({
+        ...prev,
+        status: 'Cancelled'
+      }));
+      
+      // Update localStorage
+      const storedReceipt = localStorage.getItem('latestReceipt');
+      if (storedReceipt) {
+        const parsedReceipt = JSON.parse(storedReceipt);
+        parsedReceipt.status = 'Cancelled';
+        localStorage.setItem('latestReceipt', JSON.stringify(parsedReceipt));
+      }
+      
+      // Show success message
+      alert('Order cancelled successfully');
+    } catch (err) {
+      console.error('Error cancelling order:', err);
+      alert(`Error: ${err.message}`);
+    } finally {
+      setCancelling(false);
+    }
+  };
+  
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case 'Processing':
+        return 'bg-blue-100 text-blue-800';
+      case 'Approved':
+        return 'bg-green-100 text-green-800';
+      case 'Denied':
+        return 'bg-red-100 text-red-800';
+      case 'Cancelled':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-yellow-100 text-yellow-800';
+    }
   };
   
   if (loading) {
@@ -133,13 +200,16 @@ function ReceiptPage() {
           </button>
         )}
         <h1 className="text-2xl font-bold">Order Receipt</h1>
-        <div>
+        <div className="flex gap-2">
           <button
             onClick={handlePrint}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md mr-2"
+            className="bg-blue-500 text-white px-4 py-2 rounded-md"
           >
             Print Receipt
           </button>
+          <Link href="/pages/driver/purchase-history" className="bg-gray-500 text-white px-4 py-2 rounded-md">
+            Purchase History
+          </Link>
           <Link href="/pages/driver/sponsors" className="bg-green-500 text-white px-4 py-2 rounded-md">
             Continue Shopping
           </Link>
@@ -148,10 +218,11 @@ function ReceiptPage() {
       
       {/* Receipt content - will be printed */}
       <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-md">
-        {/* Receipt header with logo and info */}
-        <div className="text-center mb-6 border-b pb-4">
-          <h1 className="text-2xl font-bold">Good Driver Program</h1>
-          <p className="text-gray-500">Order Receipt</p>
+        {/* Status badge - prominent display */}
+        <div className="mb-6 flex justify-center">
+          <span className={`px-4 py-2 inline-flex text-base leading-5 font-bold rounded-full ${getStatusBadgeClass(receiptData.status || 'Processing')}`}>
+            Status: {receiptData.status || 'Processing'}
+          </span>
         </div>
         
         {/* Order information */}
@@ -165,9 +236,52 @@ function ReceiptPage() {
           <div className="mt-4 md:mt-0">
             <h2 className="font-semibold text-gray-700">Payment</h2>
             <p><span className="font-medium">Payment Method:</span> Points Redemption</p>
-            <p><span className="font-medium">Total Points Used:</span> {receiptData.totalPoints.toLocaleString()}</p>
+            <p><span className="font-medium">Total Points:</span> {receiptData.totalPoints.toLocaleString()}</p>
           </div>
         </div>
+        
+        {/* Cancel button for Processing orders */}
+        {(receiptData.status === 'Processing' || !receiptData.status) && (
+          <div className="mb-6 print:hidden">
+            <button
+              onClick={cancelOrder}
+              disabled={cancelling}
+              className="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-md disabled:opacity-50"
+            >
+              {cancelling ? 'Cancelling...' : 'Cancel Order'}
+            </button>
+            <p className="text-sm text-gray-500 mt-1 text-center">
+              You can cancel this order while it's still in processing status. Once approved, cancellation is not possible.
+            </p>
+          </div>
+        )}
+        
+        {receiptData.status === 'Denied' && (
+          <div className="mb-6 bg-red-50 border border-red-200 p-4 rounded-lg">
+            <p className="text-red-700 font-medium">This order has been denied by your sponsor.</p>
+            <p className="text-sm text-gray-600">
+              Your points were not deducted. Please contact your sponsor for more information.
+            </p>
+          </div>
+        )}
+        
+        {receiptData.status === 'Cancelled' && (
+          <div className="mb-6 bg-gray-50 border border-gray-200 p-4 rounded-lg">
+            <p className="text-gray-700 font-medium">This order has been cancelled.</p>
+            <p className="text-sm text-gray-600">
+              Your points were not deducted. You can place a new order at any time.
+            </p>
+          </div>
+        )}
+        
+        {receiptData.status === 'Approved' && (
+          <div className="mb-6 bg-green-50 border border-green-200 p-4 rounded-lg">
+            <p className="text-green-700 font-medium">This order has been approved!</p>
+            <p className="text-sm text-gray-600">
+              {receiptData.totalPoints.toLocaleString()} points have been deducted from your account.
+            </p>
+          </div>
+        )}
         
         {/* Order items by sponsor */}
         {Object.values(groupedItems).map(sponsor => (
@@ -236,7 +350,9 @@ function ReceiptPage() {
         {/* Receipt footer */}
         <div className="text-center text-gray-500 text-sm border-t pt-4">
           <p>Thank you for your order!</p>
-          <p>If you have any questions about your order, please contact your sponsor.</p>
+          {(receiptData.status === 'Processing' || !receiptData.status) && (
+            <p>Your order is currently being reviewed by your sponsor for approval.</p>
+          )}
           <p className="mt-2">&copy; {new Date().getFullYear()} Good Driver Program</p>
         </div>
       </div>

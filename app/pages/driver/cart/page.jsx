@@ -192,70 +192,9 @@ export default function CartPage() {
     }
   };
 
-  // Modified handleCheckout function with email alerts and multiple sponsors support
+  // Modified handleCheckout function with purchase approval flow
   const handleCheckout = async () => {
-    // Check if user has enough points for each sponsor
-    const insufficientSponsorIds = [];
-    
-    Object.entries(totalPointsBySponsors).forEach(([sponsorId, totalPoints]) => {
-      const sponsorBalance = sponsorPointBalances[sponsorId] || 0;
-      if (totalPoints > sponsorBalance) {
-        insufficientSponsorIds.push({
-          sponsorId,
-          sponsorName: groupedCartItems[sponsorId].sponsorName,
-          needed: totalPoints - sponsorBalance,
-          balance: sponsorBalance,
-          total: totalPoints
-        });
-      }
-    });
-    
-    if (insufficientSponsorIds.length > 0) {
-      // Create and send insufficient points alert email
-      const emailSubject = `Order Alert: Insufficient Points`;
-      
-      let emailBody = `
-        <html>
-          <body>
-            <h2>Order Alert: Insufficient Points</h2>
-            <p>Your order could not be processed because you do not have enough points with the following sponsors:</p>
-            
-            <table border="1" cellpadding="5">
-              <tr>
-                <th>Sponsor</th>
-                <th>Your Balance</th>
-                <th>Order Total</th>
-                <th>Points Needed</th>
-              </tr>
-      `;
-      
-      // Add each insufficient sponsor to the email
-      insufficientSponsorIds.forEach(sponsor => {
-        emailBody += `
-          <tr>
-            <td>${sponsor.sponsorName}</td>
-            <td>${sponsor.balance.toLocaleString()}</td>
-            <td>${sponsor.total.toLocaleString()}</td>
-            <td>${sponsor.needed.toLocaleString()}</td>
-          </tr>
-        `;
-      });
-      
-      emailBody += `
-            </table>
-            <p>Contact your sponsor to earn more points or adjust your order.</p>
-          </body>
-        </html>
-      `;
-      
-      // Send the alert email
-      await sendAlertEmail(emailSubject, emailBody);
-      
-      alert("You don't have enough points for some items in your cart. Please review your cart.");
-      return;
-    }
-    
-    // Check if any items are out of stock or quantity issues
+    // Check for stock issues
     const stockIssues = cartItems.filter(item => item.quantity > item.Quantity);
     if (stockIssues.length > 0) {
       // Create and send stock issues alert email
@@ -318,10 +257,13 @@ export default function CartPage() {
           items: sponsorItems.map(item => ({
             productId: item.Product_ID,
             quantity: item.quantity,
-            pointPrice: item.pointPrice
+            pointPrice: item.pointPrice,
+            productName: item.Product_Name,
+            price: item.Price
           })),
           totalPoints: sponsorTotalPoints,
-          orderDate: new Date().toISOString()
+          orderDate: new Date().toISOString(),
+          status: 'Processing' // Set status to Processing instead of Completed
         };
         
         console.log(`Sending order data for sponsor ${sponsorId}:`, JSON.stringify(orderData));
@@ -354,7 +296,7 @@ export default function CartPage() {
         // Create and send processing error alert email for this sponsor
         const emailSubject = `Order Alert: Processing Error for ${sponsorData.sponsorName}`;
         
-        const emailBody = `
+        emailBody = `
           <html>
             <body>
               <h2>Order Alert: Processing Error</h2>
@@ -404,6 +346,7 @@ export default function CartPage() {
         orderDate: new Date().toISOString(),
         items: cartItems,
         totalPoints: totalPoints,
+        status: 'Processing', // Set status to Processing
         sponsors: Object.values(groupedCartItems).map(sponsor => ({
           sponsorId: sponsor.sponsorId,
           sponsorName: sponsor.sponsorName,
@@ -412,7 +355,7 @@ export default function CartPage() {
       };
       localStorage.setItem('latestReceipt', JSON.stringify(receiptData));
       
-      // Redirect to receipt page with the first order ID (we'll show all orders there)
+      // Redirect to receipt page with the first order ID
       router.push(`/pages/driver/receipt?orderId=${orderIds[0]}`);
     } else {
       alert("There was an error processing some of your orders. Please check your email for details.");
@@ -486,20 +429,10 @@ export default function CartPage() {
               
               <p className="text-sm">
                 Your Balance: 
-                <span className={`font-bold ${
-                  (sponsorPointBalances[sponsorGroup.sponsorId] || 0) >= totalPointsBySponsors[sponsorGroup.sponsorId] 
-                    ? 'text-green-600' 
-                    : 'text-red-600'
-                }`}>
+                <span className="font-bold text-green-600">
                   {(sponsorPointBalances[sponsorGroup.sponsorId] || 0).toLocaleString()} points
                 </span>
               </p>
-              
-              {(sponsorPointBalances[sponsorGroup.sponsorId] || 0) < totalPointsBySponsors[sponsorGroup.sponsorId] && (
-                <p className="text-sm text-red-600">
-                  Need {(totalPointsBySponsors[sponsorGroup.sponsorId] - (sponsorPointBalances[sponsorGroup.sponsorId] || 0)).toLocaleString()} more points
-                </p>
-              )}
             </div>
           </div>
           
@@ -596,6 +529,13 @@ export default function CartPage() {
         </div>
       ))}
       
+      {/* Checkout Information Alert */}
+      <div className="bg-yellow-100 p-4 rounded-lg mb-6 text-sm">
+        <p className="font-semibold mb-1">Important Note About Checkout:</p>
+        <p>When you place an order, it will be submitted for sponsor approval. Your points will not be deducted until the order is approved.</p>
+        <p>You can check your order status and cancel pending orders from your purchase history.</p>
+      </div>
+      
       {/* Overall cart total and checkout buttons */}
       <div className="bg-gray-100 p-4 rounded-lg mb-6 flex justify-between items-center">
         <div className="text-lg font-semibold">
@@ -618,7 +558,7 @@ export default function CartPage() {
             onClick={handleCheckout}
             className="px-6 py-2 rounded-md bg-green-500 hover:bg-green-600 text-white font-semibold"
           >
-            Checkout
+            Place Order
           </button>
         </div>
       </div>
