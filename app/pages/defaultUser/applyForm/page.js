@@ -1,11 +1,11 @@
-// Default User Application Form
-
+// ApplicationForm.jsx
 "use client";
 import { useEffect, useState } from "react";
-import { useEffectiveDriverId } from "@/hooks/useEffectiveDriverId";
+import { getCurrentUser } from "aws-amplify/auth";
 
 export default function ApplicationForm() {
-  const { userId } = useEffectiveDriverId();
+  /* ──────────────────────────── state ──────────────────────────── */
+  const [userId, setUserId] = useState("");
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -14,10 +14,12 @@ export default function ApplicationForm() {
     phone: "",
   });
 
+  const [sponsors, setSponsors] = useState([]);
+  const [sponsorId, setSponsorId] = useState("");
+
   const [policies, setPolicies] = useState([]);
   const [agreements, setAgreements] = useState({});
-  const [sponsorId, setSponsorId] = useState("");
-  const [sponsors, setSponsors] = useState([]);
+
   const [errors, setErrors] = useState({});
 
   const [infractions, setInfractions] = useState({
@@ -31,6 +33,7 @@ export default function ApplicationForm() {
     runningRedLight: false,
     other: false,
   });
+
   const [infractionDetails, setInfractionDetails] = useState({
     seatbelt: "",
     speeding: "",
@@ -42,250 +45,283 @@ export default function ApplicationForm() {
     other: "",
   });
 
-  const filteredPolicies = policies.filter(policy => policy.Sponsor_Org_ID == sponsorId);
+  const filteredPolicies = policies.filter(
+    (p) => p.Sponsor_Org_ID == sponsorId
+  );
 
+  /* ─────────────────── helpers ─────────────────── */
+  const capitalizeFirst = (txt) =>
+    txt.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+  /* ───────── 1. resolve User_ID (Cognito → DB) ───────── */
   useEffect(() => {
-    async function fetchSponsors() {
+    async function resolveUserId() {
       try {
-        const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors");
-        const data = await response.json();
-        const transformed = data.map(s => ({ id: s.Sponsor_Org_ID, name: s.Sponsor_Org_Name }));
-        setSponsors(transformed);
-      } catch (err) {
-        console.error("Error fetching sponsors:", err);
+        const cognito = await getCurrentUser(); // returns { userId: <cognito‑sub> }
+        const cognitoSub = cognito?.userId;
+        if (!cognitoSub) return;
+
+        const res = await fetch(
+          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/user/cognito/${cognitoSub}`
+        );
+        const data = await res.json();
+        if (res.ok && data.userId) setUserId(String(data.userId));
+      } catch (e) {
+        console.error("User‑ID mapping failed:", e);
       }
     }
-
-    fetchSponsors();
+    resolveUserId();
   }, []);
 
+  /* ───────── 2. auto‑fill user profile fields ───────── */
   useEffect(() => {
-    if (!sponsorId) return;
-
-    async function fetchPolicies() {
-      try {
-        const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/policies");
-        const data = await response.json();
-        const initial = {};
-        data.forEach(p => { initial[String(p.Policy_ID)] = false; });
-        setPolicies(data);
-        setAgreements(initial);
-      } catch (err) {
-        console.error("Error fetching policies:", err);
-      }
-    }
-
-    fetchPolicies();
-  }, [sponsorId]);
-
-  // 🔄 Auto-fill user info from DB
-  useEffect(() => {
+    if (!userId) return;
     async function fetchUserInfo() {
-      if (!userId) return;
-
       try {
-        const res = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/defaultUser/Info?userId=${userId}`);
-        const data = await res.json();
-        const parsed = data.body ? JSON.parse(data.body) : data;
-        const user = Array.isArray(parsed) ? parsed[0] : parsed;
+        const res = await fetch(
+          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/defaultUser/Info?userId=${userId}`
+        );
+        const raw = await res.json();
+        const parsed = raw.body ? JSON.parse(raw.body) : raw;
+        const u = Array.isArray(parsed) ? parsed[0] : parsed;
 
         setFormData({
-          firstName: user.FName || "",
-          lastName: user.LName || "",
-          email: user.Email || "",
-          phone: user.Phone_Number || ""
+          firstName: u?.FName ?? "",
+          lastName: u?.LName ?? "",
+          email: u?.Email ?? "",
+          phone: u?.Phone_Number ?? "",
         });
-      } catch (err) {
-        console.error("Failed to auto-fill user info:", err);
+      } catch (e) {
+        console.error("Auto‑fill failed:", e);
       }
     }
-
     fetchUserInfo();
   }, [userId]);
 
-  const capitalizeFirstLetter = (text) =>
-    text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
-
-  const handleSponsorChange = (e) => {
-    setSponsorId(e.target.value);
-    localStorage.setItem("selectedSponsor", e.target.value);
-  };
-
-  const handleAgreementChange = (id) => {
-    setAgreements(prev => ({ ...prev, [String(id)]: !prev[String(id)] }));
-  };
-
-  const handleInfractionChange = (e) => {
-    const { name, checked } = e.target;
-    setInfractions(prev => {
-      const updated = { ...prev, [name]: checked };
-      if (name === "noTrafficViolations" && checked) {
-        Object.keys(updated).forEach(k => { if (k !== "noTrafficViolations") updated[k] = false; });
-      } else if (checked) {
-        updated.noTrafficViolations = false;
+  /* ───────── 3. sponsors list (filtered) ───────── */
+  useEffect(() => {
+    if (!userId) return;
+    async function fetchSponsors() {
+      try {
+        const [allRes, mineRes] = await Promise.all([
+          fetch(
+            "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors"
+          ),
+          fetch(
+            `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/${userId}/sponsors`
+          ),
+        ]);
+        const all = await allRes.json();
+        const mine = await mineRes.json();
+        const available = all.filter(
+          (s) => !mine.some((m) => m.Sponsor_Org_ID === s.Sponsor_Org_ID)
+        );
+        setSponsors(
+          available.map((s) => ({
+            id: s.Sponsor_Org_ID,
+            name: s.Sponsor_Org_Name,
+          }))
+        );
+      } catch (e) {
+        console.error("Sponsor fetch error:", e);
       }
-      return updated;
+    }
+    fetchSponsors();
+  }, [userId]);
+
+  /* ───────── 4. policies for selected sponsor ───────── */
+  useEffect(() => {
+    if (!sponsorId) return;
+    async function fetchPolicies() {
+      try {
+        const res = await fetch(
+          "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/policies"
+        );
+        const data = await res.json();
+        const initial = {};
+        data.forEach((p) => (initial[String(p.Policy_ID)] = false));
+        setPolicies(data);
+        setAgreements(initial);
+      } catch (e) {
+        console.error("Policy fetch error:", e);
+      }
+    }
+    fetchPolicies();
+  }, [sponsorId]);
+
+  /* ─────────────────── event handlers ─────────────────── */
+  const handleSponsorChange = (e) => setSponsorId(e.target.value);
+
+  const handleInput = (e) =>
+    setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
+
+  const handleAgreementToggle = (id) =>
+    setAgreements((p) => ({ ...p, [id]: !p[id] }));
+
+  const handleInfractionToggle = (e) => {
+    const { name, checked } = e.target;
+    setInfractions((prev) => {
+      const up = { ...prev, [name]: checked };
+      if (name === "noTrafficViolations" && checked)
+        Object.keys(up).forEach((k) => {
+          if (k !== "noTrafficViolations") up[k] = false;
+        });
+      else if (checked) up.noTrafficViolations = false;
+      return up;
     });
   };
 
-  const handleInfractionDetailsChange = (e) => {
-    const { name, value } = e.target;
-    setInfractionDetails(prev => ({ ...prev, [name]: value }));
+  const handleInfractionDetails = (e) =>
+    setInfractionDetails((p) => ({ ...p, [e.target.name]: e.target.value }));
+
+  /* ───────────────────── validation ───────────────────── */
+  const validate = () => {
+    const err = {};
+    if (!formData.firstName.trim()) err.firstName = "First name is required.";
+    if (!formData.lastName.trim()) err.lastName = "Last name is required.";
+    if (
+      !formData.email.trim() ||
+      !/\S+@\S+\.\S+/.test(formData.email)
+    )
+      err.email = "Valid email is required.";
+    if (!/^\d{10}$/.test(formData.phone))
+      err.phone = "Phone must be 10 digits.";
+    if (!sponsorId) err.sponsorId = "Please select a sponsor.";
+
+    const allAgreed = filteredPolicies.every((p) => agreements[p.Policy_ID]);
+    if (filteredPolicies.length && !allAgreed)
+      err.agreements = "You must agree to all policies.";
+
+    setErrors(err);
+    return !Object.keys(err).length;
   };
 
-  const handleChange = (e) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.firstName.trim()) newErrors.firstName = "First name is required.";
-    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required.";
-    if (!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Valid email is required.";
-    if (!formData.phone.trim() || !/^\d{10}$/.test(formData.phone)) newErrors.phone = "Valid phone number is required.";
-    if (!sponsorId) newErrors.sponsorId = "Please select a sponsor.";
-
-    const allAgreed = filteredPolicies.every(policy => agreements[String(policy.Policy_ID)]);
-    if (filteredPolicies.length > 0 && !allAgreed) {
-      newErrors.agreements = "You must agree to all policies";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
+  /* ───────────────────── submit ───────────────────── */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!userId) {
-      alert("Error: User ID not available. Please make sure you're logged in.");
+    if (!validate()) return;
+
+    if (
+      !infractions.noTrafficViolations &&
+      Object.entries(infractions).some(
+        ([k, v]) =>
+          v &&
+          k !== "noTrafficViolations" &&
+          !infractionDetails[k]?.trim()
+      )
+    ) {
+      alert("Please add details for all selected infractions.");
       return;
     }
 
-    if (!validateForm()) return;
-
-    let valid = true;
-    if (!infractions.noTrafficViolations) {
-      for (let key in infractions) {
-        if (infractions[key] && key !== "noTrafficViolations" && !infractionDetails[key]?.trim()) {
-          alert(`Please provide more info for "${capitalizeFirstLetter(key.replace(/([A-Z])/g, " $1"))}"`);
-          valid = false;
-          break;
-        }
-      }
-    }
-
-    if (!valid) return;
-
-    const requestData = {
-      sponsorId,
+    const payload = {
       userId,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      phone: formData.phone,
+      sponsorId,
+      ...formData,
       infractions,
       infractionDetails,
     };
 
     try {
-      const res = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/application", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestData),
-      });
-
-      const resData = await res.json();
-
+      const res = await fetch(
+        "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/application",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      const data = await res.json();
       if (res.ok) {
         alert("Application submitted successfully!");
-        setFormData({ firstName: "", lastName: "", email: "", phone: "" });
         setSponsorId("");
+        setPolicies([]);
         setAgreements({});
-        setErrors({});
-        setInfractions({
-          noTrafficViolations: false,
-          seatbelt: false,
-          speeding: false,
-          distractedDriving: false,
-          recklessDriving: false,
-          dui: false,
-          runningStopSign: false,
-          runningRedLight: false,
-          other: false,
-        });
-        setInfractionDetails({
-          seatbelt: "",
-          speeding: "",
-          distractedDriving: "",
-          recklessDriving: "",
-          dui: "",
-          runningStopSign: "",
-          runningRedLight: "",
-          other: "",
-        });
-      } else {
-        alert(`Error: ${resData.error}`);
-      }
-    } catch (error) {
-      console.error("Submission error:", error);
-      alert("An error occurred while submitting your application.");
+      } else alert(`Error: ${data.error}`);
+    } catch (e) {
+      console.error("Submit error:", e);
+      alert("Something went wrong submitting your application.");
     }
   };
 
+  /* ───────────────────── render ───────────────────── */
   return (
     <div className="max-w-md mx-auto bg-white p-6 shadow-md rounded-lg">
       <h2 className="text-xl font-semibold mb-4 text-black">Application Form</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
 
-        {/* Sponsor Dropdown */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* ─── Sponsor dropdown ─── */}
         <div>
-          <label className="block text-sm font-medium text-black">Select Sponsor</label>
-          <select value={sponsorId} onChange={handleSponsorChange} className="mt-1 p-2 w-full border rounder-md text-black bg-white">
+          <label className="block text-sm font-medium text-black">
+            Select Sponsor
+          </label>
+          <select
+            value={sponsorId}
+            onChange={handleSponsorChange}
+            className="mt-1 p-2 w-full border rounded-md text-black bg-white"
+          >
             <option value="">-- Choose a Sponsor --</option>
-            {sponsors.map(sponsor => (
-              <option key={sponsor.id} value={sponsor.id}>{sponsor.name}</option>
+            {sponsors.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
             ))}
           </select>
-          {errors.sponsorId && <p className="text-red-500 text-sm">{errors.sponsorId}</p>}
+          {!sponsors.length && (
+            <p className="text-black text-sm mt-1">
+              You have applied to all available sponsors.
+            </p>
+          )}
+          {errors.sponsorId && (
+            <p className="text-red-500 text-sm">{errors.sponsorId}</p>
+          )}
         </div>
 
-        {/* User Info Fields */}
-        {["firstName", "lastName", "email", "phone"].map((field) => (
-          <div key={field}>
-            <label className="block text-sm font-medium capitalize text-black">{field.replace(/([A-Z])/g, " $1")}</label>
+        {/* ─── User info ─── */}
+        {["firstName", "lastName", "email", "phone"].map((f) => (
+          <div key={f}>
+            <label className="block text-sm font-medium capitalize text-black">
+              {f.replace(/([A-Z])/g, " $1")}
+            </label>
             <input
-              type={field === "email" ? "email" : "text"}
-              name={field}
-              value={formData[field]}
-              onChange={handleChange}
+              type={f === "email" ? "email" : "text"}
+              name={f}
+              value={formData[f]}
+              onChange={handleInput}
               className="mt-1 p-2 w-full border rounded-md text-black"
             />
-            {errors[field] && <p className="text-red-500 text-sm">{errors[field]}</p>}
+            {errors[f] && <p className="text-red-500 text-sm">{errors[f]}</p>}
           </div>
         ))}
 
-        {/* Policies */}
+        {/* ─── Policies ─── */}
         {sponsorId && filteredPolicies.length > 0 && (
           <div>
-            <h3 className="text-lg font-semibold mt-4 text-black">Sponsor Policies</h3>
-            {filteredPolicies.map((policy) => (
-              <div key={policy.Policy_ID} className="flex items-center">
+            <h3 className="text-lg font-semibold mt-4 text-black">
+              Sponsor Policies
+            </h3>
+            {filteredPolicies.map((p) => (
+              <div key={p.Policy_ID} className="flex items-center">
                 <input
                   type="checkbox"
-                  checked={agreements[policy.Policy_ID] || false}
-                  onChange={() => handleAgreementChange(Number(policy.Policy_ID))}
+                  checked={agreements[p.Policy_ID] || false}
+                  onChange={() => handleAgreementToggle(p.Policy_ID)}
                   className="mr-2"
                 />
-                <label className="text-black">{policy.Policy_Description}</label>
+                <label className="text-black">{p.Policy_Description}</label>
               </div>
             ))}
-            {errors.agreements && <p className="text-red-500 text-sm">{errors.agreements}</p>}
+            {errors.agreements && (
+              <p className="text-red-500 text-sm">{errors.agreements}</p>
+            )}
           </div>
         )}
 
-        {/* Infractions Section */}
+        {/* ─── Infractions ─── */}
         <div>
-          <h3 className="text-lg font-semibold mt-4 text-black">Driving History</h3>
+          <h3 className="text-lg font-semibold mt-4 text-black">
+            Driving History
+          </h3>
           {Object.keys(infractions).map((key) => (
             <div key={key} className="space-y-2">
               <div className="flex items-center">
@@ -293,19 +329,23 @@ export default function ApplicationForm() {
                   type="checkbox"
                   name={key}
                   checked={infractions[key]}
-                  onChange={handleInfractionChange}
+                  onChange={handleInfractionToggle}
                   className="mr-2"
                 />
-                <label className="text-black">{capitalizeFirstLetter(key.replace(/([A-Z])/g, " $1"))}</label>
+                <label className="text-black">
+                  {capitalizeFirst(key.replace(/([A-Z])/g, " $1"))}
+                </label>
               </div>
               {infractions[key] && key !== "noTrafficViolations" && (
                 <div className="mt-2 pl-6">
-                  <label className="block text-sm text-black">Please provide more information</label>
+                  <label className="block text-sm text-black">
+                    Please provide more information
+                  </label>
                   <input
                     type="text"
                     name={key}
                     value={infractionDetails[key]}
-                    onChange={handleInfractionDetailsChange}
+                    onChange={handleInfractionDetails}
                     className="mt-1 p-2 w-full border rounded-md text-black"
                   />
                 </div>
@@ -314,8 +354,13 @@ export default function ApplicationForm() {
           ))}
         </div>
 
-        {/* Submit */}
-        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded-md">Submit</button>
+        {/* ─── Submit ─── */}
+        <button
+          type="submit"
+          className="bg-blue-500 text-white px-4 py-2 rounded-md"
+        >
+          Submit
+        </button>
       </form>
     </div>
   );
