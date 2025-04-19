@@ -97,68 +97,39 @@ export default function ApplicationViewing() {
           }),
         }
       );
-
+  
       if (!response.ok) {
         throw new Error(
           `Failed to ${status.toLowerCase()} application: ${response.statusText}`
         );
       }
-
-      console.log(`Application ${applicationId} ${status.toLowerCase()} successfully`);
-
-      if (status === "Approved") {
-        const application = applications.find(app => app.id === applicationId);
-
-        console.log("Calling assign-driver-group endpoint:", {
-          url: "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/assignDriverGroup",
-          body: { username: application.username }
-        });
-      
-        const groupResponse = await fetch(
-          "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/assignDriverGroup",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: application.username })
-          }
-        );
-      
-        if (!groupResponse.ok) {
-          const errorText = await groupResponse.text();
-          console.error("Failed to add to Driver group:", groupResponse.status, errorText);
-          throw new Error("Could not add user to Driver group");
-        }
-      
-        console.log(`Successfully added ${application.username} to Driver group`);
-      }
-
+  
       const app = applications.find((a) => a.id === applicationId);
-        if (!app) throw new Error("Application not found");
-
-        // build email
-        const subject = `Your application has been ${status.toLowerCase()}`;
-        const body = `
-          <html><body>
-            <p>Hi ${app.fname},</p>
-            <p>Your application to Sponsor <strong>#${sponsorId}</strong> was <strong>${status}</strong>.</p>
-            ${
-              status === "Approved"
-                ? "<p>Congratulations! You can now access driver features.</p>"
-                : "<p>We're sorry, but your application was not approved at this time.</p>"
-            }
-            <p>Thanks,<br/>The Rewards Team</p>
-          </body></html>
-        `;
-
-        // fire SES
-        await sendAlertEmail(app.email, subject, body);
+      if (!app) throw new Error("Application not found");
+  
+      const subject = `Your application has been ${status.toLowerCase()}`;
+      const body = `
+        <html><body>
+          <p>Hi ${app.fname},</p>
+          <p>Your application to Sponsor <strong>#${sponsorId}</strong> was <strong>${status}</strong>.</p>
+          ${
+            status === "Approved"
+              ? "<p>Congratulations! You can now access driver features.</p>"
+              : "<p>We're sorry, but your application was not approved at this time.</p>"
+          }
+          <p>Thanks,<br/>The Rewards Team</p>
+        </body></html>
+      `;
+  
+      await sendAlertEmail(app.email, subject, body);
       fetchPendingApplications();
-
+  
     } catch (err) {
       console.error(`Error updating application: ${err.message}`);
       setError(err.message);
     }
   };
+  
 
   return (
     <main className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg">
