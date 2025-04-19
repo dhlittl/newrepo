@@ -36,7 +36,27 @@ async function doTheSignInThang(formData, setSuccessMessage, setFormData) {
       }
     );
 
+    const response2 = await fetch(
+      "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/user/createUser",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formattedPhone,
+          group: formData.accountType,
+          password: formData.password,
+        }),
+      }
+    );   
+
     const data = await response.json();
+    const data2 = await response2.json();
 
     if (response.ok) {
       setSuccessMessage("Account created successfully!");
@@ -47,11 +67,26 @@ async function doTheSignInThang(formData, setSuccessMessage, setFormData) {
         lastName: "",
         email: "",
         phone: "",
-        accountType: "Driver",
+        accountType: "",
         sponsorOrgId: "",
       });
     } else {
       console.error("Error during user creation:", data.error || "Unknown error");
+    }
+
+    if (response2.ok) {
+      setSuccessMessage("Account created successfully!");
+      setFormData({
+        username: "",
+        password: "",
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        group: "",
+      });
+    } else {
+      console.error("Error during user creation:", data2.error || "Unknown error");
     }
   } catch (error) {
     console.error("Error during sign-up:", error);
@@ -66,7 +101,7 @@ export default function CreateAccount() {
     lastName: "",
     email: "",
     phone: "",
-    accountType: "Sponsor",
+    accountType: "sponsor",
     sponsorOrgId: "",
   });
   const [errors, setErrors] = useState({});
@@ -88,10 +123,7 @@ export default function CreateAccount() {
     if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
     if (!formData.email.trim()) newErrors.email = "Email is required";
     if (!formData.phone.trim()) newErrors.phone = "Phone number is required";
-    if (formData.accountType === "Sponsor" && !formData.sponsorOrgId.trim()) {
-      newErrors.sponsorOrgId = "Sponsor Organization ID is required";
-    }
-
+   
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
