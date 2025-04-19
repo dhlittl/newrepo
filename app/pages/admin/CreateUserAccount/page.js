@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 
+/* ────────────── Helper: Format phone ────────────── */
 const formatPhoneNumber = (phone) => {
   if (!phone.startsWith("+")) {
     phone = `+1${phone.replace(/\D/g, "")}`;
@@ -8,53 +9,77 @@ const formatPhoneNumber = (phone) => {
   return phone;
 };
 
-async function doTheSignInThang(formData, setSuccessMessage, setFormData) {
-  try {
-    const formattedPhone = formatPhoneNumber(formData.phone);
+/* ────────────── Helper: Submit logic ────────────── */
+async function createUserFlow(formData, setSuccess, setFormData, setSubmitErr) {
+  const formattedPhone = formatPhoneNumber(formData.phone);
 
-    const response = await fetch(
-      "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/defaultUser",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formattedPhone,
-          accountType: formData.accountType,
-          sponsorOrgId: formData.accountType === "Sponsor" ? formData.sponsorOrgId : null,
-          numPointChanges: formData.accountType === "Sponsor" ? 0 : null,
-          cognitoSub: "", // As originally provided
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (response.ok) {
-      setSuccessMessage("Account created successfully!");
-      setFormData({
-        username: "",
-        password: "",
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        accountType: "Driver",
-        sponsorOrgId: "",
-      });
-    } else {
-      console.error("Error during user creation:", data.error || "Unknown error");
+  // 1️⃣ Create Cognito user
+  const cognitoRes = await fetch(
+    "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/user/createUser",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: formData.username,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formattedPhone,
+        group: formData.accountType,
+        password: formData.password,
+      }),
     }
-  } catch (error) {
-    console.error("Error during sign-up:", error);
+  );
+
+  const cognitoData = await cognitoRes.json();
+  if (!cognitoRes.ok) {
+    throw new Error(cognitoData.error || "Failed to create user in Cognito.");
   }
+
+  // 2️⃣ Create DB record
+  const dbRes = await fetch(
+    "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/defaultUser",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: formData.username,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formattedPhone,
+        accountType: formData.accountType,
+        sponsorOrgId:
+          formData.accountType === "Sponsor" || formData.accountType === "Driver"
+            ? formData.sponsorOrgId || null
+            : null,
+        numPointChanges: formData.accountType === "Sponsor" ? 0 : null,
+        cognitoSub: cognitoData.cognitoSub || "",
+      }),
+    }
+  );
+
+  const dbData = await dbRes.json();
+  if (!dbRes.ok) {
+    throw new Error(dbData.error || "User added to Cognito, but DB insert failed.");
+  }
+
+  // ✅ Success
+  setSuccess("Account created successfully!");
+  setSubmitErr("");
+  setFormData({
+    username: "",
+    password: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    accountType: "Driver",
+    sponsorOrgId: "",
+  });
 }
 
+/* ────────────── Main Component ────────────── */
 export default function CreateAccount() {
   const [formData, setFormData] = useState({
     username: "",
@@ -66,8 +91,10 @@ export default function CreateAccount() {
     accountType: "Driver",
     sponsorOrgId: "",
   });
+
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
   const validateForm = () => {
     let newErrors = {};
@@ -85,95 +112,78 @@ export default function CreateAccount() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccessMessage(""); // Clear previous success message
+    setSuccessMessage("");
+    setSubmitError("");
+
     if (!validateForm()) return;
-    doTheSignInThang(formData, setSuccessMessage, setFormData);
+
+    try {
+      await createUserFlow(formData, setSuccessMessage, setFormData, setSubmitError);
+    } catch (err) {
+      console.error("Submission error:", err);
+      setSubmitError(err.message || "Something went wrong.");
+    }
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
       <h1 className="text-4xl font-bold text-black mb-6">Create Account</h1>
-      <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-sm bg-white p-6 shadow-md rounded-lg">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4 w-full max-w-sm bg-white p-6 shadow-md rounded-lg"
+      >
+        {/* Username */}
+        <FormInput
+          label="Username"
+          value={formData.username}
+          onChange={(v) => setFormData({ ...formData, username: v })}
+          error={errors.username}
+        />
 
-        {/* Username Field */}
-        <div>
-          <label className="block text-sm font-medium text-black">Username</label>
-          <input
-            type="text"
-            value={formData.username}
-            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-            className="mt-1 p-2 w-full border rounded-md text-black"
-            placeholder="Enter username"
-          />
-          {errors.username && <p className="text-red-500 text-sm">{errors.username}</p>}
-        </div>
+        {/* Password */}
+        <FormInput
+          label="Password"
+          type="password"
+          value={formData.password}
+          onChange={(v) => setFormData({ ...formData, password: v })}
+          error={errors.password}
+        />
 
-        {/* Password Field */}
-        <div>
-          <label className="block text-sm font-medium text-black">Password</label>
-          <input
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            className="mt-1 p-2 w-full border rounded-md text-black"
-            placeholder="Enter password"
-          />
-          {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
-        </div>
+        {/* First Name */}
+        <FormInput
+          label="First Name"
+          value={formData.firstName}
+          onChange={(v) => setFormData({ ...formData, firstName: v })}
+          error={errors.firstName}
+        />
 
-        {/* First Name Field */}
-        <div>
-          <label className="block text-sm font-medium text-black">First Name</label>
-          <input
-            type="text"
-            value={formData.firstName}
-            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-            className="mt-1 p-2 w-full border rounded-md text-black"
-            placeholder="Enter first name"
-          />
-          {errors.firstName && <p className="text-red-500 text-sm">{errors.firstName}</p>}
-        </div>
+        {/* Last Name */}
+        <FormInput
+          label="Last Name"
+          value={formData.lastName}
+          onChange={(v) => setFormData({ ...formData, lastName: v })}
+          error={errors.lastName}
+        />
 
-        {/* Last Name Field */}
-        <div>
-          <label className="block text-sm font-medium text-black">Last Name</label>
-          <input
-            type="text"
-            value={formData.lastName}
-            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-            className="mt-1 p-2 w-full border rounded-md text-black"
-            placeholder="Enter last name"
-          />
-          {errors.lastName && <p className="text-red-500 text-sm">{errors.lastName}</p>}
-        </div>
+        {/* Email */}
+        <FormInput
+          label="Email"
+          type="email"
+          value={formData.email}
+          onChange={(v) => setFormData({ ...formData, email: v })}
+          error={errors.email}
+        />
 
-        {/* Email Field */}
-        <div>
-          <label className="block text-sm font-medium text-black">Email</label>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="mt-1 p-2 w-full border rounded-md text-black"
-            placeholder="Enter email"
-          />
-          {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
-        </div>
-
-        {/* Phone Number Field */}
-        <div>
-          <label className="block text-sm font-medium text-black">Phone Number</label>
-          <input
-            type="tel"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            className="mt-1 p-2 w-full border rounded-md text-black"
-            placeholder="Enter phone number"
-          />
-          {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
-        </div>
+        {/* Phone Number */}
+        <FormInput
+          label="Phone Number"
+          type="tel"
+          value={formData.phone}
+          onChange={(v) => setFormData({ ...formData, phone: v })}
+          error={errors.phone}
+        />
 
         {/* Account Type Dropdown */}
         <div>
@@ -189,29 +199,42 @@ export default function CreateAccount() {
           </select>
         </div>
 
-        {/* Sponsor Organization ID Field (Only for Sponsors) */}
+        {/* Sponsor Organization ID Field (Only for Sponsor) */}
         {formData.accountType === "Sponsor" && (
-          <div>
-            <label className="block text-sm font-medium text-black">Sponsor Organization ID</label>
-            <input
-              type="text"
-              value={formData.sponsorOrgId}
-              onChange={(e) => setFormData({ ...formData, sponsorOrgId: e.target.value })}
-              className="mt-1 p-2 w-full border rounded-md text-black"
-              placeholder="Enter sponsor organization ID"
-            />
-            {errors.sponsorOrgId && <p className="text-red-500 text-sm">{errors.sponsorOrgId}</p>}
-          </div>
+          <FormInput
+            label="Sponsor Organization ID"
+            value={formData.sponsorOrgId}
+            onChange={(v) => setFormData({ ...formData, sponsorOrgId: v })}
+            error={errors.sponsorOrgId}
+          />
         )}
 
-        {/* Success Message */}
+        {/* Success / Error Messages */}
         {successMessage && <p className="text-green-600 text-sm text-center">{successMessage}</p>}
+        {submitError && <p className="text-red-500 text-sm text-center">{submitError}</p>}
 
         {/* Submit Button */}
         <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded-md w-full text-lg">
           Create Account
         </button>
       </form>
+    </div>
+  );
+}
+
+/* ────────────── Reusable Input Field ────────────── */
+function FormInput({ label, type = "text", value, onChange, error }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-black">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 p-2 w-full border rounded-md text-black"
+        placeholder={`Enter ${label.toLowerCase()}`}
+      />
+      {error && <p className="text-red-500 text-sm">{error}</p>}
     </div>
   );
 }
