@@ -93,7 +93,7 @@ export default function SponsorsPage() {
           ← Return to Sponsor View
         </button>
       )}
-      <h2 className="text-2xl font-semibold mb-6 text-black">Our Sponsors</h2>
+      <h2 className="text-2xl font-semibold mb-6 text-black">My Sponsors</h2>
 
       {loading && <p className="text-gray-500">Loading sponsors...</p>}
       {error && <p className="text-red-500">Error: {error}</p>}
