@@ -1,5 +1,3 @@
-// Admin Manage Users Page
-
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -101,42 +99,66 @@ export default function ShowUsers() {
     });
   };
 
-  const reviewApplication = async (user, application, status) => {
-    const sponsorId = application.Sponsor_Org_ID || application.Sponsor_ID || 0;
-    const applicationId = application.Application_ID;
+  const reviewApplication = async (app, status) => {
+    console.log("Full app object:", app); // 🔍 DEBUG
+
+    const {
+      Application_ID: applicationId,
+      Sponsor_Org_ID: sponsor_id,
+      Email: email,
+      FName: fname,
+      Username: username,
+    } = app;
+
+    const payload = {
+      application_id: applicationId,
+      sponsor_id,
+      status,
+    };
 
     try {
-      const putRes = await fetch(
+      console.log("Submitting application review:", payload);
+
+      const response = await fetch(
         "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            application_id: applicationId,
-            sponsor_id: sponsorId,
-            status,
-          }),
+          body: JSON.stringify(payload),
         }
       );
-      if (!putRes.ok) throw new Error(`PUT failed: ${putRes.statusText}`);
+
+      const result = await response.json();
+      console.log("Lambda response:", result);
+
+      if (!response.ok) {
+        throw new Error(result?.error || `Failed to ${status.toLowerCase()} application`);
+      }
 
       if (status === "Approved") {
-        const postRes = await fetch(
-          "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
+        const groupResponse = await fetch(
+          "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/assignDriverGroup",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: application.User_ID }),
+            body: JSON.stringify({ username }),
           }
         );
-        if (!postRes.ok) throw new Error(`POST failed: ${postRes.statusText}`);
+
+        if (!groupResponse.ok) {
+          const errorText = await groupResponse.text();
+          console.error("Failed to add to Driver group:", groupResponse.status, errorText);
+          throw new Error("Could not add user to Driver group");
+        }
+
+        console.log(`Successfully added ${username} to Driver group`);
       }
 
       const subject = `Your application has been ${status.toLowerCase()}`;
       const body = `
         <html><body>
-          <p>Hi ${user.FName},</p>
-          <p>Your application to Sponsor <strong>#${sponsorId}</strong> was <strong>${status}</strong>.</p>
+          <p>Hi ${fname},</p>
+          <p>Your application to Sponsor <strong>#${sponsor_id}</strong> was <strong>${status}</strong>.</p>
           ${
             status === "Approved"
               ? "<p>Congratulations! You can now access driver features.</p>"
@@ -146,13 +168,11 @@ export default function ShowUsers() {
         </body></html>
       `;
 
-      await sendAlertEmail(user.Email, subject, body);
+      await sendAlertEmail(email, subject, body);
 
-      const refreshed = await fetchUserDetails(user);
-      setExpandedDetails((prev) => ({ ...prev, [user.User_ID]: refreshed }));
     } catch (err) {
-      console.error("Review application error:", err);
-      alert("Error: " + err.message);
+      console.error(`Error updating application: ${err.message}`);
+      setError(err.message);
     }
   };
 
@@ -167,7 +187,7 @@ export default function ShowUsers() {
     if (res.ok) {
       alert("User updated successfully!");
       setIsModalOpen(false);
-      const updatedUsers = users.map(u =>
+      const updatedUsers = users.map((u) =>
         u.User_ID === editingUser.User_ID ? { ...u, ...formData } : u
       );
       setUsers(updatedUsers);
@@ -230,8 +250,8 @@ export default function ShowUsers() {
         expandedRows={expandedRows}
         toggleRowExpansion={toggleRowExpansion}
         expandedDetails={expandedDetails}
-        onApprove={(user, app) => reviewApplication(user, app, "Approved")}
-        onDeny={(user, app) => reviewApplication(user, app, "Denied")}
+        onApprove={(user, app) => reviewApplication(app, "Approved")}
+        onDeny={(user, app) => reviewApplication(app, "Denied")}
         onEdit={(user) => {
           setFormData({
             FName: user.FName,
