@@ -38,8 +38,8 @@ export default function SponsorNavbar() {
         <li><Link href="/pages/sponsor/catalog">Product Catalog</Link></li>
         <li><Link href="/pages/sponsor/users">Manage Users</Link></li>
         <li><Link href="/pages/sponsor/reports">Reports</Link></li>
-        <li><Link href="/pages/sponsor/aboutPage">About</Link></li>
         <li><Link href="/pages/sponsor/purchase-requests">Purchase Requests</Link></li>
+        <li><Link href="/pages/sponsor/aboutPage">About</Link></li>
         <li><SignOutButton /></li>
       </ul>
 

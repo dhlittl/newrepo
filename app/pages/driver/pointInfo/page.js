@@ -60,14 +60,29 @@ export default function PointInfoPage() {
         throw new Error(`Error: ${response.statusText}`);
       }
       
-      const data = await response.json();
+      const apiResponse = await response.json();
+      
+      console.log("API Response:", apiResponse);
+      
+      // Parse the data from the response
+      const data = typeof apiResponse.body === 'string' 
+        ? JSON.parse(apiResponse.body) 
+        : apiResponse;
+      
+      console.log("Parsed data:", data);
       
       if (data && data.point_history && Array.isArray(data.point_history)) {
         setPointHistory(data.point_history);
+      } else {
+        console.warn("No point history data or incorrect format:", data);
+        setPointHistory([]);
       }
       
       if (data && data.current_balances && Array.isArray(data.current_balances)) {
         setBalances(data.current_balances);
+      } else {
+        console.warn("No balance data or incorrect format:", data);
+        setBalances([]);
       }
     } catch (err) {
       console.error("Failed to fetch point history:", err);
