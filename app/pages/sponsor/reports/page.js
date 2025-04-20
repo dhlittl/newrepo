@@ -1,164 +1,311 @@
-// app/pages/sponsor/reports/page.js
-
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from 'react';
+import { getCurrentUser } from 'aws-amplify/auth';
 
-export default function SponsorReportsPage() {
-  const [reportData, setReportData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+export default function Logs() {
+  const [logs, setLogs] = useState([]);
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [sponsorFilter, setSponsorFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [reportType, setReportType] = useState("driver_applications");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [sponsorMap, setSponsorMap] = useState({});
+  const [userId, setUserId] = useState(null);
+  const [sponsorOrgId, setSponsorOrgId] = useState(null);
+  const [sponsorUserId, setSponsorUserId] = useState(null);
 
-
-  const fetchReport = async () => {
-    if (!startDate || !endDate) {
-      setError("Please select both start and end dates.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    const sponsorId = 1;
-
-    try {
-      const endpointType = reportType === "point_changes"
-        ? "point_change_audit_log"
-        : "report_driver_applications";
-
-      const response = await fetch(
-        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/reports?type=${endpointType}&start_date=${startDate}&end_date=${endDate}&sponsor_id=${sponsorId}`
-      );
-
-      const result = await response.json();
-
-      if (response.ok) {
-        setReportData(result);
-      } else {
-        setError(result.error || "Failed to fetch report");
+  // get the Cognito user ID
+    useEffect(() => {
+    async function fetchUser() {
+      try {
+        const user = await getCurrentUser();
+        console.log("Fetched Cognito user ID:", user.userId);
+        
+        // Now fetch the database user ID using the Cognito sub
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/user/cognito/${user.userId}`);
+        const data = await response.json();
+        
+        if (response.ok && data.userId) {
+          setUserId(data.userId);
+          console.log("Database User ID:", data.userId);
+        } else {
+          console.error("Error fetching database user ID:", data.error || "Unknown error");
+          setError("Failed to fetch user ID from database");
+        }
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+        setError("Failed to authenticate user");
       }
-    } catch (err) {
-      setError(err.message || "Unknown error occurred");
-    } finally {
-      setLoading(false);
     }
+
+    fetchUser();
+  }, []);
+
+  // Once we have the user ID, fetch the sponsor organization ID
+  useEffect(() => {
+    if (!userId) return;
+    
+    const fetchSponsorInfo = async () => {
+      try {
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/sponsorUsers/Info?userId=${userId}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch sponsor info: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        setSponsorOrgId(data.Sponsor_Org_ID);
+        // Add a new state variable to store Sponsor_User_ID
+        //setSponsorUserId(data.Sponsor_User_ID);
+        console.log("Sponsor Organization ID:", data.Sponsor_Org_ID);
+        //console.log("Sponsor User ID:", data.Sponsor_User_ID);
+      } catch (err) {
+        console.error("Error fetching sponsor organization:", err);
+        setError("Failed to fetch sponsor organization information");
+      }
+    };
+
+    fetchSponsorInfo();
+  }, [userId]);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        setLoading(true);
+        console.log("target id:", sponsorOrgId)
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Admin/Logs?Target_ID=${sponsorOrgId}`);
+        const data = await response.json();
+        console.log("Full response data:", data);
+        console.log("data.logs =", data.logs);
+        console.log("Is Array?", Array.isArray(data.logs));
+        setLogs(data.logs);
+      } catch (err) {
+        console.error("Error fetching logs:", err);
+        setError("Failed to load logs.");
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    fetchLogs();
+  }, [sponsorOrgId]);
+
+  const handleStartDateChange = (e) => {
+    setStartDate(e.target.value);
+  };
+
+  const handleEndDateChange = (e) => {
+    setEndDate(e.target.value);
+  };
+
+  // helper function for time zone
+  const createDateForComparison = (dateString, isEndOfDay = false) => {
+    if (!dateString) return null;
+    
+    const [year, month, day] = dateString.split('-').map(Number);
+    
+    const date = new Date(year, month - 1, day);
+    
+    if (isEndOfDay) {
+      date.setHours(23, 59, 59, 999);
+    } else {
+      date.setHours(0, 0, 0, 0);
+    }
+    
+    return date;
+  };
+
+  const filteredLogs = logs.filter((log) => {
+    const logDate = new Date(log.Timestamp);
+    
+    const startDateObj = startDate ? createDateForComparison(startDate, false) : null;
+    const endDateObj = endDate ? createDateForComparison(endDate, true) : null;
+    
+    // debug output to check date handling
+    if (logDate.getDate() === new Date().getDate() && logDate.getMonth() === new Date().getMonth()) {
+      console.log('Today log:', logDate);
+      console.log('Selected end date value:', endDate);
+      console.log('End date for filtering:', endDateObj);
+      console.log('Is within end date range?', !endDateObj || logDate <= endDateObj);
+    }
+    
+    // filter by category and sponsor match
+    const isCategoryMatch = categoryFilter ? log.Event_Type === categoryFilter : true;
+    const isSponsorMatch = sponsorFilter ? log.Target_ID?.toString().trim() === sponsorFilter : true;
+    
+    // filter by date range - only apply if dates are selected
+    const isAfterStart = startDateObj ? logDate >= startDateObj : true;
+    const isBeforeEnd = endDateObj ? logDate <= endDateObj : true;
+  
+    return isCategoryMatch && isSponsorMatch && isAfterStart && isBeforeEnd;
+  });
+  
+  const sortedLogs = [...filteredLogs].sort((a, b) =>
+    sortOrder === "asc"
+      ? new Date(a.Timestamp) - new Date(b.Timestamp)
+      : new Date(b.Timestamp) - new Date(a.Timestamp)
+  );
+
+  useEffect(() => {
+    const fetchSponsors = async () => {
+      try {
+        const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors');
+        const data = await response.json();
+        console.log("Sponsor API response data:", data);
+
+        const map = {};
+        data.forEach((sponsor) => {
+          const sponsorId = sponsor.Sponsor_Org_ID?.toString().trim();
+          const sponsorName = sponsor.Sponsor_Org_Name?.trim();
+          if (sponsorId && sponsorName) {
+            map[sponsorId] = sponsorName;
+          }
+        });
+        
+        setSponsorMap(map);
+      } catch (err) {
+        console.error("Error fetching sponsors:", err);
+      }
+    };
+  
+    fetchSponsors();
+  }, []);
+
+  // display date string
+  const formatDateString = (dateString) => {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return `${month}/${day}/${year}`;
   };
 
   return (
-    <main className="p-4">
-      <h1 className="text-2xl font-bold mb-4">
-        {reportType === "driver_applications"
-          ? "Driver Applications Report"
-          : "Point Changes Audit Log"}
-      </h1>
+    <div className="p-4 w-full max-w-7xl mx-auto">
 
-      {/* Filter Controls */}
-      <div className="mb-4 flex flex-col md:flex-row items-start gap-4">
-        <div>
-          <label className="block text-sm font-medium">Select Report Type</label>
-          <select
-            value={reportType}
-            onChange={(e) => setReportType(e.target.value)}
-            className="border px-2 py-1 rounded"
+      <h1 className="text-2xl font-bold mb-4">Audit Logs</h1>
+  
+      {/* Filters and Sorting */}
+      <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            className="p-2 border rounded bg-blue-500 text-white"
+            >
+            Sort by Date ({sortOrder === "asc" ? "Oldest" : "Newest"})
+          </button>
+          
+          <button
+            onClick={() => {
+              setStartDate("");
+              setEndDate("");
+              setCategoryFilter("");
+              setSponsorFilter("");
+            }}
+            className="p-2 border rounded bg-gray-200"
           >
-            <option value="driver_applications">Driver Applications</option>
-            <option value="point_changes">Point Changes Audit Log</option>
-          </select>
+            Clear Filters
+          </button>
         </div>
-        <div>
-          <label className="block text-sm font-medium">Start Date</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="border px-2 py-1 rounded"
-          />
+
+        <div className="flex flex-wrap gap-4 items-end">
+          <div className="flex flex-col">
+            <label className="text-sm font-medium">Start Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={handleStartDateChange}
+              className="p-2 border rounded"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-sm font-medium">End Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={handleEndDateChange}
+              className="p-2 border rounded"
+            />
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium">End Date</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="border px-2 py-1 rounded"
-          />
-        </div>
+
         <button
-          onClick={fetchReport}
-          className="mt-6 md:mt-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          onClick={() => window.open("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Admin/Logs?format=csv", "_blank")}
+          className="p-2 border rounded bg-green-500 text-white"
         >
-          Get Report
+          Download CSV
         </button>
       </div>
+  
+      {/* Log Table */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full border border-gray-300">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="py-2 px-4 border-b text-left">Timestamp</th>
+            
+            {/* Event Type with filter */}
+            <th className="py-2 px-4 border-b text-left">
+              <div className="flex flex-col">
+                <span>Event Type</span>
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="mt-1 p-1 border rounded text-sm"
+                >
+                  <option value="">All</option>
+                  <option value="Driver Applications">Driver Applications</option>
+                  <option value="Login Attempts">Login Attempts</option>
+                  <option value="Password Changes">Password Changes</option>
+                  <option value="Point Changes">Point Changes</option>
+                </select>
+              </div>
+            </th>
 
-      {/* Loading/Error States */}
-      {loading && <p>Loading...</p>}
-      {error && <p className="text-red-600">Error: {error}</p>}
+            <th className="py-2 px-4 border-b text-left">User ID</th>
 
-      {/* Report Table */}
-      {!loading && !error && reportData.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="min-w-full border border-gray-300">
-            <thead className="bg-gray-100">
+            {/* Sponsor Organization with filter */}
+            <th className="py-2 px-4 border-b text-left">Sponsor</th>
+
+            <th className="py-2 px-4 border-b text-left">Action Description</th>
+          </tr>
+        </thead>
+
+          <tbody>
+            {loading ? (
               <tr>
-                {reportType === "driver_applications" ? (
-                  <>
-                    <th className="p-2 border">Application ID</th>
-                    <th className="p-2 border">Driver Name</th>
-                    <th className="p-2 border">Email</th>
-                    <th className="p-2 border">Phone</th>
-                    <th className="p-2 border">Status</th>
-                    <th className="p-2 border">Submitted</th>
-                    <th className="p-2 border">Processed</th>
-                    <th className="p-2 border">Agreed</th>
-                  </>
-                ) : (
-                  <>
-                    <th className="p-2 border">Point Change ID</th>
-                    <th className="p-2 border">Driver ID</th>
-                    <th className="p-2 border">Sponsor User ID</th>
-                    <th className="p-2 border">Points</th>
-                    <th className="p-2 border">Type</th>
-                    <th className="p-2 border">Reason</th>
-                    <th className="p-2 border">Date</th>
-                  </>
-                )}
+                <td colSpan="5" className="py-4 text-center">Loading logs...</td>
               </tr>
-            </thead>
-            <tbody>
-              {reportData.map((row, index) =>
-                reportType === "driver_applications" ? (
-                  <tr key={row.Application_ID || `app-${index}`}>
-                    <td className="p-2 border">{row.Application_ID}</td>
-                    <td className="p-2 border">{row.Driver_Name}</td>
-                    <td className="p-2 border">{row.Email}</td>
-                    <td className="p-2 border">{row.Phone}</td>
-                    <td className="p-2 border">{row.App_Status}</td>
-                    <td className="p-2 border">{row.Submitted_At}</td>
-                    <td className="p-2 border">{row.Processed_At || "Pending"}</td>
-                    <td className="p-2 border">{row.Policies_Agreed}</td>
-                  </tr>
-                ) : (
-                  <tr key={row.Points_Change_ID || `points-${index}`}>
-                    <td className="p-2 border">{row.Points_Change_ID}</td>
-                    <td className="p-2 border">{row.Driver_ID}</td>
-                    <td className="p-2 border">{row.Sponsor_User_ID}</td>
-                    <td className="p-2 border">{row.Num_Points}</td>
-                    <td className="p-2 border">{row.Point_Change_Type}</td>
-                    <td className="p-2 border">{row.Reason}</td>
-                    <td className="p-2 border">{row.Change_Date}</td>
-                  </tr>
-                )
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {!loading && !error && reportData.length === 0 && (
-        <p className="text-gray-600">No results for selected date range.</p>
-      )}
-    </main>
+            ) : error ? (
+              <tr>
+                <td colSpan="5" className="py-4 text-center text-red-500">{error}</td>
+              </tr>
+            ) : sortedLogs.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="py-4 text-center">No logs match your filters</td>
+              </tr>
+            ) : (
+              sortedLogs.map((log) => (
+                <tr key={log.Audit_ID} className="hover:bg-gray-50">
+                  <td className="py-2 px-4 border-b">{new Date(log.Timestamp).toLocaleString()}</td>
+                  <td className="py-2 px-4 border-b">{log.Event_Type}</td>
+                  <td className="py-2 px-4 border-b">{log.User_ID}</td>
+                  <td className="py-2 px-4 border-b">
+                    {sponsorMap[log.Target_ID?.toString().trim()]}
+                  </td>
+                  <td className="py-2 px-4 border-b">{log.Action_Description}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      
+      <div className="mt-4 text-sm text-gray-500">
+        {logs.length > 0 && (
+          <div>Total logs: {logs.length} | Filtered logs: {sortedLogs.length}</div>
+        )}
+      </div>
+    </div>
   );
 }
