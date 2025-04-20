@@ -2,14 +2,12 @@
 
 "use client";
 import { useState, useEffect } from 'react';
-import { fetchAuthSession } from "aws-amplify/auth";
-import { useRouter } from 'next/navigation';
+import { getCurrentUser } from 'aws-amplify/auth';
 import "@/amplify-config";
 
 export default function SponsorDrivers() {
   const [sponsorOrgId, setSponsorOrgId] = useState(null);
-  const [sponsorId, setSponsorId] = useState(null);
-  const [sponsors, setSponsors] = useState([]);
+  const [userId, setUserId] = useState(null);
   const [drivers, setDrivers] = useState([]);
   const [loadingDrivers, setLoadingDrivers] = useState(true);
   const [error, setError] = useState(null);
@@ -18,7 +16,6 @@ export default function SponsorDrivers() {
   // Modal state for bulk edit
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pointsChange, setPointsChange] = useState(""); // Keep as string for proper input handling
-
   const [reason, setReason] = useState("");
   const [reasons, setReasons] = useState([]); // store the reasons table
 
@@ -31,52 +28,66 @@ export default function SponsorDrivers() {
   const [bonusMessage, setBonusMessage] = useState("");
   const [bonusLoading, setBonusLoading] = useState(false);
 
-  // for testing: was having auth problems trying to test - anna
-  const HARD_CODED_SPONSOR_ID = 1;
-
+  // First, get the Cognito user ID
   useEffect(() => {
-    const getSponsorIdFromUser = async () => {
+    async function fetchUser() {
       try {
-        const session = await fetchAuthSession();
-        const authSponsorId = session.tokens?.idToken?.payload['custom:sponsorOrgId'];
-        if (authSponsorId) {
-          setSponsorOrgId(authSponsorId);
-        }
-      } catch (err) {
-        console.error("Error fetching sponsor ID:", err);
-        setError("Failed to fetch sponsor ID.");
-      }
-    };
-    if (!sponsorId) {
-      getSponsorIdFromUser();
-    }
-  }, [sponsorId]);
-
-  useEffect(() => {
-    const fetchSponsors = async () => {
-      try {
-        const response = await fetch("https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors");
-        if (!response.ok) {
-          throw new Error(`Failed to fetch sponsors: ${response.statusText}`);
-        }
+        const user = await getCurrentUser();
+        console.log("Fetched Cognito user ID:", user.userId);
+        
+        // Now fetch the database user ID using the Cognito sub
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/user/cognito/${user.userId}`);
         const data = await response.json();
-        setSponsors(data);
-      } catch (err) {
-        console.error("Error fetching sponsors list:", err);
+        
+        if (response.ok && data.userId) {
+          setUserId(data.userId);
+          console.log("Database User ID:", data.userId);
+        } else {
+          console.error("Error fetching database user ID:", data.error || "Unknown error");
+          setError("Failed to fetch user ID from database");
+        }
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+        setError("Failed to authenticate user");
       }
-    };
-    fetchSponsors();
+    }
+
+    fetchUser();
   }, []);
 
-  const effectiveSponsorId = sponsorId || sponsorOrgId;
-
+  // Once we have the user ID, fetch the sponsor organization ID
   useEffect(() => {
-    if (!effectiveSponsorId) return;
+    if (!userId) return;
+    
+    const fetchSponsorInfo = async () => {
+      try {
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/sponsorUsers/Info?userId=${userId}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch sponsor info: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        setSponsorOrgId(data.Sponsor_Org_ID);
+        console.log("Sponsor Organization ID:", data.Sponsor_Org_ID);
+      } catch (err) {
+        console.error("Error fetching sponsor organization:", err);
+        setError("Failed to fetch sponsor organization information");
+      }
+    };
+    
+    fetchSponsorInfo();
+  }, [userId]);
+
+  // Fetch drivers once we have the sponsor org ID
+  useEffect(() => {
+    if (!sponsorOrgId) return;
 
     const fetchDrivers = async () => {
       try {
+        setLoadingDrivers(true);
         const response = await fetch(
-          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers?sponsorOrgId=${effectiveSponsorId}`
+          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers?sponsorOrgId=${sponsorOrgId}`
         );
         if (!response.ok) {
           throw new Error("Failed to fetch drivers");
@@ -91,18 +102,18 @@ export default function SponsorDrivers() {
     };
 
     fetchDrivers();
-  }, [effectiveSponsorId]);
+  }, [sponsorOrgId]);
 
   // Fetch Reasons table when modal opens
   useEffect(() => {
-    if (isModalOpen && effectiveSponsorId) {
-      console.log("Fetching reasons for Sponsor Org ID:", effectiveSponsorId);
-      fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?sponsorOrgId=${effectiveSponsorId}`)
+    if (isModalOpen && sponsorOrgId) {
+      console.log("Fetching reasons for Sponsor Org ID:", sponsorOrgId);
+      fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?sponsorOrgId=${sponsorOrgId}`)
         .then(response => response.json())
         .then(data => setReasons(data))
         .catch(error => console.error("Error fetching reasons table:", error));
     }
-  }, [isModalOpen, effectiveSponsorId]);
+  }, [isModalOpen, sponsorOrgId]);
 
   // Toggle checkbox for each driver row
   const toggleDriverSelection = (driverId) => {
@@ -141,12 +152,13 @@ export default function SponsorDrivers() {
       return;
     }
 
-    const sponsorUserId = parseInt(effectiveSponsorId);
     const pointsChangeValue = parseInt(pointsChange);
     
     try {
       // Get the sponsor name for the email
-      const sponsorName = sponsors.find(s => s.Sponsor_Org_ID == effectiveSponsorId)?.Sponsor_Org_Name || "your sponsor";
+      const sponsorResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors?sponsorId=${sponsorOrgId}`);
+      const sponsorData = await sponsorResponse.json();
+      const sponsorName = sponsorData?.Sponsor_Org_Name || "your sponsor";
       
       for (const driverId of selectedDriverIds) {
         // Find the driver's data to get their full information
@@ -164,8 +176,8 @@ export default function SponsorDrivers() {
           },
           body: JSON.stringify({
             Driver_ID: driverId,
-            Sponsor_Org_ID: sponsorUserId,
-            Sponsor_User_ID: sponsorUserId,
+            Sponsor_Org_ID: sponsorOrgId,
+            Sponsor_User_ID: userId,
             Point_Balance: pointsChangeValue,
             Reason: reason
           })
@@ -263,7 +275,7 @@ export default function SponsorDrivers() {
 
       // Refresh the driver list
       const refreshDrivers = await fetch(
-        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers?sponsorOrgId=${effectiveSponsorId}`
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers?sponsorOrgId=${sponsorOrgId}`
       );
       const refreshedData = await refreshDrivers.json();
       setDrivers(refreshedData);
@@ -275,7 +287,7 @@ export default function SponsorDrivers() {
   };
 
   const runWeeklyBonus = async () => {
-    if (!effectiveSponsorId) {
+    if (!sponsorOrgId) {
       alert("Sponsor ID not found.");
       return;
     }
@@ -291,7 +303,7 @@ export default function SponsorDrivers() {
         },
         body: JSON.stringify({
           action: "give_weekly_bonus",
-          Sponsor_Org_ID: parseInt(effectiveSponsorId),
+          Sponsor_Org_ID: parseInt(sponsorOrgId),
           week_start: "2025-03-31",
           week_end: "2025-04-06"
         })
@@ -307,7 +319,7 @@ export default function SponsorDrivers() {
       setTimeout(() => setBonusMessage(""), 5000);
 
       const refreshDrivers = await fetch(
-        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers?sponsorOrgId=${effectiveSponsorId}`
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers?sponsorOrgId=${sponsorOrgId}`
       );
       const refreshedData = await refreshDrivers.json();
       setDrivers(refreshedData);
@@ -324,7 +336,7 @@ export default function SponsorDrivers() {
   // Functions for handling editing Points_Key table
   // handle editing existing reason
   const handleEditReason = async (reasonData) => {
-    const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?sponsorOrgId=${effectiveSponsorId}`, {
+    const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?sponsorOrgId=${sponsorOrgId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -379,57 +391,56 @@ export default function SponsorDrivers() {
     });
   };
   
-// handle adding new reason
-const handleAddReason = async () => {
-  try {
-    // Input validation
-    if (!newReason || !newPoints) {
-      alert("Please enter both a reason and points value");
-      return;
-    }
-    
-    console.log("Adding new reason:", newReason, newPoints);
-    
-    const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        sponsorOrgId: parseInt(effectiveSponsorId),
-        reason: newReason,
-        points: parseInt(newPoints),
-      }),
-    });
+  // handle adding new reason
+  const handleAddReason = async () => {
+    try {
+      // Input validation
+      if (!newReason || !newPoints) {
+        alert("Please enter both a reason and points value");
+        return;
+      }
+      
+      console.log("Adding new reason:", newReason, newPoints);
+      
+      const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sponsorOrgId: parseInt(sponsorOrgId),
+          reason: newReason,
+          points: parseInt(newPoints),
+        }),
+      });
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to add reason');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to add reason');
+      }
+      
+      console.log("API Response:", data);
+      
+      if (data.Reason_ID) {
+        setReasons([...reasons, data]);
+      } else {
+        // fetch the updated list
+        const refreshResponse = await fetch(
+          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?sponsorOrgId=${sponsorOrgId}`
+        );
+        const refreshData = await refreshResponse.json();
+        setReasons(refreshData);
+      }
+      
+      // clear input fields after
+      setNewReason("");
+      setNewPoints("");
+    } catch (error) {
+      console.error("Error adding new reason:", error);
+      alert("Failed to add new reason: " + error.message);
     }
-    
-    console.log("API Response:", data);
-    
-    if (data.Reason_ID) {
-      setReasons([...reasons, data]);
-    } else {
-      // fetch the updated list
-      const refreshResponse = await fetch(
-        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers/pointsKey?sponsorOrgId=${effectiveSponsorId}`
-      );
-      const refreshData = await refreshResponse.json();
-      setReasons(refreshData);
-    }
-    
-    // clear input fields after
-    setNewReason("");
-    setNewPoints("");
-  } catch (error) {
-    console.error("Error adding new reason:", error);
-    alert("Failed to add new reason: " + error.message);
-  }
-};
-  
+  };
 
   // handle deleting reason
   const handleDeleteReason = async (reasonId) => {
@@ -468,26 +479,8 @@ const handleAddReason = async () => {
     }
   };
 
-
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 shadow-md rounded-lg">
-      <div className="max-w-lg mx-auto mb-8 p-4 bg-gray-100 rounded-lg">
-        <h2 className="text-lg font-semibold mb-2">Testing Controls</h2>
-        <p className="mb-3">Select a sponsor to test with:</p>
-        <select 
-          className="p-2 border rounded w-full"
-          onChange={(e) => setSponsorId(e.target.value)}
-          value={sponsorId || ''}
-        >
-          <option value="">-- Select a Sponsor --</option>
-          {sponsors.map(sponsor => (
-            <option key={sponsor.Sponsor_Org_ID} value={sponsor.Sponsor_Org_ID}>
-              {sponsor.Sponsor_Org_Name} (ID: {sponsor.Sponsor_Org_ID})
-            </option>
-          ))}
-        </select>
-      </div>
-
       <h2 className="text-xl font-semibold mb-4 text-black">Your Drivers</h2>
       {loadingDrivers && <p>Loading drivers...</p>}
       {error && <p className="text-red-500">{error}</p>}
@@ -515,14 +508,14 @@ const handleAddReason = async () => {
               Edit Points
             </button>
             <button
-                className="bg-green-600 text-white py-2 px-4 rounded"
-                onClick={runWeeklyBonus}
-                disabled={bonusLoading}
-              >
-                {bonusLoading ? "Running..." : "Give Weekly Bonus"}
-              </button>
-              {bonusMessage && <p className="text-sm text-gray-700">{bonusMessage}</p>}
-            </div>
+              className="bg-green-600 text-white py-2 px-4 rounded"
+              onClick={runWeeklyBonus}
+              disabled={bonusLoading}
+            >
+              {bonusLoading ? "Running..." : "Give Weekly Bonus"}
+            </button>
+            {bonusMessage && <p className="text-sm text-gray-700">{bonusMessage}</p>}
+          </div>
 
           <div className="overflow-x-auto">
             <table className="min-w-full bg-white border border-gray-300 shadow-md rounded-lg">
