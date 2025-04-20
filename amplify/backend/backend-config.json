@@ -35,6 +35,24 @@
           "category": "function",
           "resourceName": "team24gen1v4fccea1a0PostConfirmation",
           "triggerProvider": "Cognito"
+        },
+        {
+          "attributes": [
+            "Arn",
+            "Name"
+          ],
+          "category": "function",
+          "resourceName": "team24gen1v4fccea1a0PostAuthentication",
+          "triggerProvider": "Cognito"
+        },
+        {
+          "attributes": [
+            "Arn",
+            "Name"
+          ],
+          "category": "function",
+          "resourceName": "team24gen1v4fccea1a0PreAuthentication",
+          "triggerProvider": "Cognito"
         }
       ],
       "frontendAuthConfig": {
@@ -90,7 +108,22 @@
       "providerPlugin": "awscloudformation",
       "service": "Lambda"
     },
+    "team24gen1v4fccea1a0CustomMessage": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    },
+    "team24gen1v4fccea1a0PostAuthentication": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    },
     "team24gen1v4fccea1a0PostConfirmation": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    },
+    "team24gen1v4fccea1a0PreAuthentication": {
       "build": true,
       "providerPlugin": "awscloudformation",
       "service": "Lambda"
@@ -153,6 +186,38 @@
         }
       ]
     },
+    "AMPLIFY_function_team24gen1v4fccea1a0CustomMessage_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen1v4fccea1a0CustomMessage"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen1v4fccea1a0CustomMessage_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen1v4fccea1a0CustomMessage"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen1v4fccea1a0PostAuthentication_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen1v4fccea1a0PostAuthentication"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen1v4fccea1a0PostAuthentication_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen1v4fccea1a0PostAuthentication"
+        }
+      ]
+    },
     "AMPLIFY_function_team24gen1v4fccea1a0PostConfirmation_GROUP": {
       "usedBy": [
         {
@@ -174,6 +239,22 @@
         {
           "category": "function",
           "resourceName": "team24gen1v4fccea1a0PostConfirmation"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen1v4fccea1a0PreAuthentication_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen1v4fccea1a0PreAuthentication"
+        }
+      ]
+    },
+    "AMPLIFY_function_team24gen1v4fccea1a0PreAuthentication_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "team24gen1v4fccea1a0PreAuthentication"
         }
       ]
     },

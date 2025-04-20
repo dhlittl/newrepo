@@ -1,0 +1,16 @@
+{
+  "trigger": true,
+  "modules": [
+    "custom"
+  ],
+  "parentResource": "team24gen1v4fccea1a0",
+  "functionName": "team24gen1v4fccea1a0PostAuthentication",
+  "resourceName": "team24gen1v4fccea1a0PostAuthentication",
+  "parentStack": "auth",
+  "triggerEnvs": "[]",
+  "triggerDir": "/snapshot/amplify-cli/build/node_modules/@aws-amplify/amplify-category-auth/provider-utils/awscloudformation/triggers/PostAuthentication",
+  "triggerTemplate": "PostAuthentication.json.ejs",
+  "triggerEventPath": "PostAuthentication.event.json",
+  "roleName": "team24gen1v4fccea1a0PostAuthentication",
+  "skipEdit": true
+}
