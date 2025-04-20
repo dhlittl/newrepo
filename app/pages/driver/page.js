@@ -397,15 +397,15 @@ function PointsWidget({ userId }) {
   );
 }
 
-function ConversionWidget({ userId }) {
+function ConversionWidget({ title }) {
+  const { userId } = useEffectiveDriverId();
   const [pointsData, setPointsData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [totalPoints, setTotalPoints] = useState(0);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!userId) {
-      console.debug("No userId available yet in PointsWidget, waiting...");
+      console.debug("No userId available yet in ConversionWidget, waiting...");
       return;
     }
 
@@ -416,7 +416,7 @@ function ConversionWidget({ userId }) {
         );
         const data = await response.json();
 
-        console.log("Points response:", data);
+        console.log("Conversion rates response:", data);
 
         if (response.ok && Array.isArray(data)) {
           setPointsData(data);
@@ -424,7 +424,7 @@ function ConversionWidget({ userId }) {
           throw new Error(data?.message || "Unknown error");
         }
       } catch (error) {
-        console.error("Failed to fetch points:", error);
+        console.error("Failed to fetch conversion rates:", error);
         setError(error.message);
       } finally {
         setLoading(false);
@@ -450,7 +450,7 @@ function ConversionWidget({ userId }) {
                 className="p-2 bg-gray-50 rounded flex justify-between items-center"
               >
                 <span className="font-medium">{entry.Sponsor_Org_Name}</span>
-                <span className="text-blue-600 font-bold">{entry.ConversionRate_DtoP} $ per pts</span>
+                <span className="text-blue-600 font-bold">{entry.ConversionRate_DtoP} $ per point</span>
               </li>
             ))}
           </ul>
@@ -461,7 +461,6 @@ function ConversionWidget({ userId }) {
     </div>
   );
 }
-
 
 function SponsorsWidget() {
   const [sponsors, setSponsors] = useState([]);
