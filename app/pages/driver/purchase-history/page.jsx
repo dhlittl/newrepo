@@ -211,41 +211,7 @@ export default function PurchaseHistoryPage() {
           </button>
       )}
       <h1 className="text-2xl font-bold mb-6">Purchase History</h1>
-      
-      {/* Status tabs */}
-      <div className="flex border-b mb-6">
-        <button 
-          className={`px-4 py-2 ${activeTab === 'all' ? 'border-b-2 border-blue-500 font-medium' : 'text-gray-500'}`}
-          onClick={() => setActiveTab('all')}
-        >
-          All Orders
-        </button>
-        <button 
-          className={`px-4 py-2 ${activeTab === 'processing' ? 'border-b-2 border-blue-500 font-medium' : 'text-gray-500'}`}
-          onClick={() => setActiveTab('processing')}
-        >
-          Processing
-        </button>
-        <button 
-          className={`px-4 py-2 ${activeTab === 'approved' ? 'border-b-2 border-blue-500 font-medium' : 'text-gray-500'}`}
-          onClick={() => setActiveTab('approved')}
-        >
-          Approved
-        </button>
-        <button 
-          className={`px-4 py-2 ${activeTab === 'denied' ? 'border-b-2 border-border-red-500 font-medium' : 'text-gray-500'}`}
-          onClick={() => setActiveTab('denied')}
-        >
-          Denied
-        </button>
-        <button 
-          className={`px-4 py-2 ${activeTab === 'cancelled' ? 'border-b-2 border-gray-500 font-medium' : 'text-gray-500'}`}
-          onClick={() => setActiveTab('cancelled')}
-        >
-          Cancelled
-        </button>
-      </div>
-      
+            
       <div className="mb-6">
         <Link href="/pages/driver/sponsors" className="bg-blue-500 text-white px-4 py-2 rounded-md">
           Continue Shopping

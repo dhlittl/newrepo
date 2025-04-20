@@ -15,6 +15,7 @@ export default function CartPage() {
   const [totalPoints, setTotalPoints] = useState(0);
   const [groupedCartItems, setGroupedCartItems] = useState({});
   const [totalPointsBySponsors, setTotalPointsBySponsors] = useState({});
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   
   useEffect(() => {
     const checkGroup = async () => {
@@ -192,173 +193,231 @@ export default function CartPage() {
     }
   };
 
-  // Modified handleCheckout function with purchase approval flow
+  // Modified handleCheckout function with loading state
   const handleCheckout = async () => {
-    // Check for stock issues
-    const stockIssues = cartItems.filter(item => item.quantity > item.Quantity);
-    if (stockIssues.length > 0) {
-      // Create and send stock issues alert email
-      const emailSubject = `Order Alert: Item(s) Out of Stock`;
-      
-      let emailBody = `
-        <html>
-          <body>
-            <h2>Order Alert: Stock Issues</h2>
-            <p>Your order could not be processed because one or more items have availability issues:</p>
-            <table border="1" cellpadding="5">
+    // Set loading state to true at the beginning
+    setIsCheckingOut(true);
+    
+    try {
+      // First, check if drivers have enough points with each sponsor
+      for (const [sponsorId, sponsorData] of Object.entries(groupedCartItems)) {
+        const sponsorTotalPoints = totalPointsBySponsors[sponsorId];
+        const pointBalance = sponsorPointBalances[sponsorId] || 0;
+        
+        if (sponsorTotalPoints > pointBalance) {
+          // Create and send insufficient points alert email
+          const emailSubject = `Order Alert: Insufficient Points for ${sponsorData.sponsorName}`;
+          
+          let emailBody = `
+            <html>
+              <body>
+                <h2>Order Alert: Insufficient Points</h2>
+                <p>Your order with ${sponsorData.sponsorName} could not be processed because you don't have enough points:</p>
+                <ul>
+                  <li><strong>Order Total:</strong> ${sponsorTotalPoints.toLocaleString()} points</li>
+                  <li><strong>Your Balance:</strong> ${pointBalance.toLocaleString()} points</li>
+                  <li><strong>Shortage:</strong> ${(sponsorTotalPoints - pointBalance).toLocaleString()} points</li>
+                </ul>
+                <h3>Order Details:</h3>
+                <table border="1" cellpadding="5">
+                  <tr>
+                    <th>Item</th>
+                    <th>Price (Points)</th>
+                    <th>Quantity</th>
+                    <th>Subtotal</th>
+                  </tr>
+          `;
+          
+          // Add each item to the email
+          sponsorData.items.forEach(item => {
+            emailBody += `
               <tr>
-                <th>Sponsor</th>
-                <th>Item</th>
-                <th>Requested Quantity</th>
-                <th>Available Quantity</th>
+                <td>${item.Product_Name}</td>
+                <td>${item.pointPrice}</td>
+                <td>${item.quantity}</td>
+                <td>${item.pointPrice * item.quantity}</td>
               </tr>
-      `;
+            `;
+          });
+          
+          emailBody += `
+                </table>
+                <p>Please earn more points or adjust your cart before attempting to checkout again.</p>
+              </body>
+            </html>
+          `;
+          
+          // Send the alert email
+          await sendAlertEmail(emailSubject, emailBody);
+          
+          // Reset loading state before showing alert
+          setIsCheckingOut(false);
+          alert(`You don't have enough points with ${sponsorData.sponsorName}. Your order requires ${sponsorTotalPoints.toLocaleString()} points, but you only have ${pointBalance.toLocaleString()} points.`);
+          return;
+        }
+      }
+
+      // Process orders for each sponsor separately
+      let allSuccessful = true;
+      const allOrders = [];
+      const orderIds = [];
       
-      // Add problematic items to the email
-      stockIssues.forEach(item => {
-        emailBody += `
-          <tr>
-            <td>${item.Sponsor_Org_Name}</td>
-            <td>${item.Product_Name}</td>
-            <td>${item.quantity}</td>
-            <td>${item.Quantity}</td>
-          </tr>
-        `;
-      });
+      for (const [sponsorId, sponsorData] of Object.entries(groupedCartItems)) {
+        const sponsorItems = sponsorData.items;
+        const sponsorTotalPoints = totalPointsBySponsors[sponsorId];
+        
+        try {
+          // Order data preparation
+          const orderData = {
+            driverId: userId,
+            userId: userId,
+            sponsorOrgId: parseInt(sponsorId),
+            items: sponsorItems.map(item => ({
+              productId: item.Product_ID,
+              quantity: item.quantity,
+              pointPrice: item.pointPrice,
+              productName: item.Product_Name,
+              price: item.Price
+            })),
+            totalPoints: sponsorTotalPoints,
+            orderDate: new Date().toISOString(),
+            status: 'Processing'
+          };
+          
+          // API call to place the order
+          const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/orders', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(orderData)
+          });
+          
+          const responseData = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(responseData.error || "Failed to place order");
+          }
+          
+          const orderId = responseData.orderId || Math.floor(Math.random() * 1000000);
+          orderIds.push(orderId);
+          
+          // Save order information for combined receipt
+          allOrders.push({
+            orderId,
+            sponsorId,
+            sponsorName: sponsorData.sponsorName,
+            totalPoints: sponsorTotalPoints,
+            items: sponsorItems,
+            orderDate: new Date().toISOString(),
+            status: 'Processing'
+          });
+
+          // Store the individual order receipt for later reference
+          // This is the same format as before, for compatibility with the existing receipt page
+          const individualReceipt = {
+            orderIds: [orderId],
+            orderId: orderId,
+            orderDate: new Date().toISOString(),
+            status: 'Processing',
+            totalPoints: sponsorTotalPoints,
+            items: sponsorItems,
+            sponsorName: sponsorData.sponsorName,
+            sponsorId: sponsorId
+          };
+          
+          // Only store as latest receipt if this is the only order
+          if (Object.keys(groupedCartItems).length === 1) {
+            localStorage.setItem('latestReceipt', JSON.stringify(individualReceipt));
+          }
+
+          // Add order confirmation email
+          const emailSubject = `Order Confirmation: Your order has been submitted`;
+          
+          let emailBody = `
+            <html>
+              <body>
+                <h2>Order Confirmation</h2>
+                <p>Your order with ${sponsorData.sponsorName} has been submitted and is awaiting sponsor approval:</p>
+                <p><strong>Order #:</strong> ${orderId}</p>
+                <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+                <p><strong>Total Points:</strong> ${sponsorTotalPoints.toLocaleString()}</p>
+                
+                <h3>Order Details:</h3>
+                <table border="1" cellpadding="5">
+                  <tr>
+                    <th>Item</th>
+                    <th>Price (Points)</th>
+                    <th>Quantity</th>
+                    <th>Subtotal</th>
+                  </tr>
+          `;
+          
+          // Add each item to the email
+          sponsorItems.forEach(item => {
+            emailBody += `
+              <tr>
+                <td>${item.Product_Name}</td>
+                <td>${item.pointPrice}</td>
+                <td>${item.quantity}</td>
+                <td>${item.pointPrice * item.quantity}</td>
+              </tr>
+            `;
+          });
+          
+          emailBody += `
+                </table>
+                <p><strong>Important Note:</strong> Points will not be deducted from your balance until the sponsor approves your order.</p>
+                <p>You can check your order status or cancel this order (if still pending) from your purchase history page.</p>
+              </body>
+            </html>
+          `;
+          
+          // Send the confirmation email
+          await sendAlertEmail(emailSubject, emailBody);
+          
+        } catch (err) {
+          console.error(`Error during checkout for sponsor ${sponsorId}:`, err);
+          allSuccessful = false;
+        }
+      }
       
-      emailBody += `
-            </table>
-            <p>Please adjust your cart and try again.</p>
-          </body>
-        </html>
-      `;
-      
-      // Send the alert email
-      await sendAlertEmail(emailSubject, emailBody);
-      
-      alert("Some items in your cart have availability issues. Please review your cart.");
-      return;
-    }
-    
-    // Process orders for each sponsor separately
-    let allSuccessful = true;
-    const orderIds = [];
-    
-    for (const [sponsorId, sponsorData] of Object.entries(groupedCartItems)) {
-      const sponsorItems = sponsorData.items;
-      const sponsorTotalPoints = totalPointsBySponsors[sponsorId];
-      
-      try {
-        // Prepare order data for this sponsor
-        const orderData = {
-          driverId: userId,
-          userId: userId,
-          sponsorOrgId: parseInt(sponsorId),
-          items: sponsorItems.map(item => ({
-            productId: item.Product_ID,
-            quantity: item.quantity,
-            pointPrice: item.pointPrice,
-            productName: item.Product_Name,
-            price: item.Price
-          })),
-          totalPoints: sponsorTotalPoints,
+      if (allSuccessful) {
+        // Clear cart
+        clearCart();
+        
+        // Create combined receipt data
+        const combinedReceipt = {
+          orders: allOrders,
+          orderIds: orderIds,
           orderDate: new Date().toISOString(),
-          status: 'Processing' // Set status to Processing instead of Completed
+          totalPoints: totalPoints,
+          status: 'Processing'
         };
         
-        console.log(`Sending order data for sponsor ${sponsorId}:`, JSON.stringify(orderData));
-        
-        // Make the API call to place the order
-        const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/orders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(orderData)
-        });
-        
-        // Parse the API response
-        const responseData = await response.json();
-        console.log(`Order API response for sponsor ${sponsorId}:`, responseData);
-        
-        if (!response.ok) {
-          throw new Error(responseData.error || "Failed to place order");
+        // Determine where to redirect based on number of orders
+        if (allOrders.length > 1) {
+          // For multiple orders, store the combined receipt and go to the combined receipt page
+          localStorage.setItem('combinedReceipt', JSON.stringify(combinedReceipt));
+          router.push('/pages/driver/combined-receipt');
+        } else if (allOrders.length === 1) {
+          // For single order, go directly to the regular receipt page
+          // latestReceipt is already set above
+          router.push(`/pages/driver/receipt?orderId=${orderIds[0]}`);
+        } else {
+          // Fallback if no orders were created successfully
+          router.push('/pages/driver/purchase-history');
         }
-        
-        // Use the actual orderId from the response, or fallback to random if not available
-        const orderId = responseData.orderId || Math.floor(Math.random() * 1000000);
-        orderIds.push(orderId);
-        
-      } catch (err) {
-        console.error(`Error during checkout for sponsor ${sponsorId}:`, err);
-        allSuccessful = false;
-        
-        // Create and send processing error alert email for this sponsor
-        const emailSubject = `Order Alert: Processing Error for ${sponsorData.sponsorName}`;
-        
-        emailBody = `
-          <html>
-            <body>
-              <h2>Order Alert: Processing Error</h2>
-              <p>There was an error processing your order with ${sponsorData.sponsorName}:</p>
-              <p><strong>${err.message}</strong></p>
-              <p>Our technical team has been notified. Please try again later or contact support.</p>
-              <h3>Order Details:</h3>
-              <table border="1" cellpadding="5">
-                <tr>
-                  <th>Item</th>
-                  <th>Price (Points)</th>
-                  <th>Quantity</th>
-                  <th>Subtotal</th>
-                </tr>
-          `;
-        
-        // Add each item to the email
-        sponsorItems.forEach(item => {
-          emailBody += `
-            <tr>
-              <td>${item.Product_Name}</td>
-              <td>${item.pointPrice}</td>
-              <td>${item.quantity}</td>
-              <td>${item.pointPrice * item.quantity}</td>
-            </tr>
-          `;
-        });
-        
-        emailBody += `
-              </table>
-            </body>
-          </html>
-        `;
-        
-        // Send the alert email
-        await sendAlertEmail(emailSubject, emailBody);
+      } else {
+        // Reset loading state before showing alert for error case
+        setIsCheckingOut(false);
+        alert("There was an error processing some of your orders. Please check your email for details.");
       }
-    }
-    
-    if (allSuccessful) {
-      // If all orders were placed successfully, clear the cart
-      clearCart();
-      
-      // Store receipt data for all orders
-      const receiptData = {
-        orderIds: orderIds,
-        orderDate: new Date().toISOString(),
-        items: cartItems,
-        totalPoints: totalPoints,
-        status: 'Processing', // Set status to Processing
-        sponsors: Object.values(groupedCartItems).map(sponsor => ({
-          sponsorId: sponsor.sponsorId,
-          sponsorName: sponsor.sponsorName,
-          totalPoints: totalPointsBySponsors[sponsor.sponsorId]
-        }))
-      };
-      localStorage.setItem('latestReceipt', JSON.stringify(receiptData));
-      
-      // Redirect to receipt page with the first order ID
-      router.push(`/pages/driver/receipt?orderId=${orderIds[0]}`);
-    } else {
-      alert("There was an error processing some of your orders. Please check your email for details.");
+    } catch (error) {
+      // Reset loading state in case of any uncaught exceptions
+      setIsCheckingOut(false);
+      console.error("Checkout process error:", error);
+      alert("An unexpected error occurred during checkout. Please try again.");
     }
   };
 
@@ -562,6 +621,23 @@ export default function CartPage() {
           </button>
         </div>
       </div>
+
+    {isCheckingOut && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
+            <h3 className="text-xl font-bold mb-2">Processing Your Order</h3>
+            <p className="text-gray-600 text-center">
+              Please wait while we process your order. This may take a few moments.
+            </p>
+            <p className="text-gray-500 text-sm mt-4">
+              Do not refresh or navigate away from this page.
+            </p>
+          </div>
+        </div>
+      </div>
+    )}
     </div>
   );
 }

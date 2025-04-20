@@ -297,9 +297,9 @@ function ReceiptPage() {
   
   console.log("Final items array:", items);
   
-  // Group items by sponsor with proper fallbacks
+  // Group items by sponsor with proper fallbacks and consistent key naming
   const groupedItems = {};
-  
+
   items.forEach((item, index) => {
     // Log the item format to understand its structure
     console.log(`Item ${index} format:`, item);
@@ -325,14 +325,32 @@ function ReceiptPage() {
     // Handle quantity with fallbacks
     const quantity = item.quantity || item.Quantity || 1;
     
-    // Handle sponsor data with multiple naming patterns
-    const sponsorId = item.Sponsor_Org_ID || item.sponsorId || item.sponsor_id || 
-                      item.SponsorId || item.sponsorOrgId || receiptData.sponsorId || 
-                      `unknown-${index}`;
+    // IMPORTANT FIX: Use a consistent key for grouping items
+    // Create a normalized sponsorId that's consistent across all items
+    let sponsorId = null;
+    
+    if (item.Sponsor_Org_ID) {
+      sponsorId = String(item.Sponsor_Org_ID);
+    } else if (item.sponsorId) {
+      sponsorId = String(item.sponsorId);
+    } else if (item.sponsor_id) {
+      sponsorId = String(item.sponsor_id);
+    } else if (item.SponsorId) {
+      sponsorId = String(item.SponsorId);
+    } else if (item.sponsorOrgId) {
+      sponsorId = String(item.sponsorOrgId);
+    } else if (receiptData.sponsorId) {
+      sponsorId = String(receiptData.sponsorId);
+    } else {
+      // If no sponsor ID can be found, use the sponsorName as the key
+      sponsorId = item.Sponsor_Org_Name || item.sponsorName || item.sponsor_name || 
+                receiptData.sponsorName || "unknown";
+    }
     
     const sponsorName = item.Sponsor_Org_Name || item.sponsorName || item.sponsor_name || 
-                        receiptData.sponsorName || `Sponsor ${sponsorId}`;
+                      receiptData.sponsorName || `Sponsor ${sponsorId}`;
     
+    // Create the sponsor group if it doesn't exist
     if (!groupedItems[sponsorId]) {
       groupedItems[sponsorId] = {
         sponsorId: sponsorId,

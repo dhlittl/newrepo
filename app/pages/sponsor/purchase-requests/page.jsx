@@ -128,9 +128,16 @@ export default function PurchaseRequestsPage() {
     }));
   };
   
+  // Modified handleApproveOrder function with email notification
   const handleApproveOrder = async (orderId) => {
     try {
       setProcessingAction(orderId);
+      
+      // Find the purchase in our state to get driver email and details
+      const purchase = purchaseRequests.find(p => p.purchaseId === orderId);
+      if (!purchase) {
+        throw new Error('Purchase not found in current data');
+      }
       
       const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/orders/status', {
         method: 'PUT',
@@ -140,7 +147,7 @@ export default function PurchaseRequestsPage() {
         body: JSON.stringify({
           purchaseId: orderId,
           status: 'Approved',
-          userId: cognitoSub, // Changed this to cognitoSub if that's what the API expects
+          userId: cognitoSub,
           isSponsor: true
         })
       });
@@ -149,6 +156,50 @@ export default function PurchaseRequestsPage() {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to approve order');
       }
+      
+      // Create and send approval email to the driver
+      const emailSubject = `Order Approved: Your order #${orderId} has been approved`;
+      
+      let emailBody = `
+        <html>
+          <body>
+            <h2>Order Approved</h2>
+            <p>Good news! Your order with ${purchase.sponsorName || 'your sponsor'} has been approved:</p>
+            <p><strong>Order #:</strong> ${orderId}</p>
+            <p><strong>Date Placed:</strong> ${formatDate(purchase.orderDate)}</p>
+            <p><strong>Total Points:</strong> ${purchase.totalPoints.toLocaleString()}</p>
+            
+            <h3>Order Details:</h3>
+            <table border="1" cellpadding="5">
+              <tr>
+                <th>Item</th>
+                <th>Price (Points)</th>
+                <th>Quantity</th>
+                <th>Subtotal</th>
+              </tr>
+      `;
+      
+      // Add each item to the email
+      purchase.items.forEach(item => {
+        emailBody += `
+          <tr>
+            <td>${item.productName}</td>
+            <td>${item.pointPrice}</td>
+            <td>${item.quantity}</td>
+            <td>${item.totalPointPrice}</td>
+          </tr>
+        `;
+      });
+      
+      emailBody += `
+            </table>
+            <p><strong>Note:</strong> Points have been deducted from your balance.</p>
+          </body>
+        </html>
+      `;
+      
+      // Send the approval email to the driver
+      await sendDriverAlertEmail(purchase.driverEmail, emailSubject, emailBody);
       
       alert('Order approved successfully');
       
@@ -161,10 +212,17 @@ export default function PurchaseRequestsPage() {
       setProcessingAction(null);
     }
   };
-  
+
+  // Modified handleDenyOrder function with email notification
   const handleDenyOrder = async (orderId) => {
     try {
       setProcessingAction(orderId);
+      
+      // Find the purchase in our state to get driver email and details
+      const purchase = purchaseRequests.find(p => p.purchaseId === orderId);
+      if (!purchase) {
+        throw new Error('Purchase not found in current data');
+      }
       
       const response = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/orders/status', {
         method: 'PUT',
@@ -174,7 +232,7 @@ export default function PurchaseRequestsPage() {
         body: JSON.stringify({
           purchaseId: orderId,
           status: 'Denied',
-          userId: cognitoSub, // Changed this to cognitoSub if that's what the API expects
+          userId: cognitoSub,
           isSponsor: true
         })
       });
@@ -183,6 +241,51 @@ export default function PurchaseRequestsPage() {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to deny order');
       }
+      
+      // Create and send denial email to the driver
+      const emailSubject = `Order Denied: Your order #${orderId} has been denied`;
+      
+      let emailBody = `
+        <html>
+          <body>
+            <h2>Order Denied</h2>
+            <p>We're sorry, but your order with ${purchase.sponsorName || 'your sponsor'} has been denied:</p>
+            <p><strong>Order #:</strong> ${orderId}</p>
+            <p><strong>Date Placed:</strong> ${formatDate(purchase.orderDate)}</p>
+            <p><strong>Total Points:</strong> ${purchase.totalPoints.toLocaleString()}</p>
+            
+            <h3>Order Details:</h3>
+            <table border="1" cellpadding="5">
+              <tr>
+                <th>Item</th>
+                <th>Price (Points)</th>
+                <th>Quantity</th>
+                <th>Subtotal</th>
+              </tr>
+      `;
+      
+      // Add each item to the email
+      purchase.items.forEach(item => {
+        emailBody += `
+          <tr>
+            <td>${item.productName}</td>
+            <td>${item.pointPrice}</td>
+            <td>${item.quantity}</td>
+            <td>${item.totalPointPrice}</td>
+          </tr>
+        `;
+      });
+      
+      emailBody += `
+            </table>
+            <p><strong>Note:</strong> No points have been deducted from your balance.</p>
+            <p>If you have questions about why your order was denied, please contact your sponsor.</p>
+          </body>
+        </html>
+      `;
+      
+      // Send the denial email to the driver
+      await sendDriverAlertEmail(purchase.driverEmail, emailSubject, emailBody);
       
       alert('Order denied successfully');
       
@@ -193,6 +296,35 @@ export default function PurchaseRequestsPage() {
       alert(`Error: ${err.message}`);
     } finally {
       setProcessingAction(null);
+    }
+  };
+
+  // Add a function to send alert emails to drivers
+  const sendDriverAlertEmail = async (driverEmail, subject, body) => {
+    try {
+      console.log("Sending alert email to driver:", driverEmail);
+      
+      // Send email via the email Lambda
+      const sendEmailResponse = await fetch('https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          recipientEmail: driverEmail,
+          emailSubject: subject,
+          emailBody: body
+        })
+      });
+      
+      if (!sendEmailResponse.ok) {
+        const sendEmailError = await sendEmailResponse.json();
+        console.error("Failed to send alert email:", sendEmailError);
+      } else {
+        console.log("Alert email sent successfully to driver");
+      }
+    } catch (emailError) {
+      console.error("Error sending driver alert email:", emailError);
     }
   };
   
