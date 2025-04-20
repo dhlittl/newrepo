@@ -164,13 +164,11 @@ export default function ShowUsers() {
 
       await sendAlertEmail(email, subject, body);
 
-      // ✅ Show success message and refresh
       setSuccessMessage(`Application ${status.toLowerCase()} successfully.`);
       setTimeout(() => {
         setSuccessMessage(null);
         window.location.reload();
       }, 3000);
-
     } catch (err) {
       console.error(`Error updating application: ${err.message}`);
       setError(err.message);
@@ -204,10 +202,13 @@ export default function ShowUsers() {
   const sortedUsers = filteredUsers.sort((a, b) => {
     let aKey = a[sortConfig.key];
     let bKey = b[sortConfig.key];
-    if (sortConfig.key === "Start_Date") {
-      aKey = new Date(aKey);
-      bKey = new Date(bKey);
+
+    const dateFields = ["Start_Date", "End_Date"];
+    if (dateFields.includes(sortConfig.key)) {
+      aKey = aKey ? new Date(aKey) : new Date(0);
+      bKey = bKey ? new Date(bKey) : new Date(0);
     }
+
     if (aKey < bKey) return sortConfig.direction === "asc" ? -1 : 1;
     if (aKey > bKey) return sortConfig.direction === "asc" ? 1 : -1;
     return 0;
@@ -220,7 +221,6 @@ export default function ShowUsers() {
     <main className="p-4">
       <h1 className="text-2xl font-bold mb-4">List of Users</h1>
 
-      {/* ✅ Success Message */}
       {successMessage && (
         <div className="mb-4 p-3 rounded bg-green-100 text-green-800 border border-green-400">
           {successMessage}
