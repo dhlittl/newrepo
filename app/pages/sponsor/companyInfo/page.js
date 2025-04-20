@@ -17,7 +17,8 @@ export default function SponsorsInfo() {
     Sponsor_Org_Name: '',
     Sponsor_Description: '',
     Sponsor_Email: '',
-    Sponsor_Phone: ''
+    Sponsor_Phone: '',
+    Sponsor_Conversion_Rate: ''
   });
   
   // for adding new points key entries
@@ -99,7 +100,7 @@ export default function SponsorsInfo() {
 
         // Modified to use "sponsorId" parameter properly
         const response = await fetch(
-          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors?sponsorId=${sponsorOrgId}`
+          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors?sponsorOrgId=${sponsorOrgId}`
         );
 
         if (!response.ok) throw new Error("Failed to fetch sponsor details");
@@ -121,7 +122,8 @@ export default function SponsorsInfo() {
             Sponsor_Org_Name: sponsorData.Sponsor_Org_Name || '',
             Sponsor_Description: sponsorData.Sponsor_Description || '',
             Sponsor_Email: sponsorData.Email || '',
-            Sponsor_Phone: sponsorData.Phone_Number || ''
+            Sponsor_Phone: sponsorData.Phone_Number || '',
+            Sponsor_Conversion_Rate: sponsorData.ConversionRate_DtoP || ''
           });
         } else {
           console.error("No sponsor info found");
@@ -181,7 +183,8 @@ export default function SponsorsInfo() {
             Sponsor_Org_Name: formData.Sponsor_Org_Name,
             Sponsor_Description: formData.Sponsor_Description,
             Sponsor_Email: formData.Sponsor_Email,
-            Sponsor_Phone: formData.Sponsor_Phone
+            Sponsor_Phone: formData.Sponsor_Phone,
+            ConversionRate_DtoP: formData.Sponsor_Conversion_Rate
         };
 
         console.log("Saving sponsor info with data:", updatedData);
@@ -192,7 +195,7 @@ export default function SponsorsInfo() {
         }
 
         const response = await fetch(
-            `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors`,
+            `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/infoWithConversion`,
             {
                 method: "PUT",
                 headers: {
@@ -224,7 +227,7 @@ export default function SponsorsInfo() {
   const refetchSponsorInfo = async () => {
     try {
       const response = await fetch(
-        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors?sponsorId=${sponsorOrgId}`
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors?sponsorOrgId=${sponsorOrgId}`
       );
       if (!response.ok) throw new Error("Failed to fetch sponsor details");
 
@@ -465,6 +468,17 @@ export default function SponsorsInfo() {
                   className="mt-1 p-2 w-full border"
                 />
               </div>
+              <div>
+                <label>Conversion Rate ($ to pts):</label>
+                <input
+                  type="number"
+                  name="Sponsor_Conversion_Rate"
+                  step = "0.1"
+                  value={formData.Sponsor_Conversion_Rate}
+                  onChange={handleChange}
+                  className="mt-1 p-2 w-full border"
+                />
+              </div>
               <button onClick={handleSave} className="mt-4 px-4 py-2 bg-blue-500 text-white">Save Changes</button>
             </div>
           ) : (
@@ -472,6 +486,7 @@ export default function SponsorsInfo() {
               <p><strong>Name:</strong> {sponsorInfo.Sponsor_Org_Name || "N/A"}</p>
               <p><strong>Description:</strong> {sponsorInfo.Sponsor_Description || "N/A"}</p>
               <p><strong>Contact:</strong> {sponsorInfo.Email || "N/A"}</p>
+              <p><strong>Conversion Rate ($ to pts):</strong> {sponsorInfo.ConversionRate_DtoP || "N/A"}</p>
               <button
                 onClick={() => setIsEditing(true)}
                 className="mt-4 px-4 py-2 bg-green-500 text-white"
