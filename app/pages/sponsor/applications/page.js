@@ -103,7 +103,32 @@ export default function ApplicationViewing() {
           `Failed to ${status.toLowerCase()} application: ${response.statusText}`
         );
       }
-  
+      console.log('Application ${applicationId ${status.toLowerCase()} successfully');
+
+      if (status == "Approved") {
+        const application = applications.find(app => app.id === application.Id);
+
+        console.log("Calling assign-driver-group endpoint:", {
+          url: "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/assignDriverGroup",
+          body: { username: application.username }
+        });
+
+        const groupResponse = await fetch(
+          "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/assignDriverGroup",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: application.username })
+          }
+        );
+
+        if (!groupResponse.ok) {
+          const errorText = await groupResponse.text();
+          console.error("Failed to add to Driver group:", groupResponse.status, errorText);
+          throw new Error("Could not add user to Driver group");
+        }
+        console.log('Successfully added ${application.username} to Driver group');
+      }
       const app = applications.find((a) => a.id === applicationId);
       if (!app) throw new Error("Application not found");
   
