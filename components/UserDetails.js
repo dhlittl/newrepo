@@ -22,9 +22,10 @@ export default function UserDetails({ user, details, onApprove, onDeny, onEdit }
       
             {/* -------- Right Column (Type-specific Info) -------- */}
             <div className="md:w-1/2 space-y-2">
-              <h3 className="text-lg font-semibold mb-1 border-b pb-1">{user.User_Type} Info</h3>
+            <h2 className="font-semibold text-lg mb-2">{user.User_Type.charAt(0).toUpperCase() + user.User_Type.slice(1)} Info</h2>
+
       
-              {user.User_Type === "Default" && (() => {
+              {user.User_Type === "defaultUser" && (() => {
                 const apps = (details || []).filter(a => a.Application_ID);
                 if (apps.length === 0) return <p className="italic text-gray-500">No applications</p>;
                 return apps.map((app, idx) => (
@@ -52,16 +53,15 @@ export default function UserDetails({ user, details, onApprove, onDeny, onEdit }
                 ));
               })()}
       
-              {user.User_Type === "Driver" &&
+              {user.User_Type === "driver" &&
                 (details || []).map((entry, i) => (
                   <div key={i} className="border rounded-lg p-4 mb-4 shadow-sm">
                     <p><strong>Sponsor:</strong> {entry.Sponsor_Name || entry.Sponsor_Org_ID}</p>
                     <p><strong>Points:</strong> {entry.Point_Balance}</p>
-                    <p><strong>Purchases:</strong> {entry.Num_Purchases}</p>
                   </div>
               ))}
       
-              {user.User_Type === "Sponsor" &&
+              {user.User_Type === "sponsor" &&
                 (details || []).map((entry, i) => (
                   <div key={i} className="border rounded-lg p-4 mb-4 shadow-sm">
                     <p><strong>Organization:</strong> {entry.Sponsor_Name || entry.Sponsor_Org_ID}</p>
@@ -69,7 +69,7 @@ export default function UserDetails({ user, details, onApprove, onDeny, onEdit }
                   </div>
               ))}
       
-              {user.User_Type === "Admin" &&
+              {user.User_Type === "admin" &&
                 (details || []).map((entry, i) => (
                   <div key={i} className="border rounded-lg p-4 mb-4 shadow-sm">
                     <p><strong>Admin ID:</strong> {entry.Admin_ID}</p>

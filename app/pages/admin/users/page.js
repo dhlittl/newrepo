@@ -6,7 +6,6 @@ import Link from "next/link";
 import UserTable from "@/components/UserTable";
 import EditUserModal from "@/components/EditUserModal";
 
-
 export default function ShowUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +17,6 @@ export default function ShowUsers() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({
-    Username: "",
     FName: "",
     LName: "",
     Email: "",
@@ -54,13 +52,13 @@ export default function ShowUsers() {
   const fetchUserDetails = async (user) => {
     let endpoint = "";
     switch (user.User_Type) {
-      case "Admin":
+      case "admin":
         endpoint = `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Admin/Info?userId=${user.User_ID}`;
         break;
-      case "Driver":
+      case "driver":
         endpoint = `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Info?userId=${user.User_ID}`;
         break;
-      case "Sponsor":
+      case "sponsor":
         endpoint = `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/sponsorUsers/Info?userId=${user.User_ID}`;
         break;
       default:
@@ -216,10 +214,10 @@ export default function ShowUsers() {
             className="border rounded p-1"
           >
             <option value="all">All</option>
-            <option value="Default">Default</option>
-            <option value="Driver">Driver</option>
-            <option value="Sponsor">Sponsor</option>
-            <option value="Admin">Admin</option>
+            <option value="defaultUser">Default</option>
+            <option value="driver">Driver</option>
+            <option value="sponsor">Sponsor</option>
+            <option value="admin">Admin</option>
           </select>
         </div>
       </div>
@@ -236,7 +234,6 @@ export default function ShowUsers() {
         onDeny={(user, app) => reviewApplication(user, app, "Denied")}
         onEdit={(user) => {
           setFormData({
-            Username: user.Username,
             FName: user.FName,
             LName: user.LName,
             Email: user.Email,
