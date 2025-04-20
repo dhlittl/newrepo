@@ -21,6 +21,9 @@ const Navbar = () => {
   } else if (pathname.startsWith("/pages/defaultUser")) {
     return <DefaultNavbar />;
   }
+  
+  // Return null if no matching path
+  return null;
 };
 
 export default Navbar;

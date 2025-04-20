@@ -4,6 +4,7 @@ import Link from "next/link";
 import { UserIcon } from "@heroicons/react/24/outline";
 import SignOutButton from "@/components/SignOutButton";
 import { getCurrentUser } from "aws-amplify/auth";
+import ResponsiveNavbar from "./ResponsiveNavbar";
 
 export default function DefaultNavbar() {
   const [first, setFirst] = useState("");
@@ -28,26 +29,20 @@ export default function DefaultNavbar() {
     })();
   }, []);
 
-  return (
-    <nav className="navbar flex justify-between items-center px-4 py-2 bg-white shadow">
-      <ul className="flex space-x-4">
-        <li><Link href="/pages/defaultUser">Dashboard</Link></li>
-        <li><Link href="/pages/defaultUser/applications">My Applications</Link></li>
-        <li><Link href="/pages/defaultUser/sponsorsPage">Sponsors</Link></li>
-        <li><Link href="/pages/defaultUser/help">Help</Link></li>
-        <li><Link href="/pages/defaultUser/aboutPage">About</Link></li>
-        <li><SignOutButton /></li>
-      </ul>
+  const navLinks = [
+    <Link href="/pages/defaultUser" key="dashboard">Dashboard</Link>,
+    <Link href="/pages/defaultUser/applications" key="applications">My Applications</Link>,
+    <Link href="/pages/defaultUser/sponsorsPage" key="sponsors">Sponsors</Link>,
+    <Link href="/pages/defaultUser/help" key="help">Help</Link>,
+    <Link href="/pages/defaultUser/aboutPage" key="about">About</Link>,
+    <SignOutButton key="signout" />
+  ];
 
-      <div className="flex items-center space-x-3">
-        <div className="flex flex-col items-start leading-tight">
-          <span className="text-sm font-medium text-gray-800">{first}</span>
-          <span className="text-sm font-medium text-gray-800">{last}</span>
-        </div>
-        <Link href="/pages/defaultUser/profile">
-          <UserIcon className="w-10 h-10 text-blue-600" />
-        </Link>
-      </div>
-    </nav>
+  return (
+    <ResponsiveNavbar 
+      navLinks={navLinks} 
+      profileInfo={{ first, last }} 
+      profilePath="/pages/defaultUser/profile" 
+    />
   );
 }
