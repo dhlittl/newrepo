@@ -141,10 +141,9 @@ export default function CartPage() {
     localStorage.removeItem('driverCart');
   };
   
-  // Send alert email 
-  const sendAlertEmail = async (subject, body) => {
+  // Get user's email address
+  const getUserEmail = async () => {
     try {
-      // Get user email
       console.log("Fetching email for user ID:", userId);
       
       const emailResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Team24-GetUserEmail?userId=${userId}`, {
@@ -167,6 +166,64 @@ export default function CartPage() {
         throw new Error("No email found for user");
       }
       
+      return userEmail;
+    } catch (error) {
+      console.error("Error fetching user email:", error);
+      throw error;
+    }
+  };
+  
+  // Check if the driver has notifications enabled
+  const checkNotificationPreference = async (preferenceType) => {
+    try {
+      // Get driver notification preferences
+      console.log(`Checking notification preferences for user ${userId} (preference type: ${preferenceType})`);
+      
+      const response = await fetch(
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Team24-DriverNotificationPreferences?userId=${userId}`
+      );
+      
+      if (!response.ok) {
+        console.error("Failed to retrieve notification preferences, status:", response.status);
+        // Default to true if we can't fetch preferences
+        return true;
+      }
+      
+      const data = await response.json();
+      console.log("Notification preferences:", data);
+      
+      // Check the specific preference type
+      switch (preferenceType) {
+        case 'orderStatus':
+          return data.preferences?.Order_Status_Notifications !== 0;
+        case 'orderProblem':
+          return data.preferences?.Order_Problem_Notifications !== 0;
+        case 'pointsUpdate':
+          return data.preferences?.Points_Update_Notifications !== 0;
+        default:
+          return true; // Default to true for unknown preference types
+      }
+    } catch (err) {
+      console.error("Error checking notification preferences:", err);
+      // Default to true if error occurs
+      return true;
+    }
+  };
+  
+  // Send alert email - SIMPLIFIED VERSION
+  const sendAlertEmail = async (subject, body, emailType) => {
+    try {
+      // Check notification preferences
+      const notificationsEnabled = await checkNotificationPreference(emailType);
+      console.log(`${emailType} notifications enabled:`, notificationsEnabled);
+      
+      if (!notificationsEnabled) {
+        console.log(`User has disabled ${emailType} notifications, skipping email`);
+        return false;
+      }
+      
+      // Get user email
+      const userEmail = await getUserEmail();
       console.log("Sending alert email to:", userEmail);
       
       // Send email via our email Lambda
@@ -185,12 +242,62 @@ export default function CartPage() {
       if (!sendEmailResponse.ok) {
         const sendEmailError = await sendEmailResponse.json();
         console.error("Failed to send alert email:", sendEmailError);
+        return false;
       } else {
         console.log("Alert email sent successfully");
+        return true;
       }
     } catch (emailError) {
       console.error("Error in email process:", emailError);
+      return false;
     }
+  };
+
+  // Create and send insufficient points alert email
+  const sendInsufficientPointsEmail = async (sponsorData, sponsorTotalPoints, pointBalance) => {
+    const emailSubject = `Order Alert: Insufficient Points for ${sponsorData.sponsorName}`;
+    
+    let emailBody = `
+      <html>
+        <body>
+          <h2>Order Alert: Insufficient Points</h2>
+          <p>Your order with ${sponsorData.sponsorName} could not be processed because you don't have enough points:</p>
+          <ul>
+            <li><strong>Order Total:</strong> ${sponsorTotalPoints.toLocaleString()} points</li>
+            <li><strong>Your Balance:</strong> ${pointBalance.toLocaleString()} points</li>
+            <li><strong>Shortage:</strong> ${(sponsorTotalPoints - pointBalance).toLocaleString()} points</li>
+          </ul>
+          <h3>Order Details:</h3>
+          <table border="1" cellpadding="5">
+            <tr>
+              <th>Item</th>
+              <th>Price (Points)</th>
+              <th>Quantity</th>
+              <th>Subtotal</th>
+            </tr>
+    `;
+    
+    // Add each item to the email
+    sponsorData.items.forEach(item => {
+      emailBody += `
+        <tr>
+          <td>${item.Product_Name}</td>
+          <td>${item.pointPrice}</td>
+          <td>${item.quantity}</td>
+          <td>${item.pointPrice * item.quantity}</td>
+        </tr>
+      `;
+    });
+    
+    emailBody += `
+          </table>
+          <p>Please earn more points or adjust your cart before attempting to checkout again.</p>
+        </body>
+      </html>
+    `;
+    
+    // Send the alert email - specify 'orderProblem' as the email type
+    return await sendAlertEmail(emailSubject, emailBody, 'orderProblem');
   };
 
   // Modified handleCheckout function with loading state
@@ -205,50 +312,8 @@ export default function CartPage() {
         const pointBalance = sponsorPointBalances[sponsorId] || 0;
         
         if (sponsorTotalPoints > pointBalance) {
-          // Create and send insufficient points alert email
-          const emailSubject = `Order Alert: Insufficient Points for ${sponsorData.sponsorName}`;
-          
-          let emailBody = `
-            <html>
-              <body>
-                <h2>Order Alert: Insufficient Points</h2>
-                <p>Your order with ${sponsorData.sponsorName} could not be processed because you don't have enough points:</p>
-                <ul>
-                  <li><strong>Order Total:</strong> ${sponsorTotalPoints.toLocaleString()} points</li>
-                  <li><strong>Your Balance:</strong> ${pointBalance.toLocaleString()} points</li>
-                  <li><strong>Shortage:</strong> ${(sponsorTotalPoints - pointBalance).toLocaleString()} points</li>
-                </ul>
-                <h3>Order Details:</h3>
-                <table border="1" cellpadding="5">
-                  <tr>
-                    <th>Item</th>
-                    <th>Price (Points)</th>
-                    <th>Quantity</th>
-                    <th>Subtotal</th>
-                  </tr>
-          `;
-          
-          // Add each item to the email
-          sponsorData.items.forEach(item => {
-            emailBody += `
-              <tr>
-                <td>${item.Product_Name}</td>
-                <td>${item.pointPrice}</td>
-                <td>${item.quantity}</td>
-                <td>${item.pointPrice * item.quantity}</td>
-              </tr>
-            `;
-          });
-          
-          emailBody += `
-                </table>
-                <p>Please earn more points or adjust your cart before attempting to checkout again.</p>
-              </body>
-            </html>
-          `;
-          
-          // Send the alert email
-          await sendAlertEmail(emailSubject, emailBody);
+          // Send email about insufficient points - separate function for clarity
+          await sendInsufficientPointsEmail(sponsorData, sponsorTotalPoints, pointBalance);
           
           // Reset loading state before showing alert
           setIsCheckingOut(false);
@@ -331,7 +396,7 @@ export default function CartPage() {
             localStorage.setItem('latestReceipt', JSON.stringify(individualReceipt));
           }
 
-          // Add order confirmation email
+          // Send confirmation email
           const emailSubject = `Order Confirmation: Your order has been submitted`;
           
           let emailBody = `
@@ -374,7 +439,7 @@ export default function CartPage() {
           `;
           
           // Send the confirmation email
-          await sendAlertEmail(emailSubject, emailBody);
+          await sendAlertEmail(emailSubject, emailBody, 'orderStatus');
           
         } catch (err) {
           console.error(`Error during checkout for sponsor ${sponsorId}:`, err);

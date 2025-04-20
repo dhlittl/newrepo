@@ -29,6 +29,9 @@ export default function SponsorDrivers() {
   const [bonusMessage, setBonusMessage] = useState("");
   const [bonusLoading, setBonusLoading] = useState(false);
 
+  // Add a new state for the loading modal
+  const [isSavingPoints, setIsSavingPoints] = useState(false);
+
   // First, get the Cognito user ID
   useEffect(() => {
     async function fetchUser() {
@@ -149,12 +152,15 @@ export default function SponsorDrivers() {
     setIsModalOpen(true);
   };
 
-  // Updated handleBulkUpdate function
+  // Updated handleBulkUpdate function with loading state
   const handleBulkUpdate = async () => {
     if (!pointsChange || isNaN(pointsChange)) {
       alert("Please enter a valid number for points.");
       return;
     }
+
+    // Show loading modal
+    setIsSavingPoints(true);
 
     const pointsChangeValue = parseInt(pointsChange);
     
@@ -271,12 +277,6 @@ export default function SponsorDrivers() {
         }
       }
 
-      alert("Points updated successfully!");
-      setIsModalOpen(false);
-      setSelectedDriverIds([]);
-      setPointsChange("");
-      setReason("");
-
       // Refresh the driver list
       const refreshDrivers = await fetch(
         `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/drivers?sponsorOrgId=${sponsorOrgId}`
@@ -284,8 +284,18 @@ export default function SponsorDrivers() {
       const refreshedData = await refreshDrivers.json();
       setDrivers(refreshedData);
 
+      // Hide loading modal and close the edit modal
+      setIsSavingPoints(false);
+      setIsModalOpen(false);
+      setSelectedDriverIds([]);
+      setPointsChange("");
+      setReason("");
+      
+      alert("Points updated successfully!");
+
     } catch (err) {
       console.error("Error updating points:", err);
+      setIsSavingPoints(false);
       alert("Error updating points: " + err.message);
     }
   };
@@ -703,6 +713,24 @@ export default function SponsorDrivers() {
             <button className="bg-blue-500 text-white py-2 px-4 rounded" onClick={handleBulkUpdate}>
               Save Changes
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Modal - Add this new section */}
+      {isSavingPoints && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <div className="flex flex-col items-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
+              <h3 className="text-xl font-bold mb-2">Updating Points</h3>
+              <p className="text-gray-600 text-center">
+                Please wait while we update the points for the selected drivers. This may take a few moments.
+              </p>
+              <p className="text-gray-500 text-sm mt-4">
+                Do not refresh or navigate away from this page.
+              </p>
+            </div>
           </div>
         </div>
       )}

@@ -17,6 +17,7 @@ export default function PurchaseRequestsPage() {
   const [activeFilter, setActiveFilter] = useState('Processing'); // 'Processing', 'Approved', 'Denied', 'Cancelled'
   const [activeDriverFilter, setActiveDriverFilter] = useState('all');
   const [uniqueDrivers, setUniqueDrivers] = useState([]);
+  const [driverUserIdsCache, setDriverUserIdsCache] = useState({});
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -89,6 +90,24 @@ export default function PurchaseRequestsPage() {
       const data = await response.json();
       
       if (data.purchases && Array.isArray(data.purchases)) {
+        // Extract driverIds to fetch user IDs
+        const driverIds = data.purchases.map(purchase => purchase.driverId);
+        
+        // For each unique driverId, get the user ID if not already in cache
+        for (const driverId of new Set(driverIds)) {
+          if (!driverUserIdsCache[driverId]) {
+            try {
+              // In this system, the Driver_ID is the same as User_ID
+              setDriverUserIdsCache(prev => ({
+                ...prev,
+                [driverId]: driverId // Set the userId to the same as driverId
+              }));
+            } catch (err) {
+              console.error(`Error getting user ID for driver ${driverId}:`, err);
+            }
+          }
+        }
+        
         setPurchaseRequests(data.purchases);
         
         // Extract unique drivers for the driver filter
@@ -128,6 +147,46 @@ export default function PurchaseRequestsPage() {
     }));
   };
   
+  // Check if a driver has notifications enabled
+  const checkDriverNotificationPreference = async (driverId, preferenceType) => {
+    try {
+      // Get the user ID for this driver (same as driver ID in your system)
+      const driverUserId = driverUserIdsCache[driverId] || driverId;
+      
+      console.log(`Checking notification preferences for driver ${driverId}, using userId ${driverUserId}`);
+      
+      // Get driver notification preferences
+      const response = await fetch(
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Team24-DriverNotificationPreferences?userId=${driverUserId}`
+      );
+      
+      if (!response.ok) {
+        console.error(`Failed to retrieve notification preferences for driver ${driverId}, status:`, response.status);
+        // Default to true if we can't fetch preferences
+        return true;
+      }
+      
+      const data = await response.json();
+      console.log(`Retrieved notification preferences for driver ${driverId}:`, data);
+      
+      // Check the specific preference type
+      switch (preferenceType) {
+        case 'orderStatus':
+          return data.preferences?.Order_Status_Notifications !== 0;
+        case 'orderProblem':
+          return data.preferences?.Order_Problem_Notifications !== 0;
+        case 'pointsUpdate':
+          return data.preferences?.Points_Update_Notifications !== 0;
+        default:
+          return true; // Default to true for unknown preference types
+      }
+    } catch (err) {
+      console.error(`Error checking notification preferences for driver ${driverId}:`, err);
+      // Default to true if error occurs
+      return true;
+    }
+  };
+  
   // Modified handleApproveOrder function with email notification
   const handleApproveOrder = async (orderId) => {
     try {
@@ -157,49 +216,56 @@ export default function PurchaseRequestsPage() {
         throw new Error(errorData.error || 'Failed to approve order');
       }
       
-      // Create and send approval email to the driver
-      const emailSubject = `Order Approved: Your order #${orderId} has been approved`;
+      // Check if the driver wants to receive order status notifications
+      const shouldSendEmail = await checkDriverNotificationPreference(purchase.driverId, 'orderStatus');
       
-      let emailBody = `
-        <html>
-          <body>
-            <h2>Order Approved</h2>
-            <p>Good news! Your order with ${purchase.sponsorName || 'your sponsor'} has been approved:</p>
-            <p><strong>Order #:</strong> ${orderId}</p>
-            <p><strong>Date Placed:</strong> ${formatDate(purchase.orderDate)}</p>
-            <p><strong>Total Points:</strong> ${purchase.totalPoints.toLocaleString()}</p>
-            
-            <h3>Order Details:</h3>
-            <table border="1" cellpadding="5">
-              <tr>
-                <th>Item</th>
-                <th>Price (Points)</th>
-                <th>Quantity</th>
-                <th>Subtotal</th>
-              </tr>
-      `;
-      
-      // Add each item to the email
-      purchase.items.forEach(item => {
-        emailBody += `
-          <tr>
-            <td>${item.productName}</td>
-            <td>${item.pointPrice}</td>
-            <td>${item.quantity}</td>
-            <td>${item.totalPointPrice}</td>
-          </tr>
+      if (shouldSendEmail) {
+        // Create and send approval email to the driver
+        const emailSubject = `Order Approved: Your order #${orderId} has been approved`;
+        
+        let emailBody = `
+          <html>
+            <body>
+              <h2>Order Approved</h2>
+              <p>Good news! Your order with ${purchase.sponsorName || 'your sponsor'} has been approved:</p>
+              <p><strong>Order #:</strong> ${orderId}</p>
+              <p><strong>Date Placed:</strong> ${formatDate(purchase.orderDate)}</p>
+              <p><strong>Total Points:</strong> ${purchase.totalPoints.toLocaleString()}</p>
+              
+              <h3>Order Details:</h3>
+              <table border="1" cellpadding="5">
+                <tr>
+                  <th>Item</th>
+                  <th>Price (Points)</th>
+                  <th>Quantity</th>
+                  <th>Subtotal</th>
+                </tr>
         `;
-      });
-      
-      emailBody += `
-            </table>
-            <p><strong>Note:</strong> Points have been deducted from your balance.</p>
-          </body>
-        </html>
-      `;
-      
-      // Send the approval email to the driver
-      await sendDriverAlertEmail(purchase.driverEmail, emailSubject, emailBody);
+        
+        // Add each item to the email
+        purchase.items.forEach(item => {
+          emailBody += `
+            <tr>
+              <td>${item.productName}</td>
+              <td>${item.pointPrice}</td>
+              <td>${item.quantity}</td>
+              <td>${item.totalPointPrice}</td>
+            </tr>
+          `;
+        });
+        
+        emailBody += `
+              </table>
+              <p><strong>Note:</strong> Points have been deducted from your balance.</p>
+            </body>
+          </html>
+        `;
+        
+        // Send the approval email to the driver
+        await sendDriverAlertEmail(purchase.driverEmail, emailSubject, emailBody);
+      } else {
+        console.log(`Driver ${purchase.driverId} has disabled order status notifications, skipping email`);
+      }
       
       alert('Order approved successfully');
       
@@ -242,50 +308,57 @@ export default function PurchaseRequestsPage() {
         throw new Error(errorData.error || 'Failed to deny order');
       }
       
-      // Create and send denial email to the driver
-      const emailSubject = `Order Denied: Your order #${orderId} has been denied`;
+      // Check if the driver wants to receive order status notifications
+      const shouldSendEmail = await checkDriverNotificationPreference(purchase.driverId, 'orderStatus');
       
-      let emailBody = `
-        <html>
-          <body>
-            <h2>Order Denied</h2>
-            <p>We're sorry, but your order with ${purchase.sponsorName || 'your sponsor'} has been denied:</p>
-            <p><strong>Order #:</strong> ${orderId}</p>
-            <p><strong>Date Placed:</strong> ${formatDate(purchase.orderDate)}</p>
-            <p><strong>Total Points:</strong> ${purchase.totalPoints.toLocaleString()}</p>
-            
-            <h3>Order Details:</h3>
-            <table border="1" cellpadding="5">
-              <tr>
-                <th>Item</th>
-                <th>Price (Points)</th>
-                <th>Quantity</th>
-                <th>Subtotal</th>
-              </tr>
-      `;
-      
-      // Add each item to the email
-      purchase.items.forEach(item => {
-        emailBody += `
-          <tr>
-            <td>${item.productName}</td>
-            <td>${item.pointPrice}</td>
-            <td>${item.quantity}</td>
-            <td>${item.totalPointPrice}</td>
-          </tr>
+      if (shouldSendEmail) {
+        // Create and send denial email to the driver
+        const emailSubject = `Order Denied: Your order #${orderId} has been denied`;
+        
+        let emailBody = `
+          <html>
+            <body>
+              <h2>Order Denied</h2>
+              <p>We're sorry, but your order with ${purchase.sponsorName || 'your sponsor'} has been denied:</p>
+              <p><strong>Order #:</strong> ${orderId}</p>
+              <p><strong>Date Placed:</strong> ${formatDate(purchase.orderDate)}</p>
+              <p><strong>Total Points:</strong> ${purchase.totalPoints.toLocaleString()}</p>
+              
+              <h3>Order Details:</h3>
+              <table border="1" cellpadding="5">
+                <tr>
+                  <th>Item</th>
+                  <th>Price (Points)</th>
+                  <th>Quantity</th>
+                  <th>Subtotal</th>
+                </tr>
         `;
-      });
-      
-      emailBody += `
-            </table>
-            <p><strong>Note:</strong> No points have been deducted from your balance.</p>
-            <p>If you have questions about why your order was denied, please contact your sponsor.</p>
-          </body>
-        </html>
-      `;
-      
-      // Send the denial email to the driver
-      await sendDriverAlertEmail(purchase.driverEmail, emailSubject, emailBody);
+        
+        // Add each item to the email
+        purchase.items.forEach(item => {
+          emailBody += `
+            <tr>
+              <td>${item.productName}</td>
+              <td>${item.pointPrice}</td>
+              <td>${item.quantity}</td>
+              <td>${item.totalPointPrice}</td>
+            </tr>
+          `;
+        });
+        
+        emailBody += `
+              </table>
+              <p><strong>Note:</strong> No points have been deducted from your balance.</p>
+              <p>If you have questions about why your order was denied, please contact your sponsor.</p>
+            </body>
+          </html>
+        `;
+        
+        // Send the denial email to the driver
+        await sendDriverAlertEmail(purchase.driverEmail, emailSubject, emailBody);
+      } else {
+        console.log(`Driver ${purchase.driverId} has disabled order status notifications, skipping email`);
+      }
       
       alert('Order denied successfully');
       

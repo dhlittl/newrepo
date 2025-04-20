@@ -9,7 +9,9 @@ export default function NotificationPreferences() {
   const router = useRouter();
   
   const [preferences, setPreferences] = useState({
-    pointsUpdateNotifications: true
+    pointsUpdateNotifications: true,
+    orderStatusNotifications: true,
+    orderProblemNotifications: true
   });
   
   const [loading, setLoading] = useState(true);
@@ -17,7 +19,7 @@ export default function NotificationPreferences() {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   
-  // Fetch the current notification preferences
+  // Update the useEffect that fetches preferences
   useEffect(() => {
     if (!userId) return;
     
@@ -36,7 +38,9 @@ export default function NotificationPreferences() {
         const data = await response.json();
         
         setPreferences({
-          pointsUpdateNotifications: data.preferences?.Points_Update_Notifications === 1
+          pointsUpdateNotifications: data.preferences?.Points_Update_Notifications === 1,
+          orderStatusNotifications: data.preferences?.Order_Status_Notifications === 1,
+          orderProblemNotifications: data.preferences?.Order_Problem_Notifications === 1
         });
       } catch (err) {
         console.error('Error fetching notification preferences:', err);
@@ -57,7 +61,7 @@ export default function NotificationPreferences() {
     }));
   };
   
-  // Save preferences to backend
+  // Update the save function
   const handleSavePreferences = async () => {
     if (!userId) return;
     
@@ -75,7 +79,9 @@ export default function NotificationPreferences() {
           },
           body: JSON.stringify({
             userId: userId,
-            pointsUpdateNotifications: preferences.pointsUpdateNotifications
+            pointsUpdateNotifications: preferences.pointsUpdateNotifications,
+            orderStatusNotifications: preferences.orderStatusNotifications,
+            orderProblemNotifications: preferences.orderProblemNotifications
           })
         }
       );
@@ -156,6 +162,40 @@ export default function NotificationPreferences() {
                   className="sr-only peer"
                   checked={preferences.pointsUpdateNotifications}
                   onChange={() => handleTogglePreference('pointsUpdateNotifications')}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <h3 className="font-semibold">Order Status Notifications</h3>
+                <p className="text-sm text-gray-600">
+                  Receive email notifications when your order status changes (approved, denied, etc.)
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={preferences.orderStatusNotifications}
+                  onChange={() => handleTogglePreference('orderStatusNotifications')}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <h3 className="font-semibold">Order Problem Notifications</h3>
+                <p className="text-sm text-gray-600">
+                  Receive email notifications about order issues (insufficient points, errors, etc.)
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={preferences.orderProblemNotifications}
+                  onChange={() => handleTogglePreference('orderProblemNotifications')}
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
