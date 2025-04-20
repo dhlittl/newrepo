@@ -137,7 +137,7 @@ export default function PointInfoPage() {
         )}
         <h1 className="text-2xl font-bold">Point History</h1>
         
-        <Link href="/pages/driver/dashboard" className="text-blue-600 hover:underline">
+        <Link href="/pages/driver" className="text-blue-600 hover:underline">
           Back to Dashboard
         </Link>
       </div>
