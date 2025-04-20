@@ -45,9 +45,9 @@ export default function DriverNavbar() {
     <nav className="navbar flex justify-between items-center px-4 py-2 bg-white shadow">
       <ul className="flex space-x-4">
         <li><Link href="/pages/driver">Dashboard</Link></li>
-        <li><Link href="/pages/driver/catalog">Catalog</Link></li>
         <li><Link href="/pages/driver/sponsorInfo">My Sponsors</Link></li>
         <li><Link href="/pages/driver/notifications">Notification Preferences</Link></li>
+        <li><Link href="/pages/driver/purchase-history">Purchases</Link></li>
         <li><Link href="/pages/driver/driverHelp">Help</Link></li>
         <li><Link href="/pages/driver/aboutPage">About</Link></li>
         <li><SignOutButton /></li>

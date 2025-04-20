@@ -33,9 +33,6 @@ const initialWidgets = [
   { id: "points", name: "Current Points", visible: true},
   { id: "conversion", name: "Point-to-Dollar Conversion", visible: true},
   { id: "catalog", name: "Catalog", visible: true},
-  { id: "friends", name: "Friends", visible: true},
-  { id: "trend", name: "Point Trend Graph", visible: true},
-  { id: "notifications", name: "Notifications", visible: true},
   { id: "help", name: "Help", visible: true},
   { id: "sponsors", name: "Sponsors", visible: true},
   { id: "apply", name: "Applications", visible: true},
@@ -307,12 +304,6 @@ function getWidgetContent(id, userId) {
       return <Widget title="Point-to-Dollar" content="1,500 pts = $1500" />;
     case "catalog":
       return <LinkWidget title="Rewards Catalog" link="/pages/driver/sponsors" />;
-    case "friends":
-      return <Widget title="Friends" content="You have 5 friends" />;
-    case "trend":
-      return <TrendGraph />;
-    case "notifications":
-      return <Widget title="Notifications" content="You have 3 new alerts" />;
     case "help":
       return <LinkWidget title="Help" link="/pages/driver/driverHelp" />;
     case "sponsors":
@@ -483,28 +474,6 @@ function LinkWidget ({ title, link }) {
       <Link href={link} className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
           Go to {title}
       </Link>
-    </div>
-  );
-}
-
-// point trend graph widget functionality 
-// hard coding for example and bc not tied to db yet
-function TrendGraph() {
-  const data = [
-    { name: "Jan", points: 200 },
-    { name: "Feb", points: 350 },
-  ];
-  return (
-    <div>
-      <h3 className="font-semibold">Point Trend</h3>
-      <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={data}>
-          <XAxis dataKey="name" />
-          <YAxis />
-          <Tooltip />
-          <Bar dataKey="points" fill="#3182CE" />
-        </BarChart>
-      </ResponsiveContainer>
     </div>
   );
 }

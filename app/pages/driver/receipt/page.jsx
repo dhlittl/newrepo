@@ -37,19 +37,117 @@ function ReceiptPage() {
   }, [router]);
   
   useEffect(() => {
-    // In a real app, we'd fetch the receipt data from the server using the orderId
-    // For this demo, we'll load it from localStorage where we stored it during checkout
     if (!authorized || !userId) return;
-    try {
-      const storedReceipt = localStorage.getItem('latestReceipt');
-      if (storedReceipt) {
-        setReceiptData(JSON.parse(storedReceipt));
+    
+    const fetchOrderDetails = async () => {
+      setLoading(true);
+      try {
+        // Try to get complete order details from API first
+        if (orderId) {
+          console.log("Fetching order details from API for orderId:", orderId);
+          const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/orders?driverId=${userId}`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log("API response for driver orders:", data);
+            
+            // Find the specific order in the returned orders array
+            if (data && data.orders && Array.isArray(data.orders)) {
+              const orderData = data.orders.find(o => o.purchaseId === orderId || o.orderId === orderId);
+              
+              if (orderData) {
+                console.log("Found matching order:", orderData);
+                
+                // Check if orderData has items - if not, we need to get those separately
+                if (!orderData.items || !Array.isArray(orderData.items) || orderData.items.length === 0) {
+                  // We need to fetch order items separately
+                  console.log("Fetching order items for purchase ID:", orderId);
+                  try {
+                    const itemsResponse = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/orders/items?purchaseId=${orderId}`);
+                    
+                    if (itemsResponse.ok) {
+                      const itemsData = await itemsResponse.json();
+                      console.log("Items data:", itemsData);
+                      
+                      if (itemsData && itemsData.items) {
+                        orderData.items = itemsData.items;
+                      }
+                    }
+                  } catch (itemsErr) {
+                    console.error("Failed to fetch order items:", itemsErr);
+                  }
+                }
+                
+                // Transform the API data to match the expected receipt format
+                const formattedOrder = {
+                  orderIds: [orderData.purchaseId || orderData.orderId || orderId],
+                  orderId: orderData.purchaseId || orderData.orderId || orderId,
+                  orderDate: orderData.purchaseDate || orderData.orderDate || new Date().toISOString(),
+                  status: orderData.status || 'Processing',
+                  totalPoints: orderData.totalPoints || 0,
+                  items: orderData.items || [],
+                  sponsorName: orderData.sponsorName || "Unknown Sponsor"
+                };
+                
+                setReceiptData(formattedOrder);
+                localStorage.setItem('latestReceipt', JSON.stringify(formattedOrder));
+                setLoading(false);
+                return;
+              }
+            }
+          }
+        }
+        
+        // If API didn't return the specific order, check localStorage as fallback
+        const storedReceipt = localStorage.getItem('latestReceipt');
+        if (storedReceipt) {
+          console.log("Using stored receipt data from localStorage");
+          const localData = JSON.parse(storedReceipt);
+          setReceiptData(localData);
+        } else {
+          console.error("Could not find receipt data from any source");
+          // Try one more API endpoint as a last resort
+          try {
+            const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/orders?purchaseId=${orderId}&driverId=${userId}`);
+            
+            if (response.ok) {
+              const data = await response.json();
+              console.log("Last resort API response:", data);
+              
+              if (data && data.order) {
+                const lastResortData = {
+                  orderIds: [data.order.purchaseId || orderId],
+                  orderId: data.order.purchaseId || orderId,
+                  orderDate: data.order.purchaseDate || new Date().toISOString(),
+                  status: data.order.status || 'Processing',
+                  totalPoints: data.order.totalPoints || 0,
+                  items: data.order.items || [],
+                  sponsorName: data.order.sponsorName || "Unknown Sponsor"
+                };
+                setReceiptData(lastResortData);
+              }
+            }
+          } catch (lastErr) {
+            console.error("Last resort API failed too:", lastErr);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading receipt data:", err);
+        // If everything else fails, still try localStorage
+        try {
+          const storedReceipt = localStorage.getItem('latestReceipt');
+          if (storedReceipt) {
+            setReceiptData(JSON.parse(storedReceipt));
+          }
+        } catch (localErr) {
+          console.error("Failed to load from localStorage as well:", localErr);
+        }
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Error loading receipt data:", err);
-    } finally {
-      setLoading(false);
-    }
+    };
+    
+    fetchOrderDetails();
   }, [authorized, userId, orderId]);
   
   const handlePrint = () => {
@@ -154,7 +252,7 @@ function ReceiptPage() {
   }
   
   // Format date for display
-  const orderDate = new Date(receiptData.orderDate);
+  const orderDate = new Date(receiptData.orderDate || new Date());
   const formattedDate = orderDate.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -163,23 +261,99 @@ function ReceiptPage() {
     minute: '2-digit'
   });
   
-  // Group items by sponsor
+  // Log the complete receipt data structure to debug
+  console.log("Receipt data structure:", JSON.stringify(receiptData, null, 2));
+  
+  // Safe access of items array with comprehensive fallbacks
+  let items = [];
+  
+  // Check multiple possible item array locations in the data structure
+  if (Array.isArray(receiptData.items) && receiptData.items.length > 0) {
+    items = receiptData.items;
+  } else if (receiptData.order && Array.isArray(receiptData.order.items)) {
+    items = receiptData.order.items;
+  } else if (receiptData.data && Array.isArray(receiptData.data.items)) {
+    items = receiptData.data.items; 
+  } else if (receiptData.data && receiptData.data.order && Array.isArray(receiptData.data.order.items)) {
+    items = receiptData.data.order.items;
+  } else if (Array.isArray(receiptData.orderItems)) {
+    items = receiptData.orderItems;
+  } else if (receiptData.purchaseItems && Array.isArray(receiptData.purchaseItems)) {
+    items = receiptData.purchaseItems;
+  }
+  
+  // If we still don't have items but we have purchase details, reconstruct an item
+  if (items.length === 0 && receiptData.totalPoints) {
+    console.log("Reconstructing items from receipt data");
+    items = [{
+      Product_ID: 'reconstructed-item',
+      Product_Name: 'Purchased Item',
+      pointPrice: receiptData.totalPoints,
+      quantity: 1,
+      Sponsor_Org_ID: receiptData.sponsorId || 'unknown',
+      Sponsor_Org_Name: receiptData.sponsorName || 'Sponsor'
+    }];
+  }
+  
+  console.log("Final items array:", items);
+  
+  // Group items by sponsor with proper fallbacks
   const groupedItems = {};
   
-  receiptData.items.forEach(item => {
-    const sponsorId = item.Sponsor_Org_ID;
+  items.forEach((item, index) => {
+    // Log the item format to understand its structure
+    console.log(`Item ${index} format:`, item);
+    
+    // Check for different case variations of property names to handle API inconsistencies
+    const productId = item.Product_ID || item.productId || item.product_id || `item-${index}`;
+    const productName = item.Product_Name || item.productName || item.product_name || `Item #${index + 1}`;
+    
+    // Handle point price with multiple fallbacks
+    let pointPrice = 0;
+    if (typeof item.pointPrice === 'number') {
+      pointPrice = item.pointPrice;
+    } else if (typeof item.point_price === 'number') {
+      pointPrice = item.point_price;
+    } else if (typeof item.Point_Price === 'number') {
+      pointPrice = item.Point_Price;
+    } else if (typeof item.price === 'number') {
+      pointPrice = item.price;
+    } else if (typeof item.Price === 'number') {
+      pointPrice = item.Price;
+    }
+    
+    // Handle quantity with fallbacks
+    const quantity = item.quantity || item.Quantity || 1;
+    
+    // Handle sponsor data with multiple naming patterns
+    const sponsorId = item.Sponsor_Org_ID || item.sponsorId || item.sponsor_id || 
+                      item.SponsorId || item.sponsorOrgId || receiptData.sponsorId || 
+                      `unknown-${index}`;
+    
+    const sponsorName = item.Sponsor_Org_Name || item.sponsorName || item.sponsor_name || 
+                        receiptData.sponsorName || `Sponsor ${sponsorId}`;
     
     if (!groupedItems[sponsorId]) {
       groupedItems[sponsorId] = {
-        sponsorId,
-        sponsorName: item.Sponsor_Org_Name || `Sponsor ${sponsorId}`,
+        sponsorId: sponsorId,
+        sponsorName: sponsorName,
         items: [],
         totalPoints: 0
       };
     }
     
-    groupedItems[sponsorId].items.push(item);
-    groupedItems[sponsorId].totalPoints += item.pointPrice * item.quantity;
+    // Ensure the item has all expected properties
+    const safeItem = {
+      Product_ID: productId,
+      Product_Name: productName,
+      pointPrice: pointPrice,
+      quantity: quantity,
+      Sponsor_Org_ID: sponsorId,
+      Sponsor_Org_Name: sponsorName
+    };
+    
+    groupedItems[sponsorId].items.push(safeItem);
+    groupedItems[sponsorId].totalPoints += (safeItem.pointPrice * safeItem.quantity);
   });
   
   return (
@@ -229,14 +403,24 @@ function ReceiptPage() {
         <div className="mb-6 flex flex-col md:flex-row justify-between">
           <div>
             <h2 className="font-semibold text-gray-700">Order Information</h2>
-            <p><span className="font-medium">Order ID{receiptData.orderIds?.length > 1 ? 's' : ''}:</span> {receiptData.orderIds?.map(id => `#${id}`).join(', ') || `#${receiptData.orderId}`}</p>
+            <p>
+              <span className="font-medium">
+                Order ID{Array.isArray(receiptData.orderIds) && receiptData.orderIds.length > 1 ? 's' : ''}:
+              </span> 
+              {Array.isArray(receiptData.orderIds) 
+                ? receiptData.orderIds.map(id => `#${id}`).join(', ') 
+                : `#${receiptData.orderId || orderId}`}
+            </p>
             <p><span className="font-medium">Date:</span> {formattedDate}</p>
           </div>
           
           <div className="mt-4 md:mt-0">
             <h2 className="font-semibold text-gray-700">Payment</h2>
             <p><span className="font-medium">Payment Method:</span> Points Redemption</p>
-            <p><span className="font-medium">Total Points:</span> {receiptData.totalPoints.toLocaleString()}</p>
+            <p>
+              <span className="font-medium">Total Points:</span> 
+              {(receiptData.totalPoints || Object.values(groupedItems).reduce((sum, s) => sum + s.totalPoints, 0)).toLocaleString()}
+            </p>
           </div>
         </div>
         
@@ -278,14 +462,24 @@ function ReceiptPage() {
           <div className="mb-6 bg-green-50 border border-green-200 p-4 rounded-lg">
             <p className="text-green-700 font-medium">This order has been approved!</p>
             <p className="text-sm text-gray-600">
-              {receiptData.totalPoints.toLocaleString()} points have been deducted from your account.
+              {(receiptData.totalPoints || Object.values(groupedItems).reduce((sum, s) => sum + s.totalPoints, 0)).toLocaleString()} points have been deducted from your account.
+            </p>
+          </div>
+        )}
+        
+        {/* Display a message when there are no items but we have receipt data */}
+        {Object.keys(groupedItems).length === 0 && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+            <p className="text-yellow-700 font-medium">Order details are not fully available</p>
+            <p className="text-sm text-gray-600">
+              Some information about this order may be missing or incomplete.
             </p>
           </div>
         )}
         
         {/* Order items by sponsor */}
-        {Object.values(groupedItems).map(sponsor => (
-          <div key={sponsor.sponsorId} className="mb-6">
+        {Object.values(groupedItems).map((sponsor, sponsorIndex) => (
+          <div key={`sponsor-${sponsor.sponsorId || sponsorIndex}`} className="mb-6">
             <h2 className="font-semibold text-gray-700 mb-2">{sponsor.sponsorName} Items</h2>
             <table className="min-w-full divide-y divide-gray-200 mb-4">
               <thead className="bg-gray-50">
@@ -305,21 +499,21 @@ function ReceiptPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sponsor.items.map((item) => (
-                  <tr key={`${sponsor.sponsorId}-${item.Product_ID}`}>
+                {sponsor.items.map((item, itemIndex) => (
+                  <tr key={`item-${sponsor.sponsorId}-${item.Product_ID || itemIndex}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {item.Product_Name}
+                        {item.Product_Name || `Item #${itemIndex + 1}`}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{item.pointPrice.toLocaleString()}</div>
+                      <div className="text-sm text-gray-900">{(item.pointPrice || 0).toLocaleString()}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{item.quantity}</div>
+                      <div className="text-sm text-gray-900">{item.quantity || 1}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{(item.pointPrice * item.quantity).toLocaleString()}</div>
+                      <div className="text-sm text-gray-900">{((item.pointPrice || 0) * (item.quantity || 1)).toLocaleString()}</div>
                     </td>
                   </tr>
                 ))}
@@ -342,7 +536,9 @@ function ReceiptPage() {
         <div className="border-t pt-4 mb-6">
           <div className="flex justify-end">
             <div className="text-lg font-bold">
-              Total: {receiptData.totalPoints.toLocaleString()} points
+              Total: {(receiptData.totalPoints || 
+                Object.values(groupedItems).reduce((sum, s) => sum + s.totalPoints, 0)
+              ).toLocaleString()} points
             </div>
           </div>
         </div>
