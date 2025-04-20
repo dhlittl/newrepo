@@ -1,11 +1,8 @@
-// Admin Manage Users Page
-
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import UserTable from "@/components/UserTable";
 import EditUserModal from "@/components/EditUserModal";
-
 
 export default function ShowUsers() {
   const [users, setUsers] = useState([]);
@@ -17,8 +14,8 @@ export default function ShowUsers() {
   const [expandedDetails, setExpandedDetails] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
   const [formData, setFormData] = useState({
-    Username: "",
     FName: "",
     LName: "",
     Email: "",
@@ -54,13 +51,13 @@ export default function ShowUsers() {
   const fetchUserDetails = async (user) => {
     let endpoint = "";
     switch (user.User_Type) {
-      case "Admin":
+      case "admin":
         endpoint = `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Admin/Info?userId=${user.User_ID}`;
         break;
-      case "Driver":
+      case "driver":
         endpoint = `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/Driver/Info?userId=${user.User_ID}`;
         break;
-      case "Sponsor":
+      case "sponsor":
         endpoint = `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/sponsorUsers/Info?userId=${user.User_ID}`;
         break;
       default:
@@ -103,42 +100,59 @@ export default function ShowUsers() {
     });
   };
 
-  const reviewApplication = async (user, application, status) => {
-    const sponsorId = application.Sponsor_Org_ID || application.Sponsor_ID || 0;
-    const applicationId = application.Application_ID;
+  const reviewApplication = async (app, status) => {
+    const {
+      Application_ID: applicationId,
+      Sponsor_Org_ID: sponsor_id,
+      Email: email,
+      FName: fname,
+      Username: username,
+    } = app;
+
+    const payload = {
+      application_id: applicationId,
+      sponsor_id,
+      status,
+    };
 
     try {
-      const putRes = await fetch(
+      const response = await fetch(
         "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            application_id: applicationId,
-            sponsor_id: sponsorId,
-            status,
-          }),
+          body: JSON.stringify(payload),
         }
       );
-      if (!putRes.ok) throw new Error(`PUT failed: ${putRes.statusText}`);
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || `Failed to ${status.toLowerCase()} application`);
+      }
 
       if (status === "Approved") {
-        const postRes = await fetch(
-          "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
+        const groupResponse = await fetch(
+          "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/assignDriverGroup",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: application.User_ID }),
+            body: JSON.stringify({ username }),
           }
         );
-        if (!postRes.ok) throw new Error(`POST failed: ${postRes.statusText}`);
+
+        if (!groupResponse.ok) {
+          const errorText = await groupResponse.text();
+          console.error("Failed to add to Driver group:", groupResponse.status, errorText);
+          throw new Error("Could not add user to Driver group");
+        }
       }
 
       const subject = `Your application has been ${status.toLowerCase()}`;
       const body = `
         <html><body>
-          <p>Hi ${user.FName},</p>
-          <p>Your application to Sponsor <strong>#${sponsorId}</strong> was <strong>${status}</strong>.</p>
+          <p>Hi ${fname},</p>
+          <p>Your application to Sponsor <strong>#${sponsor_id}</strong> was <strong>${status}</strong>.</p>
           ${
             status === "Approved"
               ? "<p>Congratulations! You can now access driver features.</p>"
@@ -148,13 +162,16 @@ export default function ShowUsers() {
         </body></html>
       `;
 
-      await sendAlertEmail(user.Email, subject, body);
+      await sendAlertEmail(email, subject, body);
 
-      const refreshed = await fetchUserDetails(user);
-      setExpandedDetails((prev) => ({ ...prev, [user.User_ID]: refreshed }));
+      setSuccessMessage(`Application ${status.toLowerCase()} successfully.`);
+      setTimeout(() => {
+        setSuccessMessage(null);
+        window.location.reload();
+      }, 3000);
     } catch (err) {
-      console.error("Review application error:", err);
-      alert("Error: " + err.message);
+      console.error(`Error updating application: ${err.message}`);
+      setError(err.message);
     }
   };
 
@@ -169,7 +186,7 @@ export default function ShowUsers() {
     if (res.ok) {
       alert("User updated successfully!");
       setIsModalOpen(false);
-      const updatedUsers = users.map(u =>
+      const updatedUsers = users.map((u) =>
         u.User_ID === editingUser.User_ID ? { ...u, ...formData } : u
       );
       setUsers(updatedUsers);
@@ -185,10 +202,13 @@ export default function ShowUsers() {
   const sortedUsers = filteredUsers.sort((a, b) => {
     let aKey = a[sortConfig.key];
     let bKey = b[sortConfig.key];
-    if (sortConfig.key === "Start_Date") {
-      aKey = new Date(aKey);
-      bKey = new Date(bKey);
+
+    const dateFields = ["Start_Date", "End_Date"];
+    if (dateFields.includes(sortConfig.key)) {
+      aKey = aKey ? new Date(aKey) : new Date(0);
+      bKey = bKey ? new Date(bKey) : new Date(0);
     }
+
     if (aKey < bKey) return sortConfig.direction === "asc" ? -1 : 1;
     if (aKey > bKey) return sortConfig.direction === "asc" ? 1 : -1;
     return 0;
@@ -200,6 +220,12 @@ export default function ShowUsers() {
   return (
     <main className="p-4">
       <h1 className="text-2xl font-bold mb-4">List of Users</h1>
+
+      {successMessage && (
+        <div className="mb-4 p-3 rounded bg-green-100 text-green-800 border border-green-400">
+          {successMessage}
+        </div>
+      )}
 
       <div className="flex items-center mb-4 space-x-4">
         <Link href="/pages/admin/CreateUserAccount">
@@ -216,10 +242,10 @@ export default function ShowUsers() {
             className="border rounded p-1"
           >
             <option value="all">All</option>
-            <option value="Default">Default</option>
-            <option value="Driver">Driver</option>
-            <option value="Sponsor">Sponsor</option>
-            <option value="Admin">Admin</option>
+            <option value="defaultUser">Default</option>
+            <option value="driver">Driver</option>
+            <option value="sponsor">Sponsor</option>
+            <option value="admin">Admin</option>
           </select>
         </div>
       </div>
@@ -232,11 +258,10 @@ export default function ShowUsers() {
         expandedRows={expandedRows}
         toggleRowExpansion={toggleRowExpansion}
         expandedDetails={expandedDetails}
-        onApprove={(user, app) => reviewApplication(user, app, "Approved")}
-        onDeny={(user, app) => reviewApplication(user, app, "Denied")}
+        onApprove={(user, app) => reviewApplication(app, "Approved")}
+        onDeny={(user, app) => reviewApplication(app, "Denied")}
         onEdit={(user) => {
           setFormData({
-            Username: user.Username,
             FName: user.FName,
             LName: user.LName,
             Email: user.Email,
