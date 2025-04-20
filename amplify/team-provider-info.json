@@ -38,6 +38,18 @@
         },
         "team24gen15339fb54PostConfirmation": {
           "GROUP": "defaultUser"
+        },
+        "team24gen1v4fccea1a0CustomMessage": {
+          "deploymentBucketName": "amplify-team24gen1v4-dev-2887a-deployment",
+          "s3Key": "amplify-builds/team24gen1v4fccea1a0CustomMessage-2b64584d6a653645386f-build.zip"
+        },
+        "team24gen1v4fccea1a0PostAuthentication": {
+          "deploymentBucketName": "amplify-team24gen1v4-dev-2887a-deployment",
+          "s3Key": "amplify-builds/team24gen1v4fccea1a0PostAuthentication-776d6a36624331733733-build.zip"
+        },
+        "team24gen1v4fccea1a0PreAuthentication": {
+          "deploymentBucketName": "amplify-team24gen1v4-dev-2887a-deployment",
+          "s3Key": "amplify-builds/team24gen1v4fccea1a0PreAuthentication-70572f35322f73452f4a-build.zip"
         }
       },
       "hosting": {

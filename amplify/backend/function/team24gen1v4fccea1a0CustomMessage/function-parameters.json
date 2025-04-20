@@ -1,0 +1,16 @@
+{
+  "trigger": true,
+  "modules": [
+    "custom"
+  ],
+  "parentResource": "team24gen1v4fccea1a0",
+  "functionName": "team24gen1v4fccea1a0CustomMessage",
+  "resourceName": "team24gen1v4fccea1a0CustomMessage",
+  "parentStack": "auth",
+  "triggerEnvs": "[]",
+  "triggerDir": "/snapshot/amplify-cli/build/node_modules/@aws-amplify/amplify-category-auth/provider-utils/awscloudformation/triggers/CustomMessage",
+  "triggerTemplate": "CustomMessage.json.ejs",
+  "triggerEventPath": "CustomMessage.event.json",
+  "roleName": "team24gen1v4fccea1a0CustomMessage",
+  "skipEdit": true
+}

@@ -2,7 +2,7 @@
   "version": "1",
   "cognitoConfig": {
     "identityPoolName": "team24gen1v4fccea1a0_identitypool_fccea1a0",
-    "allowUnauthenticatedIdentities": true,
+    "allowUnauthenticatedIdentities": false,
     "resourceNameTruncated": "team24fccea1a0",
     "userPoolName": "team24gen1v4fccea1a0_userpool_fccea1a0",
     "autoVerifiedAttributes": [
@@ -98,14 +98,38 @@
           "Arn",
           "Name"
         ]
+      },
+      {
+        "category": "function",
+        "resourceName": "team24gen1v4fccea1a0PostAuthentication",
+        "triggerProvider": "Cognito",
+        "attributes": [
+          "Arn",
+          "Name"
+        ]
+      },
+      {
+        "category": "function",
+        "resourceName": "team24gen1v4fccea1a0PreAuthentication",
+        "triggerProvider": "Cognito",
+        "attributes": [
+          "Arn",
+          "Name"
+        ]
       }
     ],
     "thirdPartyAuth": false,
     "userPoolGroups": false,
     "adminQueries": true,
     "triggers": {
+      "PostAuthentication": [
+        "custom"
+      ],
       "PostConfirmation": [
         "add-to-group"
+      ],
+      "PreAuthentication": [
+        "custom"
       ]
     },
     "hostedUI": false,
@@ -114,11 +138,9 @@
     "parentStack": {
       "Ref": "AWS::StackId"
     },
-    "authTriggerConnections": [
-      "{\"triggerType\":\"PostConfirmation\",\"lambdaFunctionName\":\"team24gen1v4fccea1a0PostConfirmation\"}"
-    ],
+    "authTriggerConnections": "[\n  {\n    \"triggerType\": \"PostAuthentication\",\n    \"lambdaFunctionName\": \"team24gen1v4fccea1a0PostAuthentication\"\n  },\n  {\n    \"triggerType\": \"PostConfirmation\",\n    \"lambdaFunctionName\": \"team24gen1v4fccea1a0PostConfirmation\"\n  },\n  {\n    \"triggerType\": \"PreAuthentication\",\n    \"lambdaFunctionName\": \"team24gen1v4fccea1a0PreAuthentication\"\n  }\n]",
     "permissions": [
-      "{\"policyName\":\"AddToGroupCognito\",\"trigger\":\"PostConfirmation\",\"effect\":\"Allow\",\"actions\":[\"cognito-idp:AdminAddUserToGroup\",\"cognito-idp:GetGroup\",\"cognito-idp:CreateGroup\"],\"resource\":{\"paramType\":\"!GetAtt\",\"keys\":[\"UserPool\",\"Arn\"]}}"
+      "{\n  \"policyName\": \"AddToGroupCognito\",\n  \"trigger\": \"PostConfirmation\",\n  \"effect\": \"Allow\",\n  \"actions\": [\n    \"cognito-idp:AdminAddUserToGroup\",\n    \"cognito-idp:GetGroup\",\n    \"cognito-idp:CreateGroup\"\n  ],\n  \"resource\": {\n    \"paramType\": \"!GetAtt\",\n    \"keys\": [\n      \"UserPool\",\n      \"Arn\"\n    ]\n  }\n}"
     ]
   }
 }
