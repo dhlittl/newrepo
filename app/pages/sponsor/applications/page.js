@@ -106,7 +106,7 @@ export default function ApplicationViewing() {
       console.log('Application ${applicationId ${status.toLowerCase()} successfully');
 
       if (status == "Approved") {
-        const application = applications.find(app => app.id === application.Id);
+        const application = applications.find(app => app.id === applicationId);
 
         console.log("Calling assign-driver-group endpoint:", {
           url: "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/assignDriverGroup",
