@@ -12,6 +12,7 @@ export default function SponsorDrivers() {
   const [loadingDrivers, setLoadingDrivers] = useState(true);
   const [error, setError] = useState(null);
   const [selectedDriverIds, setSelectedDriverIds] = useState([]);
+  const [sponsorUserId, setSponsorUserId] = useState(null);
 
   // Modal state for bulk edit
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -69,13 +70,16 @@ export default function SponsorDrivers() {
         
         const data = await response.json();
         setSponsorOrgId(data.Sponsor_Org_ID);
+        // Add a new state variable to store Sponsor_User_ID
+        setSponsorUserId(data.Sponsor_User_ID);
         console.log("Sponsor Organization ID:", data.Sponsor_Org_ID);
+        console.log("Sponsor User ID:", data.Sponsor_User_ID);
       } catch (err) {
         console.error("Error fetching sponsor organization:", err);
         setError("Failed to fetch sponsor organization information");
       }
     };
-    
+
     fetchSponsorInfo();
   }, [userId]);
 
@@ -177,7 +181,7 @@ export default function SponsorDrivers() {
           body: JSON.stringify({
             Driver_ID: driverId,
             Sponsor_Org_ID: sponsorOrgId,
-            Sponsor_User_ID: userId,
+            Sponsor_User_ID: sponsorUserId, // Use the correct ID here
             Point_Balance: pointsChangeValue,
             Reason: reason
           })
