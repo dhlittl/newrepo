@@ -14,6 +14,7 @@ export default function ShowUsers() {
   const [expandedDetails, setExpandedDetails] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
   const [formData, setFormData] = useState({
     FName: "",
     LName: "",
@@ -100,8 +101,6 @@ export default function ShowUsers() {
   };
 
   const reviewApplication = async (app, status) => {
-    console.log("Full app object:", app); // 🔍 DEBUG
-
     const {
       Application_ID: applicationId,
       Sponsor_Org_ID: sponsor_id,
@@ -117,8 +116,6 @@ export default function ShowUsers() {
     };
 
     try {
-      console.log("Submitting application review:", payload);
-
       const response = await fetch(
         "https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications",
         {
@@ -129,7 +126,6 @@ export default function ShowUsers() {
       );
 
       const result = await response.json();
-      console.log("Lambda response:", result);
 
       if (!response.ok) {
         throw new Error(result?.error || `Failed to ${status.toLowerCase()} application`);
@@ -150,8 +146,6 @@ export default function ShowUsers() {
           console.error("Failed to add to Driver group:", groupResponse.status, errorText);
           throw new Error("Could not add user to Driver group");
         }
-
-        console.log(`Successfully added ${username} to Driver group`);
       }
 
       const subject = `Your application has been ${status.toLowerCase()}`;
@@ -169,6 +163,13 @@ export default function ShowUsers() {
       `;
 
       await sendAlertEmail(email, subject, body);
+
+      // ✅ Show success message and refresh
+      setSuccessMessage(`Application ${status.toLowerCase()} successfully.`);
+      setTimeout(() => {
+        setSuccessMessage(null);
+        window.location.reload();
+      }, 3000);
 
     } catch (err) {
       console.error(`Error updating application: ${err.message}`);
@@ -218,6 +219,13 @@ export default function ShowUsers() {
   return (
     <main className="p-4">
       <h1 className="text-2xl font-bold mb-4">List of Users</h1>
+
+      {/* ✅ Success Message */}
+      {successMessage && (
+        <div className="mb-4 p-3 rounded bg-green-100 text-green-800 border border-green-400">
+          {successMessage}
+        </div>
+      )}
 
       <div className="flex items-center mb-4 space-x-4">
         <Link href="/pages/admin/CreateUserAccount">
