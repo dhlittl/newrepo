@@ -33,6 +33,7 @@ export default function SponsorsInfo() {
         console.log("Fetched Cognito user ID:", user.userId);
       } catch (error) {
         console.error("Error fetching current user:", error);
+        setError("Failed to authenticate user");
       }
     }
 
@@ -52,9 +53,11 @@ export default function SponsorsInfo() {
           console.log("Database User ID:", data.userId);
         } else {
           console.error("Error fetching database user ID:", data.error || "Unknown error");
+          setError("Failed to fetch user ID from database");
         }
       } catch (error) {
         console.error("Error in user ID mapping:", error);
+        setError("Error mapping user ID");
       }
     }
 
@@ -76,6 +79,7 @@ export default function SponsorsInfo() {
         const data = await response.json();
         if (data && data.Sponsor_Org_ID) {
           setSponsorOrgId(data.Sponsor_Org_ID);
+          console.log("Sponsor Org ID:", data.Sponsor_Org_ID);
         } else {
           throw new Error("Sponsor Org ID not found");
         }
@@ -93,27 +97,39 @@ export default function SponsorsInfo() {
       try {
         if (!sponsorOrgId) return;
 
+        // Modified to use "sponsorId" parameter properly
         const response = await fetch(
-          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors?SponsorOrgId=${sponsorOrgId}`
+          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors?sponsorId=${sponsorOrgId}`
         );
 
         if (!response.ok) throw new Error("Failed to fetch sponsor details");
 
         const data = await response.json();
-        if (data && data.length > 0) {
-          setSponsorInfo(data[0]);
+        console.log("Sponsor info data:", data);
+        
+        // Make sure we're getting the right data
+        if (data) {
+          // Check specifically if this is an array
+          const sponsorData = Array.isArray(data) ? data.find(s => s.Sponsor_Org_ID === parseInt(sponsorOrgId)) : data;
+          
+          if (!sponsorData) {
+            throw new Error("Sponsor data not found in response");
+          }
+          
+          setSponsorInfo(sponsorData);
           setFormData({
-            Sponsor_Org_Name: data[0].Sponsor_Org_Name,
-            Sponsor_Description: data[0].Sponsor_Description,
-            Sponsor_Email: data[0].Email,
-            Sponsor_Phone: data[0].Phone_Number
+            Sponsor_Org_Name: sponsorData.Sponsor_Org_Name || '',
+            Sponsor_Description: sponsorData.Sponsor_Description || '',
+            Sponsor_Email: sponsorData.Email || '',
+            Sponsor_Phone: sponsorData.Phone_Number || ''
           });
         } else {
           console.error("No sponsor info found");
+          setError("No sponsor information found");
         }
       } catch (error) {
         console.error("Error fetching sponsor info:", error);
-        setError("Error fetching sponsor info");
+        setError("Error fetching sponsor info: " + error.message);
       } finally {
         setLoading(false);
       }
@@ -208,17 +224,25 @@ export default function SponsorsInfo() {
   const refetchSponsorInfo = async () => {
     try {
       const response = await fetch(
-          `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors?SponsorOrgId=${sponsorOrgId}`
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors?sponsorId=${sponsorOrgId}`
       );
       if (!response.ok) throw new Error("Failed to fetch sponsor details");
-  
+
       const data = await response.json();
-      if (data && data.length > 0) {
-          setSponsorInfo(data[0]);
+      if (data) {
+        const sponsorData = Array.isArray(data) 
+          ? data.find(s => s.Sponsor_Org_ID === parseInt(sponsorOrgId)) 
+          : data;
+        
+        if (sponsorData) {
+          setSponsorInfo(sponsorData);
+        } else {
+          throw new Error("Sponsor not found in response");
+        }
       }
     } catch (err) {
       console.error("Error refetching sponsor info:", err);
-      setError("Error refetching sponsor info");
+      setError("Error refetching sponsor info: " + err.message);
     }
   };
 
