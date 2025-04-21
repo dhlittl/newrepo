@@ -287,7 +287,9 @@ function SortableWidget({widget}) {
       case "companyInfo":
         return <LinkWidget title="Company Info" link="/pages/sponsor/companyInfo" />;
       case "driverHistory":
-        return <LinkWidget title="Driver History" link="/driverHistory" />;
+        return <LinkWidget title="Driver Point Tracking" link="/pages/sponsor/pointTracking" />;
+      case "driverMetrics":
+        return <DriverMetrics />;
       default:
         return null;
     }

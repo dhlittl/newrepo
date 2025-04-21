@@ -37,6 +37,7 @@ export default function SponsorNavbar() {
     <Link href="/pages/sponsor/catalog" key="catalog">Product Catalog</Link>,
     <Link href="/pages/sponsor/users" key="users">Manage Users</Link>,
     <Link href="/pages/sponsor/reports" key="reports">Reports</Link>,
+    <Link href="/pages/sponsor/createDriverAccount" key='createdDriver'>Create Driver Account</Link>,
     <Link href="/pages/sponsor/purchase-requests" key="purchases">Purchase Requests</Link>,
     <Link href="/pages/sponsor/aboutPage" key="about">About</Link>,
     <SignOutButton key="signout" />
