@@ -3,20 +3,77 @@ import React, { useState, useEffect } from "react";
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { useEffectiveDriverId } from '@/hooks/useEffectiveDriverId';
 import { useRouter } from 'next/navigation';
+import { getCurrentUser } from 'aws-amplify/auth';
 
 export default function ApplicationViewing() {
   const [applications, setApplications] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [sponsorId, setSponsorId] = useState(1);
   const router = useRouter();
-  const { userId, isAssumed } = useEffectiveDriverId();
+  //const { userId, isAssumed } = useEffectiveDriverId();
   const [authorized, setAuthorized] = useState(false);
+  const [sponsorOrgId, setSponsorOrgId] = useState(null);
+  const [sponsorUserId, setSponsorUserId] = useState(null);
+  const [userId, setUserId] = useState(null);
+
+  // get the Cognito user ID
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const user = await getCurrentUser();
+        console.log("Fetched Cognito user ID:", user.userId);
+        
+        // Now fetch the database user ID using the Cognito sub
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/user/cognito/${user.userId}`);
+        const data = await response.json();
+        
+        if (response.ok && data.userId) {
+          setUserId(data.userId);
+          console.log("Database User ID:", data.userId);
+        } else {
+          console.error("Error fetching database user ID:", data.error || "Unknown error");
+          setError("Failed to fetch user ID from database");
+        }
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+        setError("Failed to authenticate user");
+      }
+    }
+
+    fetchUser();
+  }, []);
+
+  // Once we have the user ID, fetch the sponsor organization ID
+  useEffect(() => {
+    if (!userId) return;
+    
+    const fetchSponsorInfo = async () => {
+      try {
+        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/sponsorUsers/Info?userId=${userId}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch sponsor info: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        setSponsorOrgId(data.Sponsor_Org_ID);
+        // Add a new state variable to store Sponsor_User_ID
+        //setSponsorUserId(data.Sponsor_User_ID);
+        console.log("Sponsor Organization ID:", data.Sponsor_Org_ID);
+        //console.log("Sponsor User ID:", data.Sponsor_User_ID);
+      } catch (err) {
+        console.error("Error fetching sponsor organization:", err);
+        setError("Failed to fetch sponsor organization information");
+      }
+    };
+
+    fetchSponsorInfo();
+  }, [userId]);
 
   const fetchPendingApplications = async () => {
     try {
       const response = await fetch(
-        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications?sponsor_id=${sponsorId}`
+        `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications?sponsor_id=${sponsorOrgId}`
       );
       if (!response.ok) {
         throw new Error(`Failed to fetch: ${response.statusText}`);
@@ -66,7 +123,7 @@ export default function ApplicationViewing() {
   useEffect(() => {
     if (!authorized || !userId) return;
     fetchPendingApplications();
-  }, [authorized, userId, sponsorId]);
+  }, [authorized, userId, sponsorOrgId]);
 
   const sendAlertEmail = async (recipientEmail, subject, htmlBody) => {
     await fetch(
@@ -92,7 +149,7 @@ export default function ApplicationViewing() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             application_id: applicationId,
-            sponsor_id: sponsorId,
+            sponsor_id: sponsorOrgId,
             status: status,
           }),
         }
@@ -136,7 +193,7 @@ export default function ApplicationViewing() {
       const body = `
         <html><body>
           <p>Hi ${app.fname},</p>
-          <p>Your application to Sponsor <strong>#${sponsorId}</strong> was <strong>${status}</strong>.</p>
+          <p>Your application to Sponsor <strong>#{sponsorOrgId}</strong> was <strong>${status}</strong>.</p>
           ${
             status === "Approved"
               ? "<p>Congratulations! You can now access driver features.</p>"
@@ -159,20 +216,6 @@ export default function ApplicationViewing() {
   return (
     <main className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg">
       <h1 className="text-2xl font-semibold text-gray-800 mb-4">Pending Applications</h1>
-
-      <div className="mb-4">
-        <label htmlFor="sponsor-select" className="text-gray-700">Select Sponsor:</label>
-        <select
-          id="sponsor-select"
-          className="ml-2 p-2 border rounded"
-          value={sponsorId}
-          onChange={(e) => setSponsorId(Number(e.target.value))}
-        >
-          <option value={1}>Sponsor 1</option>
-          <option value={2}>Sponsor 2</option>
-          <option value={3}>Sponsor 3</option>
-        </select>
-      </div>
 
       {loading && <p className="text-gray-500">Loading...</p>}
       {error && <p className="text-red-500">Error: {error}</p>}
