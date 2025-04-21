@@ -1,77 +1,26 @@
+// pages/sponsor/applications
+
 "use client";
 import React, { useState, useEffect } from "react";
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { useEffectiveDriverId } from '@/hooks/useEffectiveDriverId';
+import { useEffectiveSponsorId } from '@/hooks/useEffectiveSponsorId';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser } from 'aws-amplify/auth';
 
 export default function ApplicationViewing() {
   const [applications, setApplications] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
-  //const { userId, isAssumed } = useEffectiveDriverId();
+  const { userId, isAssumed } = useEffectiveDriverId();
+  const { sponsorOrgId, sponsorUserInfo, loading: sponsorLoading } = useEffectiveSponsorId();
   const [authorized, setAuthorized] = useState(false);
-  const [sponsorOrgId, setSponsorOrgId] = useState(null);
-  const [sponsorUserId, setSponsorUserId] = useState(null);
-  const [userId, setUserId] = useState(null);
-
-  // get the Cognito user ID
-  useEffect(() => {
-    async function fetchUser() {
-      try {
-        const user = await getCurrentUser();
-        console.log("Fetched Cognito user ID:", user.userId);
-        
-        // Now fetch the database user ID using the Cognito sub
-        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/user/cognito/${user.userId}`);
-        const data = await response.json();
-        
-        if (response.ok && data.userId) {
-          setUserId(data.userId);
-          console.log("Database User ID:", data.userId);
-        } else {
-          console.error("Error fetching database user ID:", data.error || "Unknown error");
-          setError("Failed to fetch user ID from database");
-        }
-      } catch (error) {
-        console.error("Error fetching current user:", error);
-        setError("Failed to authenticate user");
-      }
-    }
-
-    fetchUser();
-  }, []);
-
-  // Once we have the user ID, fetch the sponsor organization ID
-  useEffect(() => {
-    if (!userId) return;
-    
-    const fetchSponsorInfo = async () => {
-      try {
-        const response = await fetch(`https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/sponsorUsers/Info?userId=${userId}`);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch sponsor info: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        setSponsorOrgId(data.Sponsor_Org_ID);
-        // Add a new state variable to store Sponsor_User_ID
-        //setSponsorUserId(data.Sponsor_User_ID);
-        console.log("Sponsor Organization ID:", data.Sponsor_Org_ID);
-        //console.log("Sponsor User ID:", data.Sponsor_User_ID);
-      } catch (err) {
-        console.error("Error fetching sponsor organization:", err);
-        setError("Failed to fetch sponsor organization information");
-      }
-    };
-
-    fetchSponsorInfo();
-  }, [userId]);
 
   const fetchPendingApplications = async () => {
+    if (!sponsorOrgId) return;
+    
     try {
+      setLoading(true);
       const response = await fetch(
         `https://se1j4axgel.execute-api.us-east-1.amazonaws.com/Team24/sponsors/applications?sponsor_id=${sponsorOrgId}`
       );
@@ -121,10 +70,9 @@ export default function ApplicationViewing() {
   }, [router]);
 
   useEffect(() => {
-    if (!authorized || !userId || !sponsorOrgId) return;
+    if (!authorized || !userId || !sponsorOrgId || sponsorLoading) return;
     fetchPendingApplications();
-  }, [authorized, userId, sponsorOrgId]);
-  
+  }, [authorized, userId, sponsorOrgId, sponsorLoading]);
 
   const sendAlertEmail = async (recipientEmail, subject, htmlBody) => {
     await fetch(
@@ -161,7 +109,7 @@ export default function ApplicationViewing() {
           `Failed to ${status.toLowerCase()} application: ${response.statusText}`
         );
       }
-      console.log('Application ${applicationId ${status.toLowerCase()} successfully');
+      console.log(`Application ${applicationId} ${status.toLowerCase()} successfully`);
 
       if (status == "Approved") {
         const application = applications.find(app => app.id === applicationId);
@@ -185,7 +133,7 @@ export default function ApplicationViewing() {
           console.error("Failed to add to Driver group:", groupResponse.status, errorText);
           throw new Error("Could not add user to Driver group");
         }
-        console.log('Successfully added ${application.username} to Driver group');
+        console.log(`Successfully added ${application.username} to Driver group`);
       }
       const app = applications.find((a) => a.id === applicationId);
       if (!app) throw new Error("Application not found");
@@ -194,7 +142,7 @@ export default function ApplicationViewing() {
       const body = `
         <html><body>
           <p>Hi ${app.fname},</p>
-          <p>Your application to Sponsor <strong>#{sponsorOrgId}</strong> was <strong>${status}</strong>.</p>
+          <p>Your application to ${sponsorUserInfo?.Sponsor_Name || `Sponsor #${sponsorOrgId}`} was <strong>${status}</strong>.</p>
           ${
             status === "Approved"
               ? "<p>Congratulations! You can now access driver features.</p>"
@@ -218,8 +166,19 @@ export default function ApplicationViewing() {
     <main className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg">
       <h1 className="text-2xl font-semibold text-gray-800 mb-4">Pending Applications</h1>
 
-      {loading && <p className="text-gray-500">Loading...</p>}
+      {sponsorUserInfo && (
+        <div className="mb-4 text-lg text-gray-700">
+          Organization: <span className="font-semibold">{sponsorUserInfo.Sponsor_Name || `Sponsor #${sponsorOrgId}`}</span>
+        </div>
+      )}
+
+      {(loading || sponsorLoading) && <p className="text-gray-500">Loading...</p>}
       {error && <p className="text-red-500">Error: {error}</p>}
+      {!sponsorOrgId && !sponsorLoading && (
+        <p className="text-yellow-600 p-3 bg-yellow-50 rounded">
+          No sponsor organization assigned to your account. Please contact an administrator.
+        </p>
+      )}
       {applications && applications.length === 0 && <p>No pending applications.</p>}
 
       {applications && applications.length > 0 && (
