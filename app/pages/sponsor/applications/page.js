@@ -121,9 +121,10 @@ export default function ApplicationViewing() {
   }, [router]);
 
   useEffect(() => {
-    if (!authorized || !userId) return;
+    if (!authorized || !userId || !sponsorOrgId) return;
     fetchPendingApplications();
   }, [authorized, userId, sponsorOrgId]);
+  
 
   const sendAlertEmail = async (recipientEmail, subject, htmlBody) => {
     await fetch(
