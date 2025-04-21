@@ -44,6 +44,7 @@ export default function DriverNavbar() {
   const navLinks = [
     <Link href="/pages/driver" key="dashboard">Dashboard</Link>,
     <Link href="/pages/driver/sponsorInfo" key="sponsors">My Sponsors</Link>,
+    <Link href="/pages/driver/sponsors" key="about">Catalogs</Link>,
     <Link href="/pages/driver/notifications" key="notifications">Notifications</Link>,
     <Link href="/pages/driver/purchase-history" key="purchases">Purchases</Link>,
     <Link href="/pages/driver/driverHelp" key="help">Help</Link>,
