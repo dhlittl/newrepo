@@ -28,7 +28,6 @@ import Link from "next/link";
 
 // setting up initial widgets that the sponsor user has access to
 const initialWidgets = [
-  { id: "driverMetrics", name: "Driver Metrics", visible: true},
   { id: "companyInfo", name: "Company Info", visible: true},
   { id: "driverHistory", name: "Driver History", visible: true},
 ];
@@ -289,8 +288,6 @@ function SortableWidget({widget}) {
         return <LinkWidget title="Company Info" link="/pages/sponsor/companyInfo" />;
       case "driverHistory":
         return <LinkWidget title="Driver History" link="/driverHistory" />;
-      case "driverMetrics":
-        return <DriverMetrics />;
       default:
         return null;
     }
@@ -317,26 +314,3 @@ function LinkWidget ({ title, link }) {
     </div>
   );
 }
-
-// point trend graph widget functionality 
-// hard coding for example and bc not tied to db yet
-function DriverMetrics() {
-    const data = [
-        { month: "Jan", pointsAwarded: 100 },
-        { month: "Feb", pointsAwarded: 200 },
-        { month: "March", pointsAwarded: 250 },
-      ];
-      return (
-        <div>
-          <h3 className="font-semibold">Driver Metrics</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={data}>
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="pointsAwarded" fill="#8884d8" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      );
-  }
