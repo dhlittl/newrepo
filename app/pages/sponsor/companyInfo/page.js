@@ -469,7 +469,7 @@ export default function SponsorsInfo() {
                 />
               </div>
               <div>
-                <label>Conversion Rate ($ to pts):</label>
+                <label>Conversion Rate (pts per $):</label>
                 <input
                   type="number"
                   name="Sponsor_Conversion_Rate"
@@ -486,7 +486,7 @@ export default function SponsorsInfo() {
               <p><strong>Name:</strong> {sponsorInfo.Sponsor_Org_Name || "N/A"}</p>
               <p><strong>Description:</strong> {sponsorInfo.Sponsor_Description || "N/A"}</p>
               <p><strong>Contact:</strong> {sponsorInfo.Email || "N/A"}</p>
-              <p><strong>Conversion Rate ($ to pts):</strong> {sponsorInfo.ConversionRate_DtoP || "N/A"}</p>
+              <p><strong>Conversion Rate (pts per $):</strong> {sponsorInfo.ConversionRate_DtoP || "N/A"}</p>
               <button
                 onClick={() => setIsEditing(true)}
                 className="mt-4 px-4 py-2 bg-green-500 text-white"

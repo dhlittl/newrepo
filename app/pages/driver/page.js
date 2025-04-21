@@ -450,7 +450,7 @@ function ConversionWidget({ title }) {
                 className="p-2 bg-gray-50 rounded flex justify-between items-center"
               >
                 <span className="font-medium">{entry.Sponsor_Org_Name}</span>
-                <span className="text-blue-600 font-bold">{entry.ConversionRate_DtoP} $ per point</span>
+                <span className="text-blue-600 font-bold">{entry.ConversionRate_DtoP} points per $</span>
               </li>
             ))}
           </ul>
